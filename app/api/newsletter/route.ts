@@ -1,51 +1,26 @@
-// app/api/newsletter/route.ts — Endpoint d'inscription newsletter
+// app/api/newsletter/route.ts
 import { NextResponse, type NextRequest } from "next/server";
-import { createAdminClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
-   /*  const { email } = await request.json();
+    // On garde l'email pour le message de succès, même si on ne l'utilise pas en DB pour l'instant
+    const body = await request.json().catch(() => ({}));
+    const email = body.email;
 
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return NextResponse.json({ error: "Email invalide." }, { status: 400 });
-    }
-
-    const supabase = createAdminClient();
-
-    // 1. Vérifier si déjà inscrit (Cast 'as any' pour bypasser l'erreur de build)
-    const { data: existing, error: fetchError } = await (supabase
-      .from("newsletter_subscribers" as any)
-      .select("id, confirmed")
-      .eq("email", email)
-      .maybeSingle() as any);
-
-    if (!fetchError && existing) {
-      if (existing.confirmed) {
-        return NextResponse.json({ message: "already_subscribed" }, { status: 200 });
-      }
-      return NextResponse.json({ message: "pending_confirmation" }, { status: 200 });
-    }
-
-    // 2. Insérer l'abonné (Cast 'as any' crucial ici pour éviter le type 'never')
-    const { error: insertError } = await (supabase
-      .from("newsletter_subscribers" as any))
-      .insert({ email, confirmed: true } as any);
-
-   // if (insertError) throw insertError;
-
-    // 3. Envoyer email (Le design est conservé tel quel)
+    // --- LOGIQUE RESEND (DESIGN ACTIF) ---
     const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey) { */
+    
+    if (resendKey && email) {
       try {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer *{resendKey}`,
+            Authorization: `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
             from: "AfriPulse <newsletter@afripulse.com>",
-            //to: email,
+            to: email,
             subject: "Bienvenue sur AfriPulse Newsletter 🌍",
             html: `
               <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 2rem; background: #F8F6F1;">
