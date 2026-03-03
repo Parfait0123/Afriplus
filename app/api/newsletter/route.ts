@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { email } = await request.json();
+   /*  const { email } = await request.json();
 
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return NextResponse.json({ error: "Email invalide." }, { status: 400 });
@@ -35,17 +35,17 @@ export async function POST(request: NextRequest) {
 
     // 3. Envoyer email (Le design est conservé tel quel)
     const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey) {
+    if (resendKey) { */
       try {
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${resendKey}`,
+            Authorization: `Bearer *{resendKey}`,
           },
           body: JSON.stringify({
             from: "AfriPulse <newsletter@afripulse.com>",
-            to: email,
+            //to: email,
             subject: "Bienvenue sur AfriPulse Newsletter 🌍",
             html: `
               <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 2rem; background: #F8F6F1;">
