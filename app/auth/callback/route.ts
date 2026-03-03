@@ -16,7 +16,8 @@ export async function GET(request: NextRequest) {
       {
         cookies: {
           getAll() { return cookieStore.getAll(); },
-          setAll(cookiesToSet) {
+          // Ajout du type any[] pour corriger l'erreur de build
+          setAll(cookiesToSet: any[]) {
             cookiesToSet.forEach(({ name, value, options }) =>
               cookieStore.set(name, value, options)
             );
