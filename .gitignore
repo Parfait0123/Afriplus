@@ -7,9 +7,6 @@
 /.next/
 /out/
 
-# Production build
-/build
-
 # Logs
 npm-debug.log*
 yarn-debug.log*
