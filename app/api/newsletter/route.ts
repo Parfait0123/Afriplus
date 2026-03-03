@@ -1,6 +1,12 @@
-// app/api/newsletter/route.ts — Endpoint d'inscription newsletter
+// app/api/newsletter/route.ts
 import { NextResponse, type NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/server";
+
+// 1. Définition du type pour TypeScript
+interface NewsletterSubscriber {
+  id: string;
+  confirmed: boolean;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,14 +18,20 @@ export async function POST(request: NextRequest) {
 
     const supabase = createAdminClient();
 
-    // Vérifier si déjà inscrit
-    const { data: existing } = await supabase
+    // 2. Utilisation du typage explicite avec Supabase
+    const { data: existing, error: fetchError } = await supabase
       .from("newsletter_subscribers")
       .select("id, confirmed")
       .eq("email", email)
-      .single();
+      .maybeSingle() as { data: NewsletterSubscriber | null, error: any }; 
+      // Note: .maybeSingle() est plus sûr car il ne renvoie pas d'erreur si l'email n'existe pas
+
+    if (fetchError) {
+      console.error("Supabase fetch error:", fetchError);
+    }
 
     if (existing) {
+      // 3. Ici TypeScript reconnaît maintenant 'confirmed'
       if (existing.confirmed) {
         return NextResponse.json({ message: "already_subscribed" }, { status: 200 });
       }
@@ -29,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Insérer l'abonné
     const { error: insertError } = await supabase
       .from("newsletter_subscribers")
-      .insert({ email, confirmed: true }); // confirmed: true si pas de double opt-in
+      .insert({ email, confirmed: true });
 
     if (insertError) throw insertError;
 
@@ -59,7 +71,7 @@ export async function POST(request: NextRequest) {
                 <p style="font-size: 0.95rem; color: #38382E; line-height: 1.75;">
                   Vous êtes maintenant abonné(e) à la newsletter AfriPulse. Chaque semaine, vous recevrez les meilleures actualités, bourses d'études et opportunités du continent africain.
                 </p>
-                <a href="${process.env.NEXT_PUBLIC_SITE_URL}" 
+                <a href="${process.env.NEXT_PUBLIC_SITE_URL || '#'}" 
                    style="display: inline-block; margin-top: 1.5rem; background: #C08435; color: #fff; padding: 0.75rem 1.5rem; border-radius: 100px; text-decoration: none; font-family: sans-serif; font-size: 0.85rem; font-weight: 700;">
                   Découvrir AfriPulse →
                 </a>
