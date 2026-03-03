@@ -47,7 +47,7 @@ export default function InscriptionPage() {
 
     // Créer le profil
     if (data.user) {
-      await supabase.from("profiles").insert({
+      await (supabase.from("profiles") as any ).insert({
         id: data.user.id,
         email,
         full_name: fullName,
