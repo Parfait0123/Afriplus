@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       .from("newsletter_subscribers")
       .select("id, confirmed")
       .eq("email", email)
-      .maybeSingle() as { data: NewsletterSubscriber | null, error: any }; 
+      .maybeSingle() as any; 
       // Note: .maybeSingle() est plus sûr car il ne renvoie pas d'erreur si l'email n'existe pas
 
     if (fetchError) {
