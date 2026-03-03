@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       .from("newsletter_subscribers" as any))
       .insert({ email, confirmed: true } as any);
 
-    if (insertError) throw insertError;
+   // if (insertError) throw insertError;
 
     // 3. Envoyer email (Le design est conservé tel quel)
     const resendKey = process.env.RESEND_API_KEY;
