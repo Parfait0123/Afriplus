@@ -1,96 +1,458 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import NewsletterBand from "@/components/sections/NewsletterBand";
-import RevealWrapper from "@/components/ui/RevealWrapper";
-import { opportunities } from "@/lib/data";
+import { opportunities, type OpportunityType } from "@/lib/data";
 
-const types = ["Tous", "Emploi CDI", "Stage", "Graduate", "Emploi", "Volontariat"];
+/* ─── Types ─── */
+const TYPES: OpportunityType[] = ["Emploi CDI", "Emploi", "Stage", "Graduate", "Freelance", "Volontariat"];
 
-const typeColors: Record<string, { bg: string; color: string }> = {
-  "Emploi CDI": { bg: "#EAF4EF", color: "#1A5C40" },
-  "Stage":      { bg: "#EBF0FB", color: "#1E4DA8" },
-  "Graduate":   { bg: "#FBF4E8", color: "#C08435" },
-  "Emploi":     { bg: "#FBF4E8", color: "#C08435" },
-  "Freelance":  { bg: "#FAEBE8", color: "#B8341E" },
-  "Volontariat":{ bg: "#F0EDE4", color: "#928E80" },
+const TYPE_STYLE: Record<string, { color: string; bg: string }> = {
+  "Emploi CDI":  { color: "#1A5C40", bg: "#EAF4EF" },
+  "Emploi":      { color: "#9B6B1A", bg: "#FBF4E8" },
+  "Stage":       { color: "#1E4DA8", bg: "#EBF0FB" },
+  "Graduate":    { color: "#7A1E4A", bg: "#F9EBF3" },
+  "Freelance":   { color: "#B8341E", bg: "#FAEBE8" },
+  "Volontariat": { color: "#928E80", bg: "#F0EDE4" },
 };
 
+/* ─── Pill type ─── */
+function TypePill({ type, inverted = false }: { type: string; inverted?: boolean }) {
+  const s = TYPE_STYLE[type] ?? { color: "#928E80", bg: "#F0EDE4" };
+  if (inverted) return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:"0.3rem",
+      fontSize:"0.55rem", fontWeight:800, letterSpacing:"0.12em", textTransform:"uppercase",
+      padding:"0.22rem 0.7rem", borderRadius:100,
+      background:"rgba(255,255,255,.15)", color:"#fff",
+      border:"1px solid rgba(255,255,255,.2)", backdropFilter:"blur(8px)" }}>
+      {type}
+    </span>
+  );
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:"0.3rem",
+      fontSize:"0.55rem", fontWeight:800, letterSpacing:"0.12em", textTransform:"uppercase",
+      padding:"0.22rem 0.7rem", borderRadius:100, background:s.bg, color:s.color }}>
+      <span style={{ width:5, height:5, borderRadius:"50%", background:s.color, flexShrink:0 }}/>
+      {type}
+    </span>
+  );
+}
+
+/* ─── Logo entreprise ─── */
+function CompanyLogo({ initials, size = 40 }: { initials: string; size?: number }) {
+  return (
+    <div style={{ width:size, height:size, borderRadius: size * 0.28,
+      background:"rgba(255,255,255,.95)", backdropFilter:"blur(8px)",
+      border:"1px solid rgba(255,255,255,.5)",
+      display:"flex", alignItems:"center", justifyContent:"center",
+      fontFamily:"'Fraunces', Georgia, serif", fontSize: size * 0.38,
+      fontWeight:900, color:"#C08435",
+      boxShadow:"0 2px 12px rgba(0,0,0,.18)", flexShrink:0 }}>
+      {initials}
+    </div>
+  );
+}
+
+/* ─── Méta offre ─── */
+function OppMeta({ opp, light = false }: { opp: typeof opportunities[0]; light?: boolean }) {
+  const col  = light ? "rgba(248,246,241,.45)" : "#928E80";
+  const bold = light ? "rgba(248,246,241,.8)"  : "#38382E";
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:"0.9rem", fontSize:"0.6rem", color:col }}>
+      <span style={{ fontWeight:700, color:bold }}>{opp.company}</span>
+      <span style={{ width:3, height:3, borderRadius:"50%", background:col, flexShrink:0 }}/>
+      <span>📍 {opp.location}</span>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE
+══════════════════════════════════════════════════ */
 export default function OpportunitesPage() {
+  const [filter, setFilter] = useState<"Tout" | OpportunityType>("Tout");
+
+  /* ── Découpage éditorial ── */
+  const vedette    = opportunities[0];
+  const sideItems  = opportunities.slice(1, 4);
+  const spotlight  = opportunities[4];
+  const trio       = opportunities.slice(5, 8);
+  const remaining  = opportunities.slice(8);
+  const filtered   = filter === "Tout"
+    ? remaining
+    : remaining.filter(o => o.type === filter);
+
+  /* Compteurs par type */
+  const counts = TYPES.reduce((acc, t) => {
+    acc[t] = opportunities.filter(o => o.type === t).length;
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
     <>
       <Navbar />
 
-      {/* Page header */}
-      <div style={{ paddingTop: "5rem", background: "#F8F6F1" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "4rem 2.5rem 3rem" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", background: "#EBF0FB", border: "1px solid rgba(30,77,168,.15)", borderRadius: 100, padding: "0.38rem 0.9rem", fontSize: "0.73rem", fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: "#1E4DA8", marginBottom: "1.5rem" }}>
-            💼 Opportunités professionnelles
-          </div>
-          <h1 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(2.5rem,5vw,5rem)", fontWeight: 900, letterSpacing: "-0.04em", lineHeight: 0.95, marginBottom: "1.2rem" }}>
-            Boostez votre<br /><em style={{ fontStyle: "italic", fontWeight: 200, color: "#C08435" }}>carrière</em>
-          </h1>
-          <p style={{ fontSize: "1rem", fontWeight: 300, color: "#928E80", maxWidth: 520, lineHeight: 1.75, marginBottom: "2rem" }}>
-            Emplois, stages, programmes graduate et appels à candidatures de premier plan sur le continent africain.
-          </p>
+      <main style={{ background:"#EEEADE" }}>
 
-          {/* Filters */}
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem" }}>
-            {types.map((t, i) => (
-              <button key={t} style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: "0.8rem", fontWeight: 600, padding: "0.45rem 1.1rem", borderRadius: 100, cursor: "pointer", transition: "all .22s", background: i === 0 ? "#141410" : "transparent", color: i === 0 ? "#fff" : "#38382E", border: i === 0 ? "none" : "1.5px solid rgba(20,20,16,.12)" }}>
-                {t}
-              </button>
+        {/* ══════════════════════════════════════════
+            MASTHEAD
+        ══════════════════════════════════════════ */}
+        <div style={{ background:"#141410", paddingTop:"clamp(4.5rem,8vh,6.5rem)" }}>
+          <div className="nw-wrap">
+
+            {/* Topbar */}
+            <div className="nw-topbar">
+              <div style={{ display:"flex", alignItems:"center", gap:"0.6rem" }}>
+                <span className="dot-live"/>
+                <span className="nw-meta">
+                  {opportunities.length} offres publiées &ensp;·&ensp; Afrique & International
+                </span>
+              </div>
+              <div className="nw-topbar-nav">
+                {TYPES.map(t => (
+                  <button key={t} className="nw-topbar-link"
+                    onClick={() => {
+                      setFilter(t);
+                      document.getElementById("opp-grid")?.scrollIntoView({ behavior:"smooth" });
+                    }}>
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Masthead */}
+            <div className="nw-masthead">
+              <div className="nw-masthead-left">
+                <div className="nw-edition-tag">Carrières · Afrique</div>
+                <h1 className="nw-masthead-title">
+                  Oppor<span style={{ color:"#C08435", fontStyle:"italic", fontWeight:200 }}>
+                    tunités
+                  </span>
+                </h1>
+              </div>
+              <div className="nw-masthead-right">
+                <p className="nw-masthead-desc">
+                  Emplois, stages et programmes graduate<br/>
+                  de premier plan sur le continent africain.
+                </p>
+                {/* Compteurs par type */}
+                <div style={{ display:"flex", gap:"1.25rem", flexWrap:"wrap" }}>
+                  {TYPES.filter(t => counts[t] > 0).map(t => {
+                    const s = TYPE_STYLE[t];
+                    return (
+                      <div key={t} style={{ display:"flex", alignItems:"center", gap:"0.4rem" }}>
+                        <span style={{ width:6, height:6, borderRadius:"50%",
+                          background:s.color, flexShrink:0 }}/>
+                        <span style={{ fontSize:"0.6rem", fontWeight:600,
+                          color:"rgba(248,246,241,.35)", letterSpacing:"0.05em" }}>
+                          {t} <strong style={{ color:"rgba(248,246,241,.7)" }}>{counts[t]}</strong>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style={{ height:3, background:"linear-gradient(90deg,#C08435 0%,#E8B86D 50%,#C08435 100%)" }}/>
+        </div>
+
+        {/* ══════════════════════════════════════════
+            ZONE 1 — VEDETTE + SIDEBAR
+        ══════════════════════════════════════════ */}
+        <div className="nw-wrap" style={{ paddingTop:"2.5rem" }}>
+          <div className="nw-zone1">
+
+            {/* Offre vedette */}
+            <Link href={`/opportunites/${vedette.slug}`} className="nw-hero-link">
+              <article className="nw-hero">
+                <div className="nw-hero-img" style={{ background: vedette.imageGradient }}>
+                  <div className="nw-hero-overlay"/>
+                  {/* Initiales géantes fantôme */}
+                  <div className="nw-hero-ghost-num" style={{ fontSize:"clamp(7rem,14vw,12rem)",
+                    letterSpacing:"-0.04em" }}>
+                    {vedette.companyInitials}
+                  </div>
+                  {/* Badge */}
+                  <div className="nw-hero-badge">
+                    <span style={{ width:6, height:6, borderRadius:"50%",
+                      background:"#fff", display:"inline-block" }}/>
+                    Offre en vedette
+                  </div>
+                  {/* Logo */}
+                  <div style={{ position:"absolute", bottom:"1.25rem", left:"1.25rem" }}>
+                    <CompanyLogo initials={vedette.companyInitials} size={48} />
+                  </div>
+                </div>
+                <div className="nw-hero-body">
+                  <TypePill type={vedette.type}/>
+                  <h2 className="nw-hero-title">{vedette.title}</h2>
+                  <p className="nw-hero-excerpt" style={{ color:"#928E80" }}>
+                    {vedette.company} · {vedette.location}
+                  </p>
+                  <div style={{ display:"flex", alignItems:"center",
+                    justifyContent:"space-between",
+                    paddingTop:"1.25rem", borderTop:"1px solid rgba(20,20,16,.08)" }}>
+                    <OppMeta opp={vedette}/>
+                    <span className="nw-read-cta">Postuler →</span>
+                  </div>
+                </div>
+              </article>
+            </Link>
+
+            {/* Sidebar */}
+            <aside className="nw-sidebar">
+              <div className="nw-sidebar-label">Autres offres</div>
+              {sideItems.map((opp, i) => (
+                <Link key={opp.id} href={`/opportunites/${opp.slug}`} className="nw-sidebar-link">
+                  <article className="nw-sidebar-art"
+                    style={{ borderBottom: i < sideItems.length - 1
+                      ? "1px solid rgba(20,20,16,.09)" : "none" }}>
+                    <div className="nw-sidebar-thumb" style={{ background: opp.imageGradient }}>
+                      <div style={{ position:"absolute", inset:0,
+                        background:"linear-gradient(135deg,transparent,rgba(0,0,0,.28))" }}/>
+                      {/* Mini logo */}
+                      <div style={{ position:"absolute", bottom:"0.35rem", left:"0.4rem" }}>
+                        <CompanyLogo initials={opp.companyInitials} size={28} />
+                      </div>
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <TypePill type={opp.type}/>
+                      <h3 className="nw-sidebar-title">{opp.title}</h3>
+                      <OppMeta opp={opp}/>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </aside>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════
+            ZONE 2 — SPOTLIGHT SOMBRE
+        ══════════════════════════════════════════ */}
+        <div style={{ margin:"2.5rem 0", background:"#141410",
+          position:"relative", overflow:"hidden" }}>
+          <div className="nw-wrap">
+            <Link href={`/opportunites/${spotlight.slug}`}
+              style={{ textDecoration:"none", display:"block" }}>
+              <div className="nw-spotlight">
+                <div className="nw-spotlight-img" style={{ background: spotlight.imageGradient }}>
+                  <div style={{ position:"absolute", inset:0,
+                    background:"linear-gradient(90deg,#141410 0%,rgba(20,20,16,.4) 60%,transparent 100%)" }}/>
+                  {/* Initiales géantes décoratives */}
+                  <div style={{ position:"absolute", bottom:"-1rem", right:"1.5rem",
+                    fontFamily:"'Fraunces', Georgia, serif",
+                    fontSize:"clamp(7rem,14vw,11rem)", fontWeight:900,
+                    color:"rgba(255,255,255,.07)", lineHeight:1,
+                    letterSpacing:"-0.05em", pointerEvents:"none" }}>
+                    {spotlight.companyInitials}
+                  </div>
+                </div>
+                <div className="nw-spotlight-body">
+                  <div style={{ fontSize:"0.58rem", fontWeight:800, letterSpacing:"0.2em",
+                    textTransform:"uppercase", color:"#C08435", marginBottom:"1rem" }}>
+                    Programme d&apos;excellence
+                  </div>
+                  <TypePill type={spotlight.type} inverted/>
+                  <h2 className="nw-spotlight-title">{spotlight.title}</h2>
+                  <p className="nw-spotlight-excerpt">
+                    {spotlight.company} · {spotlight.location}
+                  </p>
+                  <div style={{ display:"flex", alignItems:"center", gap:"2rem", marginTop:"2rem" }}>
+                    <OppMeta opp={spotlight} light/>
+                    <span style={{ marginLeft:"auto", fontSize:"0.8rem", fontWeight:700,
+                      color:"#C08435", display:"flex", alignItems:"center", gap:"0.4rem",
+                      flexShrink:0, borderBottom:"1.5px solid rgba(192,132,53,.3)",
+                      paddingBottom:"2px" }}>
+                      Voir l&apos;offre
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                      </svg>
+                    </span>
+                  </div>
+                </div>
+                {/* Ligne or alignée sur le wrap */}
+                <div style={{ position:"absolute", top:0,
+                  left:-10, width:4,
+                  height:"100%", background:"#C08435" }}/>
+              </div>
+            </Link>
+          </div>
+        </div>
+
+        {/* ══════════════════════════════════════════
+            ZONE 3 — TRIO 3 COLONNES
+        ══════════════════════════════════════════ */}
+        <div className="nw-wrap">
+          <div className="nw-section-header">
+            <div className="nw-section-rule"/>
+            <span className="nw-section-label">Sélection · Tous profils</span>
+            <div className="nw-section-rule"/>
+          </div>
+          <div className="nw-trio">
+            {trio.map((opp, i) => (
+              <Link key={opp.id} href={`/opportunites/${opp.slug}`}
+                style={{ textDecoration:"none" }}>
+                <article className="nw-trio-card">
+                  <div className="nw-trio-img" style={{ background: opp.imageGradient }}>
+                    <div style={{ position:"absolute", inset:0,
+                      background:"linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65) 100%)" }}/>
+                    <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
+                      <TypePill type={opp.type} inverted/>
+                    </div>
+                    {/* Numéro décoratif */}
+                    <div style={{ position:"absolute", bottom:"-1rem", right:"0.75rem",
+                      fontFamily:"'Fraunces', Georgia, serif", fontSize:"3rem", fontWeight:900,
+                      color:"rgba(255,255,255,.09)", lineHeight:1, letterSpacing:"-0.04em",
+                      pointerEvents:"none" }}>
+                      {String(i + 1).padStart(2, "0")}
+                    </div>
+                    {/* Logo */}
+                    <div style={{ position:"absolute", bottom:"0.85rem", left:"0.9rem" }}>
+                      <CompanyLogo initials={opp.companyInitials} size={36} />
+                    </div>
+                  </div>
+                  <div style={{ padding:"1.25rem 1.35rem" }}>
+                    <div style={{ fontSize:"0.6rem", fontWeight:800, letterSpacing:"0.1em",
+                      textTransform:"uppercase", color:"#C08435", marginBottom:"0.35rem" }}>
+                      {opp.company}
+                    </div>
+                    <h3 className="nw-trio-title">{opp.title}</h3>
+                    <p className="nw-trio-excerpt">📍 {opp.location}</p>
+                    <div style={{ paddingTop:"0.85rem",
+                      borderTop:"1px solid rgba(20,20,16,.07)", marginTop:"0.5rem" }}>
+                      <OppMeta opp={opp}/>
+                    </div>
+                  </div>
+                </article>
+              </Link>
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Grid */}
-      <div style={{ padding: "0 0 6rem", background: "#F8F6F1" }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 2.5rem" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1.2rem" }}>
-            {opportunities.map((opp, i) => {
-              const tc = typeColors[opp.type] || { bg: "#FBF4E8", color: "#C08435" };
-              return (
-                <RevealWrapper key={opp.id} delay={0.06 * (i % 4)}>
-                  <Link href={`/opportunites/${opp.slug}`} style={{ textDecoration: "none" }}>
-                    <div style={{ background: "#fff", borderRadius: 28, border: "1px solid rgba(20,20,16,.07)", overflow: "hidden", cursor: "pointer", transition: "all .3s", boxShadow: "0 1px 3px rgba(20,20,16,.04)", display: "flex", flexDirection: "column", height: "100%" }}>
-                      <div style={{ height: 140, position: "relative", overflow: "hidden", flexShrink: 0 }}>
-                        <div style={{ position: "absolute", inset: 0, background: opp.imageGradient }} />
-                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg,transparent 10%,rgba(0,0,0,.55) 100%)" }} />
+        {/* ══════════════════════════════════════════
+            ZONE 4 — GRILLE FILTRÉE
+        ══════════════════════════════════════════ */}
+        <div id="opp-grid" className="nw-wrap"
+          style={{ paddingTop:"1rem", paddingBottom:"5rem" }}>
+
+          <div className="nw-grid-header">
+            <div>
+              <h2 className="nw-grid-title">
+                {filter === "Tout" ? "Toutes les offres" : filter}
+              </h2>
+              <span className="nw-grid-count">
+                {filtered.length} offre{filtered.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+            <div className="nw-filters">
+              {(["Tout", ...TYPES] as ("Tout" | OpportunityType)[]).map(f => {
+                const active = filter === f;
+                const s = TYPE_STYLE[f as string];
+                return (
+                  <button key={f} onClick={() => setFilter(f)}
+                    className={`nw-filter-btn ${active ? "nw-filter-btn--active" : ""}`}
+                    style={active && s ? { background:s.color, color:"#fff" } : {}}>
+                    {f}
+                  </button>
+                );
+              })}
+              {filter !== "Tout" && (
+                <button onClick={() => setFilter("Tout")} className="nw-filter-clear">
+                  ✕ Effacer
+                </button>
+              )}
+            </div>
+          </div>
+
+          {filtered.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"6rem 0" }}>
+              <p style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:"1.5rem",
+                color:"rgba(20,20,16,.15)", fontWeight:900 }}>—</p>
+              <p style={{ color:"#928E80", fontSize:"0.88rem", marginTop:"0.5rem" }}>
+                Aucune offre dans cette catégorie.
+              </p>
+              <button onClick={() => setFilter("Tout")}
+                className="nw-load-btn" style={{ marginTop:"1.5rem" }}>
+                Voir tout
+              </button>
+            </div>
+          ) : (
+            <div className="nw-grid">
+              {filtered.map((opp, i) => {
+                const isWide = i % 7 === 0;
+                return (
+                  <Link key={opp.id} href={`/opportunites/${opp.slug}`}
+                    style={{ textDecoration:"none", gridColumn: isWide ? "span 2" : "span 1" }}>
+                    <article className={`nw-card ${isWide ? "nw-card--wide" : ""}`}>
+                      <div className={`nw-card-img ${isWide ? "nw-card-img--wide" : ""}`}
+                        style={{ background: opp.imageGradient }}>
+                        <div style={{ position:"absolute", inset:0,
+                          background: isWide
+                            ? "linear-gradient(180deg,rgba(0,0,0,.06) 0%,rgba(0,0,0,.72) 100%)"
+                            : "linear-gradient(180deg,transparent 40%,rgba(0,0,0,.55) 100%)" }}/>
+                        <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
+                          <TypePill type={opp.type} inverted={!isWide}/>
+                        </div>
                         {/* Logo */}
-                        <div style={{ position: "absolute", bottom: "0.7rem", left: "0.85rem", zIndex: 2, width: 36, height: 36, borderRadius: 9, background: "rgba(255,255,255,.93)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,.5)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.82rem", fontWeight: 900, color: "#C08435", boxShadow: "0 2px 10px rgba(0,0,0,.2)" }}>
-                          {opp.companyInitials}
+                        <div style={{ position:"absolute", bottom:"0.85rem", left:"0.85rem" }}>
+                          <CompanyLogo initials={opp.companyInitials}
+                            size={isWide ? 44 : 34}/>
                         </div>
-                        {/* Type tag */}
-                        <div style={{ position: "absolute", top: "0.7rem", right: "0.7rem", zIndex: 2 }}>
-                          <span style={{ display: "inline-block", fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", padding: "0.22rem 0.68rem", borderRadius: 100, ...tc }}>
-                            {opp.type}
-                          </span>
+                        {isWide && (
+                          <div style={{ position:"absolute", bottom:"0.5rem", right:"1rem",
+                            fontFamily:"'Fraunces', Georgia, serif", fontSize:"4.5rem",
+                            fontWeight:900, color:"rgba(255,255,255,.07)", lineHeight:1,
+                            letterSpacing:"-0.04em" }}>
+                            {opp.companyInitials}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ padding: isWide ? "1.5rem 1.75rem" : "1rem 1.2rem",
+                        display:"flex", flexDirection:"column", flex:1, gap:"0.4rem" }}>
+                        <div style={{ fontSize:"0.58rem", fontWeight:800,
+                          letterSpacing:"0.1em", textTransform:"uppercase", color:"#C08435" }}>
+                          {opp.company}
+                        </div>
+                        {!isWide && <div style={{ marginBottom:"0.1rem" }}>
+                          <TypePill type={opp.type}/>
+                        </div>}
+                        <h3 className={`nw-card-title ${isWide ? "nw-card-title--wide" : ""}`}>
+                          {opp.title}
+                        </h3>
+                        {isWide && (
+                          <p className="nw-card-excerpt">📍 {opp.location}</p>
+                        )}
+                        <div style={{ marginTop:"auto", paddingTop:"0.75rem",
+                          borderTop:"1px solid rgba(20,20,16,.06)" }}>
+                          <OppMeta opp={opp}/>
                         </div>
                       </div>
-                      <div style={{ padding: "1.1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.48rem", flex: 1 }}>
-                        <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#C08435" }}>{opp.company}</div>
-                        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.95rem", fontWeight: 700, color: "#141410", lineHeight: 1.32, flex: 1 }}>{opp.title}</div>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.8rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
-                          <span style={{ fontSize: "0.68rem", color: "#928E80" }}>📍 {opp.location}</span>
-                          <span style={{ fontSize: "0.7rem", fontWeight: 600, color: "#C08435" }}>Postuler →</span>
-                        </div>
-                      </div>
-                    </div>
+                    </article>
                   </Link>
-                </RevealWrapper>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
-          <div style={{ textAlign: "center", marginTop: "3rem" }}>
-            <button style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: "0.9rem", fontWeight: 600, padding: "0.82rem 2.2rem", borderRadius: 100, cursor: "pointer", background: "transparent", color: "#38382E", border: "1.5px solid rgba(20,20,16,.12)" }}>
-              Voir plus d&apos;opportunités
-            </button>
-          </div>
+          {filtered.length > 0 && (
+            <div style={{ textAlign:"center", marginTop:"4rem" }}>
+              <button className="nw-load-btn">
+                Charger plus d&apos;offres
+                <span style={{ marginLeft:"0.75rem", fontSize:"0.6rem", fontWeight:800,
+                  background:"rgba(248,246,241,.15)", padding:"0.15rem 0.6rem",
+                  borderRadius:100 }}>+12</span>
+              </button>
+            </div>
+          )}
         </div>
-      </div>
+      </main>
 
       <NewsletterBand />
       <Footer />

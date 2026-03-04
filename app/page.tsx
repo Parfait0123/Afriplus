@@ -136,14 +136,16 @@ export default function Home() {
             {/* Col droite : stats + mini articles + CTAs */}
             <div className="ap-hero-aside">
               {/* Stats sombres */}
-              <div style={{ background: "#141410", borderRadius: 20, padding: "1.75rem", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.25rem" }}>
+              <div className="ap-stats-block">
                 {[
-                  { n: "12K+", l: "Lecteurs actifs" }, { n: "340+", l: "Bourses" },
-                  { n: "55",   l: "Pays couverts" },   { n: "1 200+", l: "Opportunités" },
+                  { n: "12K+", l: "Lecteurs actifs" },
+                  { n: "340+", l: "Bourses" },
+                  { n: "515",   l: "Pays couverts" },
+                  { n: "1 200+", l: "Opportunités" },
                 ].map((s) => (
-                  <div key={s.l}>
-                    <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.7rem", fontWeight: 900, lineHeight: 1, color: "#F8F6F1", display: "block" }}>{s.n}</span>
-                    <span style={{ fontSize: "0.65rem", color: "rgba(248,246,241,.45)", marginTop: "0.2rem", display: "block" }}>{s.l}</span>
+                  <div key={s.l} className="ap-stats-content">
+                    <span className="ap-stats-num">{s.n}</span>
+                    <span className="ap-stats-label">{s.l}</span>
                   </div>
                 ))}
               </div>
