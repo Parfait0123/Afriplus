@@ -43,6 +43,16 @@ export interface Article {
   content: ArticleContent;
 }
 
+export interface ScholarshipContent {
+  description: string;
+  mission: string;
+  eligibility: string[];
+  benefits: { icon: string; label: string; value: string; highlight: boolean }[];
+  documents: { label: string; detail: string }[];
+  steps: { num: string; label: string; desc: string }[];
+  tips: string[];
+}
+
 export interface Scholarship {
   id: string;
   slug: string;
@@ -57,6 +67,7 @@ export interface Scholarship {
   amount?: string;
   imageGradient: string;
   tags: string[];
+  content: ScholarshipContent;
 }
 
 export interface Opportunity {
@@ -1743,6 +1754,48 @@ export const scholarships: Scholarship[] = [
     amount: "Financement total",
     imageGradient: "linear-gradient(135deg, #0a0800 0%, #1c1400 50%, #2e2000 100%)",
     tags: ["Financement total", "Master", "Leadership"],
+    content: {
+      description: "Le Mastercard Foundation Scholars Program 2026 est l'une des opportunités académiques les plus prestigieuses disponibles pour les étudiants africains en 2026. Porté par Mastercard Foundation, ce programme vise à former la prochaine génération de leaders africains capables de transformer leurs sociétés et de contribuer au développement durable du continent.",
+      mission: "En investissant dans des talents africains exceptionnels au niveau Master, Mastercard Foundation construit un réseau mondial d'alumni engagés qui rentrent dans leurs pays avec les compétences, les réseaux et l'ambition nécessaires pour faire une différence réelle. Le programme met l'accent sur le leadership, l'impact communautaire et l'excellence académique dans le domaine de Toutes disciplines.",
+      eligibility: [
+        "Être ressortissant d'un pays africain subsaharien ou d'Afrique du Nord",
+        "Niveau académique requis : Master",
+        "Domaine d'études ciblé : Toutes disciplines",
+        "Moins de 35 ans au moment du dépôt du dossier",
+        "Résultats académiques dans le top 15 % de sa promotion",
+        "Engagement démontré en service communautaire ou leadership",
+        "Maîtrise de la langue d'enseignement (certificat requis)",
+      ],
+      benefits: [
+        { icon: "🎓", label: "Frais de scolarité", value: "100 % pris en charge", highlight: true },
+        { icon: "🏠", label: "Logement", value: "Allocation mensuelle incluse", highlight: false },
+        { icon: "✈️", label: "Transport", value: "Billet aller-retour international", highlight: false },
+        { icon: "💰", label: "Allocation mensuelle", value: "Selon le programme", highlight: true },
+        { icon: "🌐", label: "Réseau alumni", value: "Accès à vie au réseau mondial", highlight: false },
+        { icon: "📚", label: "Mentorat", value: "Accompagnement personnalisé", highlight: false },
+      ],
+      documents: [
+        { label: "CV académique et professionnel", detail: "Format PDF, maximum 3 pages, en anglais ou français selon le programme" },
+        { label: "Lettre de motivation", detail: "1 500 mots maximum — préciser votre projet et votre impact attendu" },
+        { label: "Relevés de notes officiels", detail: "Tous les diplômes depuis le baccalauréat, traduits si nécessaire" },
+        { label: "2 lettres de recommandation", detail: "Académique + professionnel, sur papier en-tête officiel" },
+        { label: "Projet de recherche / SOP", detail: "Spécifique au domaine Toutes disciplines — 2 000 mots maximum" },
+        { label: "Certificat de langue", detail: "IELTS ≥ 6.5 ou TOEFL ≥ 90 (si programme anglophone) / DALF C1 (si francophone)" },
+        { label: "Passeport et documents d'identité", detail: "Copie du passeport en cours de validité (min. 18 mois)" },
+      ],
+      steps: [
+        { num: "01", label: "Préparez votre dossier", desc: "Rassemblez tous les documents requis et faites-les traduire si nécessaire." },
+        { num: "02", label: "Créez votre compte", desc: "Inscrivez-vous sur le portail officiel de candidature de l'organisation." },
+        { num: "03", label: "Remplissez le formulaire", desc: "Complétez soigneusement chaque section — relisez plusieurs fois." },
+        { num: "04", label: "Soumettez avant la deadline", desc: "Date limite : 31 Mars 2026. Aucun dossier tardif ne sera accepté." },
+      ],
+      tips: [
+        "Commencez votre dossier au moins 6 semaines avant la deadline",
+        "Faites relire votre lettre de motivation par un tiers",
+        "Personnalisez votre projet en lien avec les valeurs du programme",
+        "Contactez d'anciens boursiers via LinkedIn pour des conseils",
+      ],
+    }
   },
   {
     id: "2",
@@ -1758,6 +1811,48 @@ export const scholarships: Scholarship[] = [
     amount: "1 200 €/mois",
     imageGradient: "linear-gradient(135deg, #08000a 0%, #140012 50%, #20001e 100%)",
     tags: ["Sciences", "Tech", "Bourse complète"],
+    content: {
+      description: "Le Bourse d'Excellence Allemagne DAAD 2026 est l'une des opportunités académiques les plus prestigieuses disponibles pour les étudiants africains en 2026. Porté par DAAD, ce programme vise à former la prochaine génération de leaders africains capables de transformer leurs sociétés et de contribuer au développement durable du continent.",
+      mission: "En investissant dans des talents africains exceptionnels au niveau Master, DAAD construit un réseau mondial d'alumni engagés qui rentrent dans leurs pays avec les compétences, les réseaux et l'ambition nécessaires pour faire une différence réelle. Le programme met l'accent sur le leadership, l'impact communautaire et l'excellence académique dans le domaine de Sciences, Tech, Ingénierie.",
+      eligibility: [
+        "Être ressortissant d'un pays africain subsaharien ou d'Afrique du Nord",
+        "Niveau académique requis : Master",
+        "Domaine d'études ciblé : Sciences, Tech, Ingénierie",
+        "Moins de 35 ans au moment du dépôt du dossier",
+        "Résultats académiques dans le top 15 % de sa promotion",
+        "Engagement démontré en service communautaire ou leadership",
+        "Maîtrise de la langue d'enseignement (certificat requis)",
+      ],
+      benefits: [
+        { icon: "🎓", label: "Frais de scolarité", value: "Partiellement couvert", highlight: false },
+        { icon: "🏠", label: "Logement", value: "Allocation mensuelle incluse", highlight: false },
+        { icon: "✈️", label: "Transport", value: "Billet aller-retour international", highlight: false },
+        { icon: "💰", label: "Allocation mensuelle", value: "1 200 €/mois", highlight: true },
+        { icon: "🌐", label: "Réseau alumni", value: "Accès à vie au réseau mondial", highlight: false },
+        { icon: "📚", label: "Mentorat", value: "Accompagnement personnalisé", highlight: false },
+      ],
+      documents: [
+        { label: "CV académique et professionnel", detail: "Format PDF, maximum 3 pages, en anglais ou français selon le programme" },
+        { label: "Lettre de motivation", detail: "1 500 mots maximum — préciser votre projet et votre impact attendu" },
+        { label: "Relevés de notes officiels", detail: "Tous les diplômes depuis le baccalauréat, traduits si nécessaire" },
+        { label: "2 lettres de recommandation", detail: "Académique + professionnel, sur papier en-tête officiel" },
+        { label: "Projet de recherche / SOP", detail: "Spécifique au domaine Sciences, Tech, Ingénierie — 2 000 mots maximum" },
+        { label: "Certificat de langue", detail: "IELTS ≥ 6.5 ou TOEFL ≥ 90 (si programme anglophone) / DALF C1 (si francophone)" },
+        { label: "Passeport et documents d'identité", detail: "Copie du passeport en cours de validité (min. 18 mois)" },
+      ],
+      steps: [
+        { num: "01", label: "Préparez votre dossier", desc: "Rassemblez tous les documents requis et faites-les traduire si nécessaire." },
+        { num: "02", label: "Créez votre compte", desc: "Inscrivez-vous sur le portail officiel de candidature de l'organisation." },
+        { num: "03", label: "Remplissez le formulaire", desc: "Complétez soigneusement chaque section — relisez plusieurs fois." },
+        { num: "04", label: "Soumettez avant la deadline", desc: "Date limite : 15 Avr 2026. Aucun dossier tardif ne sera accepté." },
+      ],
+      tips: [
+        "Commencez votre dossier au moins 6 semaines avant la deadline",
+        "Faites relire votre lettre de motivation par un tiers",
+        "Personnalisez votre projet en lien avec les valeurs du programme",
+        "Contactez d'anciens boursiers via LinkedIn pour des conseils",
+      ],
+    }
   },
   {
     id: "3",
@@ -1773,6 +1868,48 @@ export const scholarships: Scholarship[] = [
     amount: "Financement total",
     imageGradient: "linear-gradient(135deg, #000010 0%, #000820 50%, #001035 100%)",
     tags: ["Développement", "Anglophone", "Master"],
+    content: {
+      description: "Le Commonwealth Scholarship — Royaume-Uni 2026 est l'une des opportunités académiques les plus prestigieuses disponibles pour les étudiants africains en 2026. Porté par Commonwealth, ce programme vise à former la prochaine génération de leaders africains capables de transformer leurs sociétés et de contribuer au développement durable du continent.",
+      mission: "En investissant dans des talents africains exceptionnels au niveau Master, Commonwealth construit un réseau mondial d'alumni engagés qui rentrent dans leurs pays avec les compétences, les réseaux et l'ambition nécessaires pour faire une différence réelle. Le programme met l'accent sur le leadership, l'impact communautaire et l'excellence académique dans le domaine de Sciences sociales, Développement.",
+      eligibility: [
+        "Être ressortissant d'un pays africain subsaharien ou d'Afrique du Nord",
+        "Niveau académique requis : Master",
+        "Domaine d'études ciblé : Sciences sociales, Développement",
+        "Moins de 35 ans au moment du dépôt du dossier",
+        "Résultats académiques dans le top 15 % de sa promotion",
+        "Engagement démontré en service communautaire ou leadership",
+        "Maîtrise de la langue d'enseignement (certificat requis)",
+      ],
+      benefits: [
+        { icon: "🎓", label: "Frais de scolarité", value: "100 % pris en charge", highlight: true },
+        { icon: "🏠", label: "Logement", value: "Allocation mensuelle incluse", highlight: false },
+        { icon: "✈️", label: "Transport", value: "Billet aller-retour international", highlight: false },
+        { icon: "💰", label: "Allocation mensuelle", value: "Selon le programme", highlight: true },
+        { icon: "🌐", label: "Réseau alumni", value: "Accès à vie au réseau mondial", highlight: false },
+        { icon: "📚", label: "Mentorat", value: "Accompagnement personnalisé", highlight: false },
+      ],
+      documents: [
+        { label: "CV académique et professionnel", detail: "Format PDF, maximum 3 pages, en anglais ou français selon le programme" },
+        { label: "Lettre de motivation", detail: "1 500 mots maximum — préciser votre projet et votre impact attendu" },
+        { label: "Relevés de notes officiels", detail: "Tous les diplômes depuis le baccalauréat, traduits si nécessaire" },
+        { label: "2 lettres de recommandation", detail: "Académique + professionnel, sur papier en-tête officiel" },
+        { label: "Projet de recherche / SOP", detail: "Spécifique au domaine Sciences sociales, Développement — 2 000 mots maximum" },
+        { label: "Certificat de langue", detail: "IELTS ≥ 6.5 ou TOEFL ≥ 90 (si programme anglophone) / DALF C1 (si francophone)" },
+        { label: "Passeport et documents d'identité", detail: "Copie du passeport en cours de validité (min. 18 mois)" },
+      ],
+      steps: [
+        { num: "01", label: "Préparez votre dossier", desc: "Rassemblez tous les documents requis et faites-les traduire si nécessaire." },
+        { num: "02", label: "Créez votre compte", desc: "Inscrivez-vous sur le portail officiel de candidature de l'organisation." },
+        { num: "03", label: "Remplissez le formulaire", desc: "Complétez soigneusement chaque section — relisez plusieurs fois." },
+        { num: "04", label: "Soumettez avant la deadline", desc: "Date limite : 22 Fév 2026. Aucun dossier tardif ne sera accepté." },
+      ],
+      tips: [
+        "Commencez votre dossier au moins 6 semaines avant la deadline",
+        "Faites relire votre lettre de motivation par un tiers",
+        "Personnalisez votre projet en lien avec les valeurs du programme",
+        "Contactez d'anciens boursiers via LinkedIn pour des conseils",
+      ],
+    }
   },
   {
     id: "4",
@@ -1788,6 +1925,48 @@ export const scholarships: Scholarship[] = [
     amount: "1 800 €/mois",
     imageGradient: "linear-gradient(135deg, #0f0500 0%, #1e0a00 50%, #2e1000 100%)",
     tags: ["Numérique", "IA", "Doctorat"],
+    content: {
+      description: "Le Bourses Doctorales Orange Afrique 2026 est l'une des opportunités académiques les plus prestigieuses disponibles pour les étudiants africains en 2026. Porté par Fondation Orange, ce programme vise à former la prochaine génération de leaders africains capables de transformer leurs sociétés et de contribuer au développement durable du continent.",
+      mission: "En investissant dans des talents africains exceptionnels au niveau Doctorat, Fondation Orange construit un réseau mondial d'alumni engagés qui rentrent dans leurs pays avec les compétences, les réseaux et l'ambition nécessaires pour faire une différence réelle. Le programme met l'accent sur le leadership, l'impact communautaire et l'excellence académique dans le domaine de Numérique, IA, Télécommunications.",
+      eligibility: [
+        "Être ressortissant d'un pays africain subsaharien ou d'Afrique du Nord",
+        "Niveau académique requis : Doctorat",
+        "Domaine d'études ciblé : Numérique, IA, Télécommunications",
+        "Moins de 35 ans au moment du dépôt du dossier",
+        "Résultats académiques dans le top 15 % de sa promotion",
+        "Engagement démontré en service communautaire ou leadership",
+        "Maîtrise de la langue d'enseignement (certificat requis)",
+      ],
+      benefits: [
+        { icon: "🎓", label: "Frais de scolarité", value: "Partiellement couvert", highlight: false },
+        { icon: "🏠", label: "Logement", value: "Allocation mensuelle incluse", highlight: false },
+        { icon: "✈️", label: "Transport", value: "Billet aller-retour international", highlight: false },
+        { icon: "💰", label: "Allocation mensuelle", value: "1 800 €/mois", highlight: true },
+        { icon: "🌐", label: "Réseau alumni", value: "Accès à vie au réseau mondial", highlight: false },
+        { icon: "📚", label: "Mentorat", value: "Accompagnement personnalisé", highlight: false },
+      ],
+      documents: [
+        { label: "CV académique et professionnel", detail: "Format PDF, maximum 3 pages, en anglais ou français selon le programme" },
+        { label: "Lettre de motivation", detail: "1 500 mots maximum — préciser votre projet et votre impact attendu" },
+        { label: "Relevés de notes officiels", detail: "Tous les diplômes depuis le baccalauréat, traduits si nécessaire" },
+        { label: "2 lettres de recommandation", detail: "Académique + professionnel, sur papier en-tête officiel" },
+        { label: "Projet de recherche / SOP", detail: "Spécifique au domaine Numérique, IA, Télécommunications — 2 000 mots maximum" },
+        { label: "Certificat de langue", detail: "IELTS ≥ 6.5 ou TOEFL ≥ 90 (si programme anglophone) / DALF C1 (si francophone)" },
+        { label: "Passeport et documents d'identité", detail: "Copie du passeport en cours de validité (min. 18 mois)" },
+      ],
+      steps: [
+        { num: "01", label: "Préparez votre dossier", desc: "Rassemblez tous les documents requis et faites-les traduire si nécessaire." },
+        { num: "02", label: "Créez votre compte", desc: "Inscrivez-vous sur le portail officiel de candidature de l'organisation." },
+        { num: "03", label: "Remplissez le formulaire", desc: "Complétez soigneusement chaque section — relisez plusieurs fois." },
+        { num: "04", label: "Soumettez avant la deadline", desc: "Date limite : 30 Avr 2026. Aucun dossier tardif ne sera accepté." },
+      ],
+      tips: [
+        "Commencez votre dossier au moins 6 semaines avant la deadline",
+        "Faites relire votre lettre de motivation par un tiers",
+        "Personnalisez votre projet en lien avec les valeurs du programme",
+        "Contactez d'anciens boursiers via LinkedIn pour des conseils",
+      ],
+    }
   },
   {
     id: "5",
@@ -1803,6 +1982,48 @@ export const scholarships: Scholarship[] = [
     amount: "Stipend + logement",
     imageGradient: "linear-gradient(135deg, #050800 0%, #0e1400 50%, #182000 100%)",
     tags: ["Économie", "Recherche", "Postdoc"],
+    content: {
+      description: "Le AfDB Fellowship Programme — Économie du Développement est l'une des opportunités académiques les plus prestigieuses disponibles pour les étudiants africains en 2026. Porté par Banque Africaine de Développement, ce programme vise à former la prochaine génération de leaders africains capables de transformer leurs sociétés et de contribuer au développement durable du continent.",
+      mission: "En investissant dans des talents africains exceptionnels au niveau Postdoc, Banque Africaine de Développement construit un réseau mondial d'alumni engagés qui rentrent dans leurs pays avec les compétences, les réseaux et l'ambition nécessaires pour faire une différence réelle. Le programme met l'accent sur le leadership, l'impact communautaire et l'excellence académique dans le domaine de Économie, Finance.",
+      eligibility: [
+        "Être ressortissant d'un pays africain subsaharien ou d'Afrique du Nord",
+        "Niveau académique requis : Postdoc",
+        "Domaine d'études ciblé : Économie, Finance",
+        "Moins de 35 ans au moment du dépôt du dossier",
+        "Résultats académiques dans le top 15 % de sa promotion",
+        "Engagement démontré en service communautaire ou leadership",
+        "Maîtrise de la langue d'enseignement (certificat requis)",
+      ],
+      benefits: [
+        { icon: "🎓", label: "Frais de scolarité", value: "Partiellement couvert", highlight: false },
+        { icon: "🏠", label: "Logement", value: "Allocation mensuelle incluse", highlight: false },
+        { icon: "✈️", label: "Transport", value: "Billet aller-retour international", highlight: false },
+        { icon: "💰", label: "Allocation mensuelle", value: "Stipend + logement", highlight: true },
+        { icon: "🌐", label: "Réseau alumni", value: "Accès à vie au réseau mondial", highlight: false },
+        { icon: "📚", label: "Mentorat", value: "Accompagnement personnalisé", highlight: false },
+      ],
+      documents: [
+        { label: "CV académique et professionnel", detail: "Format PDF, maximum 3 pages, en anglais ou français selon le programme" },
+        { label: "Lettre de motivation", detail: "1 500 mots maximum — préciser votre projet et votre impact attendu" },
+        { label: "Relevés de notes officiels", detail: "Tous les diplômes depuis le baccalauréat, traduits si nécessaire" },
+        { label: "2 lettres de recommandation", detail: "Académique + professionnel, sur papier en-tête officiel" },
+        { label: "Projet de recherche / SOP", detail: "Spécifique au domaine Économie, Finance — 2 000 mots maximum" },
+        { label: "Certificat de langue", detail: "IELTS ≥ 6.5 ou TOEFL ≥ 90 (si programme anglophone) / DALF C1 (si francophone)" },
+        { label: "Passeport et documents d'identité", detail: "Copie du passeport en cours de validité (min. 18 mois)" },
+      ],
+      steps: [
+        { num: "01", label: "Préparez votre dossier", desc: "Rassemblez tous les documents requis et faites-les traduire si nécessaire." },
+        { num: "02", label: "Créez votre compte", desc: "Inscrivez-vous sur le portail officiel de candidature de l'organisation." },
+        { num: "03", label: "Remplissez le formulaire", desc: "Complétez soigneusement chaque section — relisez plusieurs fois." },
+        { num: "04", label: "Soumettez avant la deadline", desc: "Date limite : 10 Mai 2026. Aucun dossier tardif ne sera accepté." },
+      ],
+      tips: [
+        "Commencez votre dossier au moins 6 semaines avant la deadline",
+        "Faites relire votre lettre de motivation par un tiers",
+        "Personnalisez votre projet en lien avec les valeurs du programme",
+        "Contactez d'anciens boursiers via LinkedIn pour des conseils",
+      ],
+    }
   },
   {
     id: "6",
@@ -1818,6 +2039,48 @@ export const scholarships: Scholarship[] = [
     amount: "Financement total",
     imageGradient: "linear-gradient(135deg, #001005 0%, #001a0a 50%, #002814 100%)",
     tags: ["Excellence", "Leadership", "Toutes disciplines"],
+    content: {
+      description: "Le Gates Cambridge Scholarship 2026 est l'une des opportunités académiques les plus prestigieuses disponibles pour les étudiants africains en 2026. Porté par Gates Foundation / Cambridge, ce programme vise à former la prochaine génération de leaders africains capables de transformer leurs sociétés et de contribuer au développement durable du continent.",
+      mission: "En investissant dans des talents africains exceptionnels au niveau Doctorat, Gates Foundation / Cambridge construit un réseau mondial d'alumni engagés qui rentrent dans leurs pays avec les compétences, les réseaux et l'ambition nécessaires pour faire une différence réelle. Le programme met l'accent sur le leadership, l'impact communautaire et l'excellence académique dans le domaine de Toutes disciplines.",
+      eligibility: [
+        "Être ressortissant d'un pays africain subsaharien ou d'Afrique du Nord",
+        "Niveau académique requis : Doctorat",
+        "Domaine d'études ciblé : Toutes disciplines",
+        "Moins de 35 ans au moment du dépôt du dossier",
+        "Résultats académiques dans le top 15 % de sa promotion",
+        "Engagement démontré en service communautaire ou leadership",
+        "Maîtrise de la langue d'enseignement (certificat requis)",
+      ],
+      benefits: [
+        { icon: "🎓", label: "Frais de scolarité", value: "100 % pris en charge", highlight: true },
+        { icon: "🏠", label: "Logement", value: "Allocation mensuelle incluse", highlight: false },
+        { icon: "✈️", label: "Transport", value: "Billet aller-retour international", highlight: false },
+        { icon: "💰", label: "Allocation mensuelle", value: "Selon le programme", highlight: true },
+        { icon: "🌐", label: "Réseau alumni", value: "Accès à vie au réseau mondial", highlight: false },
+        { icon: "📚", label: "Mentorat", value: "Accompagnement personnalisé", highlight: false },
+      ],
+      documents: [
+        { label: "CV académique et professionnel", detail: "Format PDF, maximum 3 pages, en anglais ou français selon le programme" },
+        { label: "Lettre de motivation", detail: "1 500 mots maximum — préciser votre projet et votre impact attendu" },
+        { label: "Relevés de notes officiels", detail: "Tous les diplômes depuis le baccalauréat, traduits si nécessaire" },
+        { label: "2 lettres de recommandation", detail: "Académique + professionnel, sur papier en-tête officiel" },
+        { label: "Projet de recherche / SOP", detail: "Spécifique au domaine Toutes disciplines — 2 000 mots maximum" },
+        { label: "Certificat de langue", detail: "IELTS ≥ 6.5 ou TOEFL ≥ 90 (si programme anglophone) / DALF C1 (si francophone)" },
+        { label: "Passeport et documents d'identité", detail: "Copie du passeport en cours de validité (min. 18 mois)" },
+      ],
+      steps: [
+        { num: "01", label: "Préparez votre dossier", desc: "Rassemblez tous les documents requis et faites-les traduire si nécessaire." },
+        { num: "02", label: "Créez votre compte", desc: "Inscrivez-vous sur le portail officiel de candidature de l'organisation." },
+        { num: "03", label: "Remplissez le formulaire", desc: "Complétez soigneusement chaque section — relisez plusieurs fois." },
+        { num: "04", label: "Soumettez avant la deadline", desc: "Date limite : 5 Juin 2026. Aucun dossier tardif ne sera accepté." },
+      ],
+      tips: [
+        "Commencez votre dossier au moins 6 semaines avant la deadline",
+        "Faites relire votre lettre de motivation par un tiers",
+        "Personnalisez votre projet en lien avec les valeurs du programme",
+        "Contactez d'anciens boursiers via LinkedIn pour des conseils",
+      ],
+    }
   },
 ];
 
