@@ -7,7 +7,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import NewsletterBand from "@/components/sections/NewsletterBand";
 import RevealWrapper from "@/components/ui/RevealWrapper";
-import { scholarships } from "@/lib/data";
+import { scholarships, type Block } from "@/lib/data";
 
 /* ─── Couleurs par niveau ─── */
 const LEVEL_COLOR: Record<string, { color: string; bg: string; dark: string }> = {
@@ -71,6 +71,324 @@ const IcoShare = () => (
    EXPORTS NEXT.JS
 ══════════════════════════════════════════════════════ */
 
+
+/* ─── Block Renderer ─── */
+/* ─── Checklist interactive ─── */
+function ChecklistBlock({ block, color, bg }: {
+  block: { title?: string; items: { label: string; detail?: string }[] };
+  color: string;
+  bg: string;
+}) {
+  const [checked, setChecked] = useState<number[]>([]);
+  const toggle = (j: number) =>
+    setChecked(prev => prev.includes(j) ? prev.filter(x => x !== j) : [...prev, j]);
+  const total = block.items.length;
+  const done = checked.length;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+      {block.title && (
+        <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#928E80", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.25rem" }}>{block.title}</div>
+      )}
+      {total > 1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.4rem" }}>
+          <div style={{ flex: 1, height: 5, background: "rgba(20,20,16,.08)", borderRadius: 100, overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 100, background: color,
+              width: `${(done / total) * 100}%`, transition: "width .3s cubic-bezier(.34,1.56,.64,1)" }} />
+          </div>
+          <span style={{ fontSize: "0.62rem", fontWeight: 700, color: color, flexShrink: 0 }}>
+            {done}/{total}
+          </span>
+        </div>
+      )}
+      {block.items.map((item, j) => {
+        const isChecked = checked.includes(j);
+        return (
+          <div key={j} onClick={() => toggle(j)}
+            style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start",
+              padding: "0.9rem 1.1rem",
+              background: isChecked ? bg : "#fff",
+              borderRadius: 14,
+              border: `1px solid ${isChecked ? color : "rgba(20,20,16,.07)"}`,
+              cursor: "pointer", transition: "all .18s",
+              boxShadow: isChecked ? "none" : "0 1px 6px rgba(20,20,16,.04)" }}>
+            <div style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0, transition: "all .18s",
+              background: isChecked ? color : "transparent",
+              border: `2px solid ${isChecked ? color : "rgba(20,20,16,.2)"}`,
+              display: "flex", alignItems: "center", justifyContent: "center", color: "#fff" }}>
+              {isChecked && <IcoCheck />}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: "0.88rem", fontWeight: 600,
+                color: isChecked ? color : "#141410",
+                textDecoration: isChecked ? "line-through" : "none",
+                textDecorationColor: color, lineHeight: 1.4, marginBottom: item.detail ? "0.25rem" : 0 }}>
+                {item.label}
+              </div>
+              {item.detail && (
+                <div style={{ fontSize: "0.72rem", color: "#928E80", lineHeight: 1.5 }}>
+                  {item.detail}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      {done === total && total > 1 && (
+        <div style={{ display: "flex", alignItems: "center", gap: "0.65rem",
+          padding: "0.85rem 1.1rem", background: bg,
+          border: `1.5px solid ${color}`, borderRadius: 14, marginTop: "0.25rem" }}>
+          <span style={{ fontSize: "1rem" }}>✅</span>
+          <span style={{ fontSize: "0.82rem", fontWeight: 700, color: color }}>
+            Dossier complet — vous pouvez postuler !
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BlockRenderer({ blocks, color, bg, dark }: {
+  blocks: Block[];
+  color: string;
+  bg: string;
+  dark: string;
+}) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", paddingTop: "2rem" }}>
+      {blocks.map((block, i) => {
+        switch (block.type) {
+
+          case "paragraph":
+            return <p key={i} className="bs-p">{block.text}</p>;
+
+          case "heading":
+            return block.level === 3
+              ? <h3 key={i} style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.1rem", fontWeight: 900, color: "#141410", marginTop: "0.5rem" }}>{block.text}</h3>
+              : (
+                <div key={i} style={{ paddingTop: "1rem" }}>
+                  <h2 className="bs-h2">{block.text}</h2>
+                  <div style={{ width: "2.8rem", height: 3, background: color, borderRadius: 100, marginTop: "0.75rem" }}/>
+                </div>
+              );
+
+          case "pullquote":
+            return (
+              <blockquote key={i} style={{ margin: "0.5rem 0", padding: "1.5rem 2rem", borderLeft: `4px solid ${color}`, background: bg, borderRadius: "0 16px 16px 0" }}>
+                <p style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.1rem", fontWeight: 700, fontStyle: "italic", color: "#141410", lineHeight: 1.5, marginBottom: block.author ? "0.75rem" : 0 }}>
+                  « {block.text} »
+                </p>
+                {block.author && (
+                  <div style={{ fontSize: "0.7rem", fontWeight: 700, color: color, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    — {block.author}{block.role ? `, ${block.role}` : ""}
+                  </div>
+                )}
+              </blockquote>
+            );
+
+          case "factbox":
+            return (
+              <div key={i} style={{ padding: "1.5rem 1.75rem", background: "#141410", borderRadius: 20, border: "1px solid rgba(248,246,241,.06)" }}>
+                <div style={{ fontSize: "0.6rem", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C08435", marginBottom: "1rem" }}>
+                  💡 {block.title}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
+                  {block.facts.map((fact, j) => (
+                    <div key={j} style={{ display: "flex", gap: "0.7rem", alignItems: "flex-start" }}>
+                      <span style={{ color: "#C08435", fontWeight: 700, fontSize: "0.7rem", flexShrink: 0, marginTop: "0.15rem" }}>→</span>
+                      <span style={{ fontSize: "0.82rem", color: "rgba(248,246,241,.65)", lineHeight: 1.6 }}>{fact}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case "alert":
+            const alertStyles = {
+              info:    { bg: "#EBF0FB", border: "#1E4DA8", icon: "ℹ️", color: "#1E4DA8" },
+              warning: { bg: "#FFF4EB", border: "#C08435", icon: "⚠️", color: "#C08435" },
+              tip:     { bg: "#EAF4EF", border: "#1A5C40", icon: "💡", color: "#1A5C40" },
+            };
+            const as = alertStyles[block.variant ?? "info"];
+            return (
+              <div key={i} style={{ display: "flex", gap: "0.85rem", padding: "1rem 1.25rem", background: as.bg, border: `1.5px solid ${as.border}40`, borderRadius: 14 }}>
+                <span style={{ fontSize: "1rem", flexShrink: 0 }}>{as.icon}</span>
+                <p style={{ fontSize: "0.85rem", color: "#141410", lineHeight: 1.6, margin: 0 }}>{block.message}</p>
+              </div>
+            );
+
+          case "divider":
+            return <hr key={i} style={{ border: "none", borderTop: "1px solid rgba(20,20,16,.08)", margin: "0.5rem 0" }}/>;
+
+          case "benefits":
+            return (
+              <div key={i} className="bs-benefits-grid">
+                {block.items.map((b, j) => (
+                  <div key={j} className={`bs-benefit-card ${b.highlight ? "bs-benefit-card--highlight" : ""}`}
+                    style={b.highlight ? { borderColor: color, background: bg } : {}}>
+                    <div style={{ fontSize: "1.5rem", marginBottom: "0.6rem" }}>{b.icon}</div>
+                    <div style={{ fontSize: "0.6rem", fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase", color: b.highlight ? color : "#928E80", marginBottom: "0.3rem" }}>{b.label}</div>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 600, color: "#141410", lineHeight: 1.4 }}>{b.value}</div>
+                  </div>
+                ))}
+              </div>
+            );
+
+          case "checklist":
+            return <ChecklistBlock key={i} block={block} color={color} bg={bg} />;
+
+          case "steps":
+            return (
+              <div key={i}>
+                {block.title && <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#928E80", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>{block.title}</div>}
+                <div className="bs-steps">
+                  {block.items.map((step, j) => (
+                    <div key={j} className="bs-step">
+                      {j < block.items.length - 1 && (
+                        <div style={{ position: "absolute", left: 18, top: 40, width: 2, height: "calc(100% - 20px)", background: `linear-gradient(180deg, ${color}40, transparent)` }}/>
+                      )}
+                      <div style={{ width: 38, height: 38, borderRadius: "50%", flexShrink: 0, background: `linear-gradient(135deg, ${color}, ${dark})`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "#fff", boxShadow: `0 4px 12px ${color}44` }}>
+                        {j + 1}
+                      </div>
+                      <div style={{ flex: 1, paddingTop: "0.4rem" }}>
+                        <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#141410", marginBottom: "0.3rem" }}>{step.label}</div>
+                        <div style={{ fontSize: "0.8rem", color: "#928E80", lineHeight: 1.6 }}>{step.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case "external":
+            return (
+              <a key={i} href={block.url} target="_blank" rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem 1.25rem", background: "#fff", border: "1px solid rgba(20,20,16,.08)", borderRadius: 14, textDecoration: "none", boxShadow: "0 1px 6px rgba(20,20,16,.04)" }}>
+                {block.favicon && <img src={block.favicon} alt="" width={16} height={16} style={{ borderRadius: 4 }}/>}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#141410" }}>{block.label}</div>
+                  {block.description && <div style={{ fontSize: "0.72rem", color: "#928E80", marginTop: "0.15rem" }}>{block.description}</div>}
+                </div>
+                <IcoExternal />
+              </a>
+            );
+
+          case "download":
+            return (
+              <a key={i} href={block.url} download
+                style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem 1.25rem", background: bg, border: `1.5px solid ${color}30`, borderRadius: 14, textDecoration: "none" }}>
+                <span style={{ fontSize: "1.2rem" }}>📥</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.88rem", fontWeight: 700, color: color }}>{block.label}</div>
+                  {block.size && <div style={{ fontSize: "0.7rem", color: "#928E80", marginTop: "0.1rem" }}>{block.size}</div>}
+                </div>
+              </a>
+            );
+
+          case "profile":
+            return (
+              <div key={i}>
+                {block.title && (
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#928E80", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>{block.title}</div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "0.75rem" }}>
+                  {block.traits.map((t, j) => (
+                    <div key={j} style={{ padding: "1.1rem 1.25rem", background: "#fff", borderRadius: 16, border: "1px solid rgba(20,20,16,.07)", boxShadow: "0 1px 8px rgba(20,20,16,.05)", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      <div style={{ fontSize: "1.4rem" }}>{t.icon}</div>
+                      <div style={{ fontSize: "0.78rem", fontWeight: 800, color: "#141410", letterSpacing: "0.02em" }}>{t.label}</div>
+                      <div style={{ fontSize: "0.72rem", color: "#928E80", lineHeight: 1.55 }}>{t.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case "compare":
+            return (
+              <div key={i}>
+                {block.title && (
+                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#928E80", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.75rem" }}>{block.title}</div>
+                )}
+                <div style={{ borderRadius: 16, overflow: "hidden", border: "1px solid rgba(20,20,16,.08)", boxShadow: "0 1px 8px rgba(20,20,16,.04)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: `1.5fr ${block.columns.map(() => "1fr").join(" ")}`, background: "#141410" }}>
+                    <div style={{ padding: "0.75rem 1rem" }} />
+                    {block.columns.map((col, j) => (
+                      <div key={j} style={{ padding: "0.75rem 1rem", fontSize: "0.7rem", fontWeight: 800, color: col.color ?? color, textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center", borderLeft: "1px solid rgba(255,255,255,.06)" }}>
+                        {col.label}
+                      </div>
+                    ))}
+                  </div>
+                  {block.rows.map((row, j) => (
+                    <div key={j} style={{ display: "grid", gridTemplateColumns: `1.5fr ${block.columns.map(() => "1fr").join(" ")}`, background: j % 2 === 0 ? "#fff" : "#F8F6F1", borderTop: "1px solid rgba(20,20,16,.06)" }}>
+                      <div style={{ padding: "0.75rem 1rem", fontSize: "0.8rem", fontWeight: 600, color: "#38382E" }}>{row.label}</div>
+                      {row.values.map((val, k) => (
+                        <div key={k} style={{ padding: "0.75rem 1rem", fontSize: "0.78rem", color: "#928E80", textAlign: "center", borderLeft: "1px solid rgba(20,20,16,.06)", lineHeight: 1.45 }}>{val}</div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+
+          case "location":
+            return (
+              <div key={i} style={{ borderRadius: 18, overflow: "hidden", border: "1px solid rgba(20,20,16,.08)", boxShadow: "0 2px 12px rgba(20,20,16,.06)" }}>
+                {block.mapUrl ? (
+                  <iframe
+                    src={block.mapUrl}
+                    width="100%" height="220"
+                    style={{ display: "block", border: "none" }}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    title={block.label}
+                  />
+                ) : (
+                  <div style={{ height: 180, background: `linear-gradient(135deg, ${bg} 0%, #E8E4DA 100%)`, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "0.5rem" }}>
+                    <div style={{ fontSize: "2rem" }}>📍</div>
+                    <div style={{ fontSize: "0.75rem", color: "#928E80", fontWeight: 600 }}>{block.label}</div>
+                  </div>
+                )}
+                <div style={{ padding: "0.9rem 1.1rem", background: "#fff", display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: bg, color: color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.85rem", flexShrink: 0 }}>📍</div>
+                  <div>
+                    <div style={{ fontSize: "0.88rem", fontWeight: 700, color: "#141410" }}>{block.label}</div>
+                    {block.address && <div style={{ fontSize: "0.72rem", color: "#928E80", marginTop: "0.1rem" }}>{block.address}</div>}
+                  </div>
+                </div>
+              </div>
+            );
+
+          case "apply":
+            return (
+              <div key={i} style={{ padding: "1.75rem", background: `linear-gradient(135deg, ${dark} 0%, #141410 100%)`, borderRadius: 20, border: `1px solid ${color}30`, boxShadow: `0 4px 24px ${color}18` }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {block.deadline && (
+                    <div style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", fontSize: "0.65rem", fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: color }}>
+                      <span>⏳</span> Date limite : {block.deadline}
+                    </div>
+                  )}
+                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.2rem", fontWeight: 900, color: "#F8F6F1", lineHeight: 1.3 }}>
+                    {block.label}
+                  </div>
+                  {block.note && (
+                    <div style={{ fontSize: "0.78rem", color: "rgba(248,246,241,.5)", lineHeight: 1.6 }}>{block.note}</div>
+                  )}
+                  <a href={block.url} target="_blank" rel="noopener noreferrer"
+                    style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "0.6rem", padding: "0.85rem 1.5rem", background: color, color: "#fff", borderRadius: 12, textDecoration: "none", fontWeight: 700, fontSize: "0.88rem", boxShadow: `0 4px 16px ${color}55`, transition: "opacity .2s", alignSelf: "flex-start" }}>
+                    Postuler maintenant →
+                  </a>
+                </div>
+              </div>
+            );
+
+          default:
+            return null;
+        }
+      })}
+    </div>
+  );
+}
+
 export default function BourseDetailPage({ params }: { params: { slug: string } }) {
   return <BourseClient slug={params.slug} />;
 }
@@ -84,21 +402,16 @@ function BourseClient({ slug }: { slug: string }) {
 
   const [heroVisible, setHeroVisible] = useState(false);
   const [saved, setSaved]             = useState(false);
-  const [checkedDocs, setCheckedDocs] = useState<number[]>([]);
 
   const lc      = LEVEL_COLOR[sc.level] ?? LEVEL_COLOR["Master"];
-  const content = sc.content;
+  const blocks = sc.blocks;
   const daysLeft = daysUntil(sc.deadline);
 
   const related = scholarships.filter((s) => s.id !== sc.id).slice(0, 3);
 
   useEffect(() => { requestAnimationFrame(() => setHeroVisible(true)); }, []);
 
-  const toggleDoc = (i: number) => {
-    setCheckedDocs((prev) =>
-      prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
-    );
-  };
+;
 
   /* Urgence couleur */
   const urgentColor = sc.urgent ? "#B8341E" : "#1A5C40";
@@ -303,222 +616,11 @@ function BourseClient({ slug }: { slug: string }) {
                   </button>
                   <button className="bs-btn"><IcoShare /> Partager</button>
 
-                  {/* Progress checklist */}
-                  <div style={{ marginLeft: "auto", display: "flex",
-                    alignItems: "center", gap: "0.6rem" }}>
-                    <div style={{ width: 80, height: 5, background: "rgba(20,20,16,.1)",
-                      borderRadius: 100, overflow: "hidden" }}>
-                      <div style={{ height: "100%", borderRadius: 100,
-                        background: lc.color,
-                        width: `${(checkedDocs.length / content.documents.length) * 100}%`,
-                        transition: "width .3s" }}/>
-                    </div>
-                    <span style={{ fontSize: "0.6rem", color: "#928E80", fontWeight: 600 }}>
-                      {checkedDocs.length}/{content.documents.length} docs
-                    </span>
-                  </div>
                 </div>
 
-                {/* Section : À propos */}
+                {/* ── Contenu libre en blocs ── */}
                 <RevealWrapper>
-                  <section style={{ paddingTop: "2.5rem" }}>
-                    <div className="bs-section-tag" style={{ color: lc.color }}>
-                      À propos du programme
-                    </div>
-                    <h2 className="bs-h2">Présentation de la bourse</h2>
-                    <div style={{ width: "2.8rem", height: 3, background: lc.color,
-                      borderRadius: 100, margin: "1rem 0 1.5rem" }}/>
-                    <p className="bs-p">{content.description}</p>
-                    <p className="bs-p">{content.mission}</p>
-                  </section>
-                </RevealWrapper>
-
-                {/* Section : Avantages */}
-                <RevealWrapper>
-                  <section style={{ paddingTop: "3rem" }}>
-                    <div className="bs-section-tag" style={{ color: lc.color }}>Ce que couvre la bourse</div>
-                    <h2 className="bs-h2">Avantages & financement</h2>
-                    <div style={{ width: "2.8rem", height: 3, background: lc.color,
-                      borderRadius: 100, margin: "1rem 0 1.75rem" }}/>
-                    <div className="bs-benefits-grid">
-                      {content.benefits.map((b, i) => (
-                        <div key={i} className={`bs-benefit-card ${b.highlight ? "bs-benefit-card--highlight" : ""}`}
-                          style={ b.highlight ? { borderColor: lc.color, background: lc.bg } : {} }>
-                          <div style={{ fontSize: "1.5rem", marginBottom: "0.6rem" }}>{b.icon}</div>
-                          <div style={{ fontSize: "0.6rem", fontWeight: 800,
-                            letterSpacing: "0.12em", textTransform: "uppercase",
-                            color: b.highlight ? lc.color : "#928E80",
-                            marginBottom: "0.3rem" }}>{b.label}</div>
-                          <div style={{ fontSize: "0.88rem", fontWeight: 600,
-                            color: "#141410", lineHeight: 1.4 }}>{b.value}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                </RevealWrapper>
-
-                {/* Section : Éligibilité */}
-                <RevealWrapper>
-                  <section style={{ paddingTop: "3rem" }}>
-                    <div className="bs-section-tag" style={{ color: lc.color }}>Conditions</div>
-                    <h2 className="bs-h2">Critères d'éligibilité</h2>
-                    <div style={{ width: "2.8rem", height: 3, background: lc.color,
-                      borderRadius: 100, margin: "1rem 0 1.75rem" }}/>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                      {content.eligibility.map((c, i) => (
-                        <div key={i} style={{ display: "flex", gap: "0.85rem",
-                          alignItems: "flex-start", padding: "0.9rem 1.1rem",
-                          background: "#fff", borderRadius: 14,
-                          border: "1px solid rgba(20,20,16,.07)",
-                          boxShadow: "0 1px 6px rgba(20,20,16,.04)" }}>
-                          <div style={{ width: 22, height: 22, borderRadius: "50%",
-                            background: lc.bg, color: lc.color,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            flexShrink: 0 }}>
-                            <IcoCheck />
-                          </div>
-                          <span style={{ fontSize: "0.88rem", color: "#38382E",
-                            fontWeight: 400, lineHeight: 1.55 }}>{c}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </section>
-                </RevealWrapper>
-
-                {/* Section : Documents — checklist interactive */}
-                <RevealWrapper>
-                  <section style={{ paddingTop: "3rem" }}>
-                    <div className="bs-section-tag" style={{ color: lc.color }}>Dossier de candidature</div>
-                    <h2 className="bs-h2">Documents requis</h2>
-                    <div style={{ width: "2.8rem", height: 3, background: lc.color,
-                      borderRadius: 100, margin: "1rem 0 0.75rem" }}/>
-                    {/* Progress docs */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem",
-                      marginBottom: "1.5rem" }}>
-                      <div style={{ flex: 1, height: 6, background: "rgba(20,20,16,.08)",
-                        borderRadius: 100, overflow: "hidden" }}>
-                        <div style={{ height: "100%", borderRadius: 100, background: lc.color,
-                          width: `${(checkedDocs.length / content.documents.length) * 100}%`,
-                          transition: "width .3s cubic-bezier(.34,1.56,.64,1)" }}/>
-                      </div>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700,
-                        color: lc.color, flexShrink: 0 }}>
-                        {checkedDocs.length}/{content.documents.length}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
-                      {content.documents.map((doc, i) => {
-                        const checked = checkedDocs.includes(i);
-                        return (
-                          <div key={i} onClick={() => toggleDoc(i)}
-                            style={{ display: "flex", gap: "0.85rem", alignItems: "flex-start",
-                              padding: "1rem 1.15rem",
-                              background: checked ? lc.bg : "#fff",
-                              borderRadius: 14,
-                              border: `1px solid ${checked ? lc.color : "rgba(20,20,16,.07)"}`,
-                              cursor: "pointer", transition: "all .2s",
-                              boxShadow: checked ? "none" : "0 1px 6px rgba(20,20,16,.04)" }}>
-                            {/* Checkbox */}
-                            <div style={{ width: 22, height: 22, borderRadius: 7,
-                              flexShrink: 0, transition: "all .2s",
-                              background: checked ? lc.color : "transparent",
-                              border: `2px solid ${checked ? lc.color : "rgba(20,20,16,.2)"}`,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              color: "#fff" }}>
-                              {checked && <IcoCheck />}
-                            </div>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: "0.88rem", fontWeight: 700,
-                                color: checked ? lc.dark : "#141410",
-                                textDecoration: checked ? "line-through" : "none",
-                                textDecorationColor: lc.color, lineHeight: 1.3,
-                                marginBottom: "0.2rem" }}>
-                                {doc.label}
-                              </div>
-                              <div style={{ fontSize: "0.72rem", color: "#928E80",
-                                lineHeight: 1.5, fontWeight: 400 }}>
-                                {doc.detail}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {checkedDocs.length === content.documents.length && (
-                      <div style={{ marginTop: "1rem", padding: "1rem 1.25rem",
-                        background: lc.bg, border: `1.5px solid ${lc.color}`,
-                        borderRadius: 14, display: "flex", alignItems: "center",
-                        gap: "0.75rem" }}>
-                        <span style={{ fontSize: "1.2rem" }}>🎉</span>
-                        <span style={{ fontSize: "0.85rem", fontWeight: 700, color: lc.dark }}>
-                          Dossier complet ! Vous pouvez maintenant postuler.
-                        </span>
-                      </div>
-                    )}
-                  </section>
-                </RevealWrapper>
-
-                {/* Section : Étapes de candidature */}
-                <RevealWrapper>
-                  <section style={{ paddingTop: "3rem", paddingBottom: "3rem" }}>
-                    <div className="bs-section-tag" style={{ color: lc.color }}>Mode d'emploi</div>
-                    <h2 className="bs-h2">Comment postuler ?</h2>
-                    <div style={{ width: "2.8rem", height: 3, background: lc.color,
-                      borderRadius: 100, margin: "1rem 0 1.75rem" }}/>
-                    <div className="bs-steps">
-                      {content.steps.map((step, i) => (
-                        <div key={i} className="bs-step">
-                          {/* Ligne connectrice */}
-                          {i < content.steps.length - 1 && (
-                            <div style={{ position: "absolute", left: 18,
-                              top: 40, width: 2, height: "calc(100% - 20px)",
-                              background: `linear-gradient(180deg, ${lc.color}40, transparent)` }}/>
-                          )}
-                          <div style={{ width: 38, height: 38, borderRadius: "50%",
-                            flexShrink: 0,
-                            background: `linear-gradient(135deg, ${lc.color}, ${lc.dark})`,
-                            display: "flex", alignItems: "center", justifyContent: "center",
-                            fontFamily: "'Fraunces', Georgia, serif",
-                            fontSize: "0.85rem", fontWeight: 900, color: "#fff",
-                            boxShadow: `0 4px 12px ${lc.color}44` }}>
-                            {step.num}
-                          </div>
-                          <div style={{ flex: 1, paddingTop: "0.5rem" }}>
-                            <div style={{ fontSize: "0.95rem", fontWeight: 700,
-                              color: "#141410", marginBottom: "0.3rem" }}>
-                              {step.label}
-                            </div>
-                            <div style={{ fontSize: "0.8rem", color: "#928E80",
-                              lineHeight: 1.6 }}>
-                              {step.desc}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Tips */}
-                    <div style={{ marginTop: "2rem", padding: "1.5rem 1.75rem",
-                      background: "#141410", borderRadius: 20,
-                      border: "1px solid rgba(248,246,241,.06)" }}>
-                      <div style={{ fontSize: "0.58rem", fontWeight: 800,
-                        letterSpacing: "0.2em", textTransform: "uppercase",
-                        color: "#C08435", marginBottom: "1rem" }}>
-                        💡 Conseils AfriPulse
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem" }}>
-                        {content.tips.map((tip, i) => (
-                          <div key={i} style={{ display: "flex", gap: "0.7rem",
-                            alignItems: "flex-start" }}>
-                            <span style={{ color: "#C08435", fontWeight: 700,
-                              fontSize: "0.7rem", flexShrink: 0, marginTop: "0.15rem" }}>→</span>
-                            <span style={{ fontSize: "0.82rem", color: "rgba(248,246,241,.65)",
-                              lineHeight: 1.6 }}>{tip}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </section>
+                  <BlockRenderer blocks={blocks} color={lc.color} bg={lc.bg} dark={lc.dark} />
                 </RevealWrapper>
               </div>
 
@@ -625,27 +727,7 @@ function BourseClient({ slug }: { slug: string }) {
                   </div>
                 </div>
 
-                {/* ─ Checklist rapide ─ */}
-                <div className="bs-sidebar-block"
-                  style={{ background: "#141410", border: "none" }}>
-                  <div className="bs-sidebar-label" style={{ color: "#C08435" }}>
-                    Ma checklist
-                  </div>
-                  <div style={{ height: 5, background: "rgba(255,255,255,.08)",
-                    borderRadius: 100, overflow: "hidden", marginBottom: "0.85rem" }}>
-                    <div style={{ height: "100%", borderRadius: 100,
-                      background: "#C08435",
-                      width: `${(checkedDocs.length / content.documents.length) * 100}%`,
-                      transition: "width .3s" }}/>
-                  </div>
-                  <div style={{ fontSize: "0.72rem", color: "rgba(248,246,241,.45)",
-                    marginBottom: "0.5rem" }}>
-                    {checkedDocs.length === 0 && "Cochez les docs préparés ci-contre"}
-                    {checkedDocs.length > 0 && checkedDocs.length < content.documents.length &&
-                      `${content.documents.length - checkedDocs.length} document${content.documents.length - checkedDocs.length > 1 ? "s" : ""} restant${content.documents.length - checkedDocs.length > 1 ? "s" : ""}`}
-                    {checkedDocs.length === content.documents.length && "✓ Dossier complet !"}
-                  </div>
-                </div>
+
               </aside>
             </div>
           </div>
