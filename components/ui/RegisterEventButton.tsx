@@ -12,7 +12,7 @@ interface RegisterEventButtonProps {
   bg?:           string;
   variant?:      "full" | "pill";
 }
-
+/* 
 export default function RegisterEventButton({
   eventSlug, eventTitle, eventDate, eventLocation,
   color   = "#1E4DA8",
@@ -91,3 +91,4 @@ export default function RegisterEventButton({
     </button>
   );
 }
+ */
