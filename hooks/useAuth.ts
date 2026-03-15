@@ -197,7 +197,7 @@ export function useApplication(
 /* ══════════════════════════════════════════════════════
    useEventRegistration — inscription + export .ics
 ══════════════════════════════════════════════════════ */
-export function useEventRegistration(eventSlug: string) {
+export function useEventRegistration(eventSlug: string, eventTitle?: string, eventDate?: string, eventLocation?: string) {
   const supabase = getClient();
   const [registered, setRegistered] = useState(false);
   const [loading, setLoading]       = useState(true);
