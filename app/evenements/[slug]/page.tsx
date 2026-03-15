@@ -7,7 +7,6 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import NewsletterBand from "@/components/sections/NewsletterBand";
 import RevealWrapper from "@/components/ui/RevealWrapper";
-import RegisterEventButton from "@/components/ui/RegisterEventButton";
 import { events, type Block } from "@/lib/data";
 import { createBrowserClient } from "@supabase/ssr";
 
