@@ -1,55 +1,261 @@
 "use client";
-// hooks/useAuth.ts — Hook d'authentification côté client
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { User } from "@supabase/supabase-js";
-import type { Profile } from "@/types/database";
 
+/**
+ * hooks/useAuth.ts
+ * Tous les types viennent de @/types — rien n'est redéfini ici.
+ * Ré-exporté pour rétrocompatibilité avec le reste du projet.
+ */
+
+import { useState, useEffect, useCallback } from "react";
+import { createBrowserClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
+
+import type {
+  UserRole,
+  Profile,
+  ContentType,
+  ApplicationStatus,
+} from "@/types";
+
+import {
+  STATUS_LABEL,
+  STATUS_COLOR,
+} from "@/types";
+
+/* ── Ré-exports pour rétrocompatibilité ── */
+export type { UserRole, Profile, ContentType, ApplicationStatus };
+export { STATUS_LABEL, STATUS_COLOR };
+
+/* ── Client Supabase navigateur ── */
+function getClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   useAuth — authentification + profil + rôles
+══════════════════════════════════════════════════════ */
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const supabase = getClient();
+  const [user, setUser]       = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const supabase = createClient();
 
   useEffect(() => {
-    // Récupérer la session actuelle
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else setLoading(false);
+    supabase.auth.getUser().then(({ data }) => {
+      setUser(data.user);
+      if (data.user) {
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.user.id)
+          .single()
+          .then(({ data: p }) => { setProfile(p); setLoading(false); });
+      } else {
+        setLoading(false);
+      }
     });
 
-    // Écouter les changements d'auth
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) fetchProfile(session.user.id);
-        else { setProfile(null); setLoading(false); }
-      }
-    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) { setProfile(null); setLoading(false); }
+    });
 
     return () => subscription.unsubscribe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function fetchProfile(userId: string) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .single();
-    setProfile(data);
-    setLoading(false);
-  }
-
-  async function signOut() {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-  }
+  }, [supabase]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isAdmin = profile?.role === "admin";
-  const isEditor = profile?.role === "editor" || isAdmin;
+  return {
+    user,
+    profile,
+    loading,
+    signOut,
+    isLoggedIn: !!user,
+    isAdmin:    profile?.role === "admin",
+    isEditor:   profile?.role === "editor" || profile?.role === "admin",
+  };
+}
 
-  return { user, profile, loading, signOut, isAdmin, isEditor };
+/* ══════════════════════════════════════════════════════
+   useSave — état de sauvegarde d'un contenu
+══════════════════════════════════════════════════════ */
+export function useSave(contentType: ContentType, contentSlug: string) {
+  const supabase = getClient();
+  const [saved, setSaved]   = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { setLoading(false); return; }
+      setLoggedIn(true);
+      const { data: row } = await supabase
+        .from("saves")
+        .select("id")
+        .eq("user_id", data.user.id)
+        .eq("content_type", contentType)
+        .eq("content_slug", contentSlug)
+        .maybeSingle();
+      setSaved(!!row);
+      setLoading(false);
+    });
+  }, [contentType, contentSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = useCallback(async (title?: string, meta?: Record<string, unknown>) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (saved) {
+      setSaved(false);
+      await supabase.from("saves")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("content_type", contentType)
+        .eq("content_slug", contentSlug);
+    } else {
+      setSaved(true);
+      await supabase.from("saves").insert({
+        user_id: user.id,
+        content_type: contentType,
+        content_slug: contentSlug,
+        content_title: title ?? null,
+        content_meta: meta ?? null,
+      });
+    }
+  }, [saved, contentType, contentSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { saved, loading, toggle, isLoggedIn };
+}
+
+/* ══════════════════════════════════════════════════════
+   useApplication — suivi de candidature
+══════════════════════════════════════════════════════ */
+export function useApplication(
+  contentType:   "scholarship" | "opportunity",
+  contentSlug:   string,
+  contentTitle?: string,
+  deadline?:     string,
+) {
+  const supabase = getClient();
+  const [application, setApplication] = useState<{ id: string; status: ApplicationStatus; notes: string | null } | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [isLoggedIn, setLoggedIn]     = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { setLoading(false); return; }
+      setLoggedIn(true);
+      const { data: row } = await supabase
+        .from("applications")
+        .select("id, status, notes")
+        .eq("user_id", data.user.id)
+        .eq("content_type", contentType)
+        .eq("content_slug", contentSlug)
+        .maybeSingle();
+      setApplication(row ?? null);
+      setLoading(false);
+    });
+  }, [contentType, contentSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /* upsert — envoie title et deadline depuis les props du hook */
+  const upsert = useCallback(async (status: ApplicationStatus, notes?: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const payload = {
+      user_id:       user.id,
+      content_type:  contentType,
+      content_slug:  contentSlug,
+      content_title: contentTitle ?? null,
+      content_meta:  {},
+      status,
+      notes:         notes ?? null,
+      /* deadline est de type DATE en base — on ne l'envoie pas
+         depuis une string française non parseable ("15 Mar 2025").
+         Elle peut être mise à jour séparément si nécessaire. */
+    };
+    const { data } = await supabase
+      .from("applications")
+      .upsert(payload, { onConflict: "user_id,content_type,content_slug" })
+      .select("id, status, notes")
+      .single();
+    if (data) setApplication(data);
+  }, [contentType, contentSlug, contentTitle, deadline]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const remove = useCallback(async () => {
+    if (!application) return;
+    await supabase.from("applications").delete().eq("id", application.id);
+    setApplication(null);
+  }, [application]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { application, loading, upsert, remove, isLoggedIn };
+}
+
+/* ══════════════════════════════════════════════════════
+   useEventRegistration — inscription + export .ics
+══════════════════════════════════════════════════════ */
+export function useEventRegistration(eventSlug: string) {
+  const supabase = getClient();
+  const [registered, setRegistered] = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const [isLoggedIn, setLoggedIn]   = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) { setLoading(false); return; }
+      setLoggedIn(true);
+      const { data: row } = await supabase
+        .from("event_registrations")
+        .select("id")
+        .eq("user_id", data.user.id)
+        .eq("event_slug", eventSlug)
+        .maybeSingle();
+      setRegistered(!!row);
+      setLoading(false);
+    });
+  }, [eventSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = useCallback(async (title?: string, date?: string, location?: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (registered) {
+      setRegistered(false);
+      await supabase.from("event_registrations")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("event_slug", eventSlug);
+    } else {
+      setRegistered(true);
+      await supabase.from("event_registrations").insert({
+        user_id: user.id,
+        event_slug: eventSlug,
+        event_title: title ?? null,
+        event_date: date ?? null,
+        event_location: location ?? null,
+      });
+    }
+  }, [registered, eventSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const exportICS = useCallback((title: string, date: string, location?: string) => {
+    const dt  = date.replace(/-/g, "");
+    const ics = [
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AfriPulse//FR",
+      "BEGIN:VEVENT",
+      `UID:${eventSlug}@afripulse.com`,
+      `DTSTART;VALUE=DATE:${dt}`,
+      `DTEND;VALUE=DATE:${dt}`,
+      `SUMMARY:${title}`,
+      location ? `LOCATION:${location}` : "",
+      `URL:https://afripulse.com/evenements/${eventSlug}`,
+      "END:VEVENT", "END:VCALENDAR",
+    ].filter(Boolean).join("\r\n");
+    const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
+    Object.assign(document.createElement("a"), { href: url, download: `${eventSlug}.ics` }).click();
+    URL.revokeObjectURL(url);
+  }, [eventSlug]);
+
+  return { registered, loading, toggle, exportICS, isLoggedIn };
 }

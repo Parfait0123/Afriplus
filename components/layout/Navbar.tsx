@@ -92,15 +92,47 @@ export default function Navbar() {
                   {(profile?.role === "admin" || profile?.role === "editor") && (
                     <Link href="/admin" className="nav-btn-admin">Admin</Link>
                   )}
-                  <div style={{
-                    width: 32, height: 32, borderRadius: "50%",
-                    background: "linear-gradient(135deg, #C08435, #E09B48)",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.85rem", fontWeight: 900,
-                    color: "#fff", cursor: "pointer",
-                  }} title={profile?.full_name || user.email}>
-                    {(profile?.full_name || user.email || "U").charAt(0).toUpperCase()}
-                  </div>
+                  <Link href="/dashboard" style={{ textDecoration: "none", display: "block" }}>
+  <div 
+    style={{
+      width: 34, 
+      height: 34, 
+      borderRadius: "50%",
+      overflow: "hidden", // Important pour l'image
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center",
+      cursor: "pointer",
+      transition: "all 0.3s ease",
+      // Style "Luxe" par défaut (bordure fine dorée)
+      border: "1.5px solid #C08435",
+      boxShadow: "0 4px 12px rgba(192, 132, 53, 0.15)",
+      background: "#141410", // Fond noir profond pour le luxe
+    }}
+    onMouseEnter={(e) => e.currentTarget.style.transform = "scale(1.08)"}
+    onMouseLeave={(e) => e.currentTarget.style.transform = "scale(1)"}
+    title={profile?.full_name || "Tableau de bord"}
+  >
+    {profile?.avatar_url ? (
+      <img 
+        src={profile.avatar_url} 
+        alt="Avatar" 
+        style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+      />
+    ) : (
+      <span style={{
+        fontFamily: "'Fraunces', serif",
+        fontSize: "0.85rem",
+        fontWeight: 800,
+        color: "#C08435", // Texte doré sur fond noir
+        letterSpacing: "0.02em"
+      }}>
+        {(profile?.full_name || user.email || "U").charAt(0).toUpperCase()}
+      </span>
+    )}
+  </div>
+</Link>
+
                   <button onClick={signOut} className="nav-btn-ghost">Déconnexion</button>
                 </div>
               ) : (

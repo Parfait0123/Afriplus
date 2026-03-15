@@ -58,6 +58,7 @@ export interface Scholarship {
   title: string;
   organization: string;
   country: string;
+  applyUrl ?: string | "#";
   flag: string;
   level: ScholarshipLevel;
   domain: string;
@@ -76,6 +77,7 @@ export interface Opportunity {
   slug: string;
   title: string;
   company: string;
+  applyUrl ?: string | "#";
   companyInitials: string;
   location: string;
   country: string;
@@ -101,6 +103,7 @@ export interface Event {
   type: EventType;
   location: string;
   country: string;
+  eventUrl ?: string | "#";
   flag: string;
   day: string;
   month: string;
@@ -2533,6 +2536,7 @@ export const opportunities: Opportunity[] = [
     remote: false,
     imageGradient: "linear-gradient(135deg, #080010 0%, #100020 50%, #1a0030 100%)",
     featured: false,
+    applyUrl: "https://www.bankofafrica.ma/careers/data-scientist",
     blocks: [
       { type: "paragraph", text: "Bank of Africa recrute un Data Scientist pour son équipe Data & IA à Casablanca. Vous développerez des modèles à fort impact opérationnel — scoring crédit, détection de fraude, analyse comportementale — au service de 5 millions de clients sur le continent." },
       { type: "heading", text: "Avantages & conditions", level: 2 },
@@ -2580,6 +2584,7 @@ export const events: Event[] = [
     id: "1",
     slug: "africatech-summit-2026",
     title: "AfricaTech Summit 2026",
+    eventUrl : "https://non-stop-chat.vercel.app/", 
     type: "Conférence",
     location: "Nairobi",
     country: "Kenya",
