@@ -441,7 +441,8 @@ export default function EvenementsPage() {
                 const isWide = i % 7 === 0;
                 return (
                   <Link key={ev.id} href={`/evenements/${ev.slug}`}
-                    style={{ textDecoration:"none", gridColumn: isWide ? "span 2" : "span 1" }}>
+                    className={isWide ? "nw-grid-col-wide" : ""}
+                    style={{ textDecoration:"none" }}>
                     <article className={`nw-card ${isWide ? "nw-card--wide" : ""}`}>
                       <div className={`nw-card-img ${isWide ? "nw-card-img--wide" : ""}`}
                         style={{ background: ev.imageGradient }}>
