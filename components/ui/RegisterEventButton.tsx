@@ -12,7 +12,7 @@ interface RegisterEventButtonProps {
   bg?:           string;
   variant?:      "full" | "pill";
 }
-/* 
+
 export default function RegisterEventButton({
   eventSlug, eventTitle, eventDate, eventLocation,
   color   = "#1E4DA8",
@@ -63,7 +63,7 @@ export default function RegisterEventButton({
             📅 Ajouter au calendrier
           </button>
         )}
-        <button onClick={toggle} style={{
+        <button onClick={() => toggle()} style={{
           flex: eventDate ? "0 0 auto" : 1,
           padding: "0.6rem 0.85rem", borderRadius: 10,
           background: "#FAEBE8", border: "none",
@@ -91,4 +91,3 @@ export default function RegisterEventButton({
     </button>
   );
 }
- */

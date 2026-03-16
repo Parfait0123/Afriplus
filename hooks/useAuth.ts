@@ -84,7 +84,7 @@ export function useAuth() {
 /* ══════════════════════════════════════════════════════
    useSave — état de sauvegarde d'un contenu
 ══════════════════════════════════════════════════════ */
-export function useSave(contentType: ContentType, contentSlug: string) {
+export function useSave(contentType: ContentType, contentSlug: string, contentTitle?: string, contentMeta?: Record<string, unknown>) {
   const supabase = getClient();
   const [saved, setSaved]   = useState(false);
   const [loading, setLoading] = useState(true);
@@ -106,7 +106,7 @@ export function useSave(contentType: ContentType, contentSlug: string) {
     });
   }, [contentType, contentSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggle = useCallback(async (title?: string, meta?: Record<string, unknown>) => {
+  const toggle = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     if (saved) {
@@ -122,11 +122,11 @@ export function useSave(contentType: ContentType, contentSlug: string) {
         user_id: user.id,
         content_type: contentType,
         content_slug: contentSlug,
-        content_title: title ?? null,
-        content_meta: meta ?? null,
+        content_title: contentTitle ?? null,
+        content_meta: contentMeta ?? null,
       });
     }
-  }, [saved, contentType, contentSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [saved, contentType, contentSlug, contentTitle, contentMeta]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { saved, loading, toggle, isLoggedIn };
 }
@@ -218,7 +218,7 @@ export function useEventRegistration(eventSlug: string, eventTitle?: string, eve
     });
   }, [eventSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const toggle = useCallback(async (title?: string, date?: string, location?: string) => {
+  const toggle = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     if (registered) {
@@ -232,30 +232,31 @@ export function useEventRegistration(eventSlug: string, eventTitle?: string, eve
       await supabase.from("event_registrations").insert({
         user_id: user.id,
         event_slug: eventSlug,
-        event_title: title ?? null,
-        event_date: date ?? null,
-        event_location: location ?? null,
+        event_title: eventTitle ?? null,
+        event_date: eventDate ?? null,
+        event_location: eventLocation ?? null,
       });
     }
-  }, [registered, eventSlug]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [registered, eventSlug, eventTitle, eventDate, eventLocation]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const exportICS = useCallback((title: string, date: string, location?: string) => {
-    const dt  = date.replace(/-/g, "");
+  const exportICS = useCallback(() => {
+    if (!eventDate) return;
+    const dt  = eventDate.replace(/-/g, "");
     const ics = [
       "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AfriPulse//FR",
       "BEGIN:VEVENT",
       `UID:${eventSlug}@afripulse.com`,
       `DTSTART;VALUE=DATE:${dt}`,
       `DTEND;VALUE=DATE:${dt}`,
-      `SUMMARY:${title}`,
-      location ? `LOCATION:${location}` : "",
+      `SUMMARY:${eventTitle ?? eventSlug}`,
+      eventLocation ? `LOCATION:${eventLocation}` : "",
       `URL:https://afripulse.com/evenements/${eventSlug}`,
       "END:VEVENT", "END:VCALENDAR",
     ].filter(Boolean).join("\r\n");
     const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
     Object.assign(document.createElement("a"), { href: url, download: `${eventSlug}.ics` }).click();
     URL.revokeObjectURL(url);
-  }, [eventSlug]);
+  }, [eventSlug, eventTitle, eventDate, eventLocation]);
 
   return { registered, loading, toggle, exportICS, isLoggedIn };
 }

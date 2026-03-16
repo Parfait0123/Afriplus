@@ -56,7 +56,7 @@ export default function SaveButton({
 
   return (
     <button
-      onClick={toggle}
+      onClick={() => toggle()}
       style={{
         ...baseStyle,
         border:     `1px solid ${saved ? color : "rgba(20,20,16,.1)"}`,
