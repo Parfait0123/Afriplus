@@ -116,7 +116,7 @@ export default function EvenementsPage() {
   return (
     <>
       <Navbar />
-      <main style={{ background:"#EEEADE" }}>
+      <main style={{ background:"#EEEADE", overflowX:"hidden" }}>
 
         {/* ══ MASTHEAD ══════════════════════════════ */}
         <div style={{ background:"#141410", paddingTop:"clamp(4.5rem,8vh,6.5rem)" }}>
@@ -276,9 +276,10 @@ export default function EvenementsPage() {
                   {/* Jour fantôme géant */}
                   <div style={{ position:"absolute", bottom:"-2.5rem", right:"0",
                     fontFamily:"'Fraunces', Georgia, serif",
-                    fontSize:"clamp(10rem,20vw,16rem)", fontWeight:900,
+                    fontSize:"clamp(6rem,14vw,12rem)", fontWeight:900,
                     color:"rgba(255,255,255,.05)", lineHeight:1,
-                    letterSpacing:"-0.06em", pointerEvents:"none" }}>
+                    letterSpacing:"-0.06em", pointerEvents:"none",
+                    overflow:"hidden", maxWidth:"100%" }}>
                     {spotlight.day}
                   </div>
                   {/* Flag */}
@@ -311,7 +312,7 @@ export default function EvenementsPage() {
                   </div>
                 </div>
                 <div style={{ position:"absolute", top:0,
-                  left:-10, width:4,
+                  left:0, width:4,
                   height:"100%", background:"#C08435" }}/>
               </div>
             </Link>
