@@ -522,14 +522,7 @@ export default function EvenementsPage() {
       <NewsletterBand />
       <Footer />
 
-      <style>{`
-        .ev-agenda-row:hover { background: rgba(20,20,16,.033) !important; }
 
-        @media (max-width: 640px) {
-          .ev-agenda-row { grid-template-columns: 52px 1fr !important; }
-          .ev-cta { display: none; }
-        }
-      `}</style>
     </>
   );
 }
