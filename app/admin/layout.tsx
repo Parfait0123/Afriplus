@@ -5,6 +5,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ToastProvider } from "@/components/ui/Toast";
 import { useState, useEffect } from "react";
+import { Suspense } from "react";
+import NavigationProgress from "@/components/ui/NavigationProgress";
+
 
 /* ══════════════════════════════════════════════
    NAV ITEMS
@@ -20,7 +23,7 @@ const NAV = [
   {
     section: "Contenu",
     items: [
-      { href: "/admin/articles",    label: "Actualités",       icon: IcoNews,      exact: false },
+      { href: "/admin/actualites",    label: "Actualités",       icon: IcoNews,      exact: false },
       { href: "/admin/bourses",     label: "Bourses",          icon: IcoGrad,      exact: false },
       { href: "/admin/opportunites",label: "Opportunités",     icon: IcoBrief,     exact: false },
       { href: "/admin/evenements",  label: "Événements",       icon: IcoCal,       exact: false },
@@ -71,6 +74,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         background: "#F0EDE4",
         fontFamily: "'DM Sans', system-ui, sans-serif",
       }}>
+ <Suspense fallback={null}>
+        <NavigationProgress />
+      </Suspense>
 
         {/* ── OVERLAY MOBILE ── */}
         {mobileOpen && (

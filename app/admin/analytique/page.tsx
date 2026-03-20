@@ -35,6 +35,14 @@ interface TopItem {
   id: string; title: string; slug: string; type: string; saves: number; views?: number;
 }
 
+/* ── Types pour les données Supabase brutes ── */
+interface RowCreatedAt   { created_at: string; }
+interface RowCategory    { category: string | null; }
+interface RowSaveItem    { content_slug: string; content_title: string | null; content_type: string; }
+interface RowPublished   { id: string; published: boolean; }
+interface RowUrgent      { id: string; urgent: boolean; }
+interface RowConfirmed   { id: string; confirmed: boolean; }
+
 /* ══ PALETTE COULEURS ═══════════════════════════════════════ */
 const PALETTE = {
   gold:   "#C08435",
@@ -59,7 +67,7 @@ const IcoArrow  = ({ c = PALETTE.muted }: { c?: string }) => <svg width="14" hei
 
 /* ══ GRAPHIQUE LIGNE SVG PUR ════════════════════════════════ */
 function LineChart({
-  data, color, height = 120, width = 400, gradient = true, label,
+  data, color, height = 120, width = 400, gradient = true,
 }: {
   data: TimePoint[]; color: string; height?: number; width?: number;
   gradient?: boolean; label?: string;
@@ -88,7 +96,6 @@ function LineChart({
   const pathD    = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
   const fillPath = `${pathD} L${pts[pts.length - 1].x},${pad.t + h} L${pts[0].x},${pad.t + h} Z`;
 
-  // Grilles horizontales
   const gridLines = [0, 0.25, 0.5, 0.75, 1].map(f => ({
     y: pad.t + h - f * h,
     val: Math.round(min + f * range),
@@ -103,7 +110,6 @@ function LineChart({
         </linearGradient>
       </defs>
 
-      {/* Grilles */}
       {gridLines.map((g, i) => (
         <g key={i}>
           <line x1={pad.l} y1={g.y} x2={pad.l + w} y2={g.y} stroke="rgba(20,20,16,.06)" strokeWidth="1" strokeDasharray={i > 0 ? "4 4" : "none"} />
@@ -113,8 +119,7 @@ function LineChart({
         </g>
       ))}
 
-      {/* Étiquettes X */}
-      {data.filter((_, i) => i % Math.ceil(data.length / 6) === 0 || i === data.length - 1).map((d, i, arr) => {
+      {data.filter((_, i) => i % Math.ceil(data.length / 6) === 0 || i === data.length - 1).map((d, i) => {
         const idx = data.indexOf(d);
         const x   = pad.l + (idx / (data.length - 1)) * w;
         const lbl = new Date(d.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
@@ -123,13 +128,8 @@ function LineChart({
         );
       })}
 
-      {/* Aire remplie */}
       {gradient && <path d={fillPath} fill={`url(#grad-${color.replace("#","")})`} />}
-
-      {/* Ligne principale */}
       <path d={pathD} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-
-      {/* Points */}
       {pts.map((p, i) => (
         <circle key={i} cx={p.x} cy={p.y} r="3" fill={color} stroke="#fff" strokeWidth="1.5" />
       ))}
@@ -178,7 +178,7 @@ function DonutChart({
   const cx    = size / 2, cy = size / 2;
   const circ  = 2 * Math.PI * r;
 
-  let offset = -circ / 4; // start at top
+  let offset = -circ / 4;
 
   return (
     <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -269,14 +269,14 @@ function SH({ title, sub, action, href }: { title: string; sub?: string; action?
 /* ══ PAGE PRINCIPALE ════════════════════════════════════════ */
 export default function AnalytiquePage() {
   const sb = createClient();
-  const [stats,    setStats]   = useState<GlobalStats | null>(null);
-  const [breaking, setBreaking]= useState<ContentBreak[]>([]);
-  const [topSaves, setTopSaves]= useState<TopItem[]>([]);
-  const [regByDay, setRegByDay]= useState<TimePoint[]>([]);
-  const [savesByDay,setSavesByDay]= useState<TimePoint[]>([]);
-  const [catDist,  setCatDist] = useState<{ label: string; value: number; color: string }[]>([]);
-  const [loading,  setLoading] = useState(true);
-  const [period,   setPeriod]  = useState<30 | 60 | 90>(30);
+  const [stats,      setStats]      = useState<GlobalStats | null>(null);
+  const [breaking,   setBreaking]   = useState<ContentBreak[]>([]);
+  const [topSaves,   setTopSaves]   = useState<TopItem[]>([]);
+  const [regByDay,   setRegByDay]   = useState<TimePoint[]>([]);
+  const [savesByDay, setSavesByDay] = useState<TimePoint[]>([]);
+  const [catDist,    setCatDist]    = useState<{ label: string; value: number; color: string }[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [period,     setPeriod]     = useState<30 | 60 | 90>(30);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -300,18 +300,33 @@ export default function AnalytiquePage() {
         sb.from("applications").select("id", { count: "exact" }),
         sb.from("event_registrations").select("id", { count: "exact" }),
         // Timeline saves sur la période
-        sb.from("saves").select("created_at").gte("created_at", sinceISO).order("created_at"),
+        sb.from("saves")
+          .select("created_at")
+          .gte("created_at", sinceISO)
+          .order("created_at"),
         // Timeline abonnés sur la période
-        sb.from("newsletter_subscribers").select("created_at").gte("created_at", sinceISO).order("created_at"),
+        sb.from("newsletter_subscribers")
+          .select("created_at")
+          .gte("created_at", sinceISO)
+          .order("created_at"),
         // Répartition catégories articles
-        sb.from("articles").select("category").eq("published", true),
+        sb.from("articles")
+          .select("category")
+          .eq("published", true),
         // Top contenus sauvegardés
-        sb.from("saves").select("content_type,content_slug,content_title").gte("created_at", sinceISO),
+        sb.from("saves")
+          .select("content_type,content_slug,content_title")
+          .gte("created_at", sinceISO),
       ]);
 
-      const artData = artR.data ?? [];
-      const bsData  = bsR.data ?? [];
-      const subData = subR.data ?? [];
+      /* ── casts explicites pour éviter l'inférence `never[]` ── */
+      const artData     = (artR.data     ?? []) as RowPublished[];
+      const bsData      = (bsR.data      ?? []) as RowUrgent[];
+      const subData     = (subR.data     ?? []) as RowConfirmed[];
+      const savRows     = (savTimeline.data  ?? []) as RowCreatedAt[];
+      const regRows     = (regTimeline.data  ?? []) as RowCreatedAt[];
+      const catRows     = (artCat.data   ?? []) as RowCategory[];
+      const topSavesRows= (topSavesR.data ?? []) as RowSaveItem[];
 
       setStats({
         totalContent:     (artR.count ?? 0) + (bsR.count ?? 0) + (opR.count ?? 0) + (evR.count ?? 0),
@@ -320,25 +335,19 @@ export default function AnalytiquePage() {
         totalSaves:       savR.count ?? 0,
         totalApps:        appR.count ?? 0,
         totalEventRegs:   regR.count ?? 0,
-        published:        artData.filter((a: any) => a.published).length,
-        unpublished:      artData.filter((a: any) => !a.published).length,
-        urgent:           bsData.filter((b: any) => b.urgent).length,
-        confirmedAbonnes: subData.filter((s: any) => s.confirmed).length,
+        published:        artData.filter(a => a.published).length,
+        unpublished:      artData.filter(a => !a.published).length,
+        urgent:           bsData.filter(b => b.urgent).length,
+        confirmedAbonnes: subData.filter(s => s.confirmed).length,
       });
 
-      // Timeline saves : agréger par jour
-      const savMap: Record<string, number> = {};
-      for (const s of (savTimeline.data ?? [])) {
-        const day = s.created_at.slice(0, 10);
-        savMap[day] = (savMap[day] ?? 0) + 1;
-      }
-      setRegByDay(buildTimeline(regTimeline.data ?? [], period));
-      setSavesByDay(buildTimeline(savTimeline.data ?? [], period));
+      setRegByDay(buildTimeline(regRows, period));
+      setSavesByDay(buildTimeline(savRows, period));
 
       // Répartition catégories
       const catMap: Record<string, number> = {};
-      for (const a of (artCat.data ?? [])) {
-        catMap[a.category] = (catMap[a.category] ?? 0) + 1;
+      for (const a of catRows) {
+        if (a.category) catMap[a.category] = (catMap[a.category] ?? 0) + 1;
       }
       const catColors: Record<string, string> = {
         "Politique": PALETTE.blue, "Économie": PALETTE.gold, "Tech": PALETTE.green,
@@ -353,15 +362,15 @@ export default function AnalytiquePage() {
 
       // Répartition du contenu
       setBreaking([
-        { label: "Actualités",   count: artR.count ?? 0,  published: artData.filter((a:any)=>a.published).length, color: PALETTE.gold  },
-        { label: "Bourses",      count: bsR.count ?? 0,   published: bsData.filter((b:any)=>!b.urgent).length,   color: PALETTE.green },
-        { label: "Opportunités", count: opR.count ?? 0,   published: opR.count ?? 0,                             color: PALETTE.blue  },
-        { label: "Événements",  count: evR.count ?? 0,   published: evR.count ?? 0,                             color: PALETTE.brown },
+        { label: "Actualités",   count: artR.count ?? 0, published: artData.filter(a => a.published).length,  color: PALETTE.gold  },
+        { label: "Bourses",      count: bsR.count  ?? 0, published: bsData.filter(b => !b.urgent).length,    color: PALETTE.green },
+        { label: "Opportunités", count: opR.count  ?? 0, published: opR.count ?? 0,                          color: PALETTE.blue  },
+        { label: "Événements",   count: evR.count  ?? 0, published: evR.count ?? 0,                          color: PALETTE.brown },
       ]);
 
       // Top contenus par sauvegardes
       const slugMap: Record<string, { title: string; type: string; count: number }> = {};
-      for (const s of (topSavesR.data ?? [])) {
+      for (const s of topSavesRows) {
         const k = s.content_slug;
         if (!slugMap[k]) slugMap[k] = { title: s.content_title ?? s.content_slug, type: s.content_type, count: 0 };
         slugMap[k].count++;
@@ -379,8 +388,8 @@ export default function AnalytiquePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // ── Helpers ──────────────────────────────────────────────
-  function buildTimeline(rows: { created_at: string }[], days: number): TimePoint[] {
+  // ── Helper timeline ──────────────────────────────────────
+  function buildTimeline(rows: RowCreatedAt[], days: number): TimePoint[] {
     const map: Record<string, number> = {};
     for (const r of rows) { const d = r.created_at.slice(0, 10); map[d] = (map[d] ?? 0) + 1; }
     const result: TimePoint[] = [];
@@ -404,12 +413,11 @@ export default function AnalytiquePage() {
   const totalContent = stats?.totalContent ?? 0;
   const engagement   = (stats?.totalSaves ?? 0) + (stats?.totalApps ?? 0) + (stats?.totalEventRegs ?? 0);
 
-  /* ─ Nav sous-pages ──────────────────────────────────────── */
   const subNav = [
-    { href: "/admin/analytique",          label: "Vue d'ensemble", exact: true  },
-    { href: "/admin/analytique/contenu",  label: "Contenu"                      },
-    { href: "/admin/analytique/audience", label: "Audience"                     },
-    { href: "/admin/analytique/engagement", label: "Engagement"                 },
+    { href: "/admin/analytique",            label: "Vue d'ensemble" },
+    { href: "/admin/analytique/contenu",    label: "Contenu"        },
+    { href: "/admin/analytique/audience",   label: "Audience"       },
+    { href: "/admin/analytique/engagement", label: "Engagement"     },
   ];
 
   return (
@@ -427,17 +435,16 @@ export default function AnalytiquePage() {
             </h1>
             <p className="an-header-sub">Performance, audience et engagement — données en temps réel</p>
           </div>
-          {/* Sélecteur période */}
           <div className="an-period-sel">
             {([30, 60, 90] as const).map(p => (
-              <button key={p} onClick={() => setPeriod(p)} className={`an-period-btn ${period === p ? "an-period-btn--active" : ""}`}>
+              <button key={p} onClick={() => setPeriod(p)}
+                className={`an-period-btn${period === p ? " an-period-btn--active" : ""}`}>
                 {p}j
               </button>
             ))}
           </div>
         </div>
 
-        {/* Sous-navigation */}
         <div className="an-subnav">
           {subNav.map(n => (
             <Link key={n.href} href={n.href} className="an-subnav-link an-subnav-link--active">
@@ -448,7 +455,6 @@ export default function AnalytiquePage() {
       </div>
 
       <div className="an-body">
-
         {loading ? (
           <div className="an-loading">
             <div className="an-loading-ring" />
@@ -456,21 +462,18 @@ export default function AnalytiquePage() {
           </div>
         ) : (
           <>
-
             {/* ── KPI GRID ─────────────────────────────────── */}
             <div className="an-kpi-grid">
-              <KpiMini label="Contenus publiés"   value={stats?.totalContent ?? 0}  sub={`${stats?.published ?? 0} actifs`}           color={PALETTE.gold}  Icon={IcoFile}  delta={8}  />
-              <KpiMini label="Membres inscrits"   value={stats?.totalUsers ?? 0}    sub="comptes actifs"                               color={PALETTE.blue}  Icon={IcoUsers} delta={15} />
-              <KpiMini label="Abonnés newsletter" value={stats?.totalAbonnes ?? 0}  sub={`${stats?.confirmedAbonnes ?? 0} confirmés`}  color={PALETTE.green} Icon={IcoMail}  delta={22} />
-              <KpiMini label="Sauvegardes"        value={stats?.totalSaves ?? 0}    sub="contenus mis en favoris"                      color={PALETTE.teal}  Icon={IcoHeart} delta={9}  />
-              <KpiMini label="Candidatures"       value={stats?.totalApps ?? 0}     sub="dossiers suivis"                              color={PALETTE.brown} Icon={IcoBrief} delta={12} />
-              <KpiMini label="Inscriptions évèn." value={stats?.totalEventRegs ?? 0} sub="participants enregistrés"                   color={PALETTE.red}   Icon={IcoTrend} delta={6}  />
+              <KpiMini label="Contenus publiés"    value={stats?.totalContent ?? 0}   sub={`${stats?.published ?? 0} actifs`}          color={PALETTE.gold}  Icon={IcoFile}  delta={8}  />
+              <KpiMini label="Membres inscrits"    value={stats?.totalUsers ?? 0}     sub="comptes actifs"                              color={PALETTE.blue}  Icon={IcoUsers} delta={15} />
+              <KpiMini label="Abonnés newsletter"  value={stats?.totalAbonnes ?? 0}   sub={`${stats?.confirmedAbonnes ?? 0} confirmés`} color={PALETTE.green} Icon={IcoMail}  delta={22} />
+              <KpiMini label="Sauvegardes"         value={stats?.totalSaves ?? 0}     sub="contenus mis en favoris"                     color={PALETTE.teal}  Icon={IcoHeart} delta={9}  />
+              <KpiMini label="Candidatures"        value={stats?.totalApps ?? 0}      sub="dossiers suivis"                             color={PALETTE.brown} Icon={IcoBrief} delta={12} />
+              <KpiMini label="Inscriptions évèn."  value={stats?.totalEventRegs ?? 0} sub="participants enregistrés"                    color={PALETTE.red}   Icon={IcoTrend} delta={6}  />
             </div>
 
             {/* ── TIMELINES ────────────────────────────────── */}
             <div className="an-grid-2">
-
-              {/* Saves dans le temps */}
               <div className="an-card">
                 <SH title="Sauvegardes" sub={`Évolution sur ${period} jours`} />
                 <div style={{ marginTop: "0.5rem" }}>
@@ -484,7 +487,6 @@ export default function AnalytiquePage() {
                 </div>
               </div>
 
-              {/* Abonnés dans le temps */}
               <div className="an-card">
                 <SH title="Nouvelles inscriptions newsletter" sub={`Évolution sur ${period} jours`} />
                 <div style={{ marginTop: "0.5rem" }}>
@@ -494,7 +496,11 @@ export default function AnalytiquePage() {
                   <span className="an-chip" style={{ background: `${PALETTE.green}14`, color: PALETTE.green }}>
                     {formatNumber(stats?.totalAbonnes ?? 0)} abonnés
                   </span>
-                  <span style={{ fontSize: "0.65rem", color: PALETTE.muted }}>Taux de confirmation : {stats?.totalAbonnes ? Math.round(((stats?.confirmedAbonnes ?? 0) / stats.totalAbonnes) * 100) : 0}%</span>
+                  <span style={{ fontSize: "0.65rem", color: PALETTE.muted }}>
+                    Taux de confirmation : {stats?.totalAbonnes
+                      ? Math.round(((stats.confirmedAbonnes) / stats.totalAbonnes) * 100)
+                      : 0}%
+                  </span>
                 </div>
               </div>
             </div>
@@ -566,7 +572,7 @@ export default function AnalytiquePage() {
                 {[
                   { label: "Sauvegardes",  v: stats?.totalSaves ?? 0,    c: PALETTE.gold,  pct: engagement > 0 ? Math.round(((stats?.totalSaves ?? 0) / engagement) * 100) : 0 },
                   { label: "Candidatures", v: stats?.totalApps ?? 0,     c: PALETTE.green, pct: engagement > 0 ? Math.round(((stats?.totalApps ?? 0) / engagement) * 100) : 0 },
-                  { label: "Évènements",  v: stats?.totalEventRegs ?? 0, c: PALETTE.blue,  pct: engagement > 0 ? Math.round(((stats?.totalEventRegs ?? 0) / engagement) * 100) : 0 },
+                  { label: "Évènements",   v: stats?.totalEventRegs ?? 0, c: PALETTE.blue,  pct: engagement > 0 ? Math.round(((stats?.totalEventRegs ?? 0) / engagement) * 100) : 0 },
                 ].map(({ label, v, c, pct }) => (
                   <div key={label} style={{ marginBottom: "0.75rem" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.3rem" }}>
@@ -605,7 +611,7 @@ export default function AnalytiquePage() {
                       <div style={{ width: 3, height: 28, borderRadius: 100, background: c, flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "0.84rem", fontWeight: 700, color: PALETTE.ink, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</div>
-                        <span style={{ fontSize: "0.56rem", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", padding: "0.1rem 0.45rem", borderRadius: 100, background: `${c}14`, color: c }}>
+                        <span style={{ fontSize: "0.56rem", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase" as const, padding: "0.1rem 0.45rem", borderRadius: 100, background: `${c}14`, color: c }}>
                           {typeLabel[item.type] ?? item.type}
                         </span>
                       </div>
@@ -624,9 +630,9 @@ export default function AnalytiquePage() {
             {/* ── NAVIGATION SOUS-SECTIONS ─────────────────── */}
             <div className="an-subnav-cards">
               {[
-                { href: "/admin/analytique/contenu",    title: "Analytique Contenu",   desc: "Performance des actualités, bourses, opportunités et événements par catégorie.",  color: PALETTE.gold,  Icon: IcoFile  },
-                { href: "/admin/analytique/audience",   title: "Analytique Audience",  desc: "Profil des membres, répartition géographique et croissance des abonnés.",         color: PALETTE.blue,  Icon: IcoUsers },
-                { href: "/admin/analytique/engagement", title: "Analytique Engagement",desc: "Sauvegardes, candidatures, inscriptions événements et taux de conversion.",        color: PALETTE.green, Icon: IcoHeart },
+                { href: "/admin/analytique/contenu",    title: "Analytique Contenu",    desc: "Performance des actualités, bourses, opportunités et événements par catégorie.", color: PALETTE.gold,  Icon: IcoFile  },
+                { href: "/admin/analytique/audience",   title: "Analytique Audience",   desc: "Profil des membres, répartition géographique et croissance des abonnés.",        color: PALETTE.blue,  Icon: IcoUsers },
+                { href: "/admin/analytique/engagement", title: "Analytique Engagement", desc: "Sauvegardes, candidatures, inscriptions événements et taux de conversion.",       color: PALETTE.green, Icon: IcoHeart },
               ].map(({ href, title, desc, color, Icon }) => (
                 <Link key={href} href={href} style={{ textDecoration: "none" }}>
                   <div className="an-nav-card">
@@ -642,7 +648,6 @@ export default function AnalytiquePage() {
                 </Link>
               ))}
             </div>
-
           </>
         )}
       </div>
