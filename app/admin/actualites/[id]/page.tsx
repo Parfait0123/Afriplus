@@ -223,9 +223,16 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       meta_desc:      state.metaDesc || null,
     };
     const { data, error } = isNew
-      ? await (sb.from("articles") as any).insert(payload).select("id,slug").single()
-      : await (sb.from("articles") as any).update(payload).eq("id", params.id).select("id,slug").single();
-    setSaving(false);
+     ? await (sb.from("articles") as any)
+         .upsert(payload, { onConflict: "slug" })
+         .select("id,slug")
+         .single()
+     : await (sb.from("articles") as any)
+         .update(payload)
+         .eq("id", params.id)
+         .select("id,slug")
+         .single();
+         setSaving(false);
     if (error) {
       showToast("Erreur : " + error.message, false);
     } else {
