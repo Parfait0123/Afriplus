@@ -657,8 +657,11 @@ function ArticleClient({ slug }: { slug: string }) {
   if (!article) return null;
 
   const cs      = CAT[article.category] ?? CAT["Économie"];
-  const content = article.content ?? { intro: article.excerpt ?? "", blocks: [] };
-  const headings = content?.blocks?.filter(
+  const content = {
+    intro:  article.content?.intro  ?? article.excerpt ?? "",
+    blocks: article.content?.blocks ?? [],
+  };
+  const headings = content.blocks.filter(
     (b): b is Extract<Block, { type: "heading" }> => b.type === "heading"
   );
 
@@ -843,7 +846,7 @@ function ArticleClient({ slug }: { slug: string }) {
 
                 {/* Blocs de contenu */}
                 <div className="sl-body">
-                  {content.blocks.map((block, bi) => (
+                  {(content.blocks ?? []).map((block, bi) => (
                     <RenderBlock
                       key={bi}
                       block={block}
