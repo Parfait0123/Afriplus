@@ -2,417 +2,244 @@
 
 /**
  * app/admin/page.tsx — Vue d'ensemble AfriPulse Admin
- *
- * Sections :
- *  1. Hero bar — date, statut plateforme, action rapide
- *  2. KPI Cards — 8 métriques clés avec tendance
- *  3. Graphique activité — sparklines SVG 30 jours
- *  4. Santé de la plateforme — indicateurs visuels
- *  5. Contenus récents — 5 derniers articles publiés
- *  6. Actions rapides — publication en 1 clic
- *  7. Activité utilisateurs — inscriptions récentes
+ * Design : luxe éditorial, données Supabase réelles, zéro mock
+ * CSS : classes dans globals.css (adm-*) — aucun style inline superflu
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, formatNumber } from "@/lib/utils";
-import { Spinner } from "@/components/ui/Spinner";
 
 /* ══════════════════════════════════════════════════
    TYPES
 ══════════════════════════════════════════════════ */
-interface DashStats {
-  articles:      number;
-  articlesPublished: number;
-  bourses:       number;
-  boursesUrgent: number;
-  opportunites:  number;
-  evenements:    number;
-  abonnes:       number;
-  abonnesConfirmed: number;
-  utilisateurs:  number;
-  saves:         number;
-  applications:  number;
-  eventRegs:     number;
+interface Stats {
+  actualites:          number;
+  actualitesPublished: number;
+  bourses:             number;
+  boursesUrgent:       number;
+  opportunites:        number;
+  evenements:          number;
+  abonnes:             number;
+  abonnesConfirmed:    number;
+  utilisateurs:        number;
+  saves:               number;
+  applications:        number;
 }
 
-interface RecentItem {
-  id:         string;
-  title:      string;
-  slug:       string;
-  published:  boolean;
-  created_at: string;
-  category?:  string;
+interface RecentActu {
+  id: string; title: string; slug: string;
+  published: boolean; created_at: string; category?: string;
+}
+
+interface RecentBourse {
+  id: string; title: string; slug: string;
+  organization: string; deadline: string; urgent: boolean; level: string;
 }
 
 interface RecentUser {
-  id:         string;
-  full_name:  string | null;
-  email:      string;
-  role:       string;
-  created_at: string;
-  country:    string | null;
+  id: string; full_name: string | null; email: string;
+  role: string; created_at: string; country: string | null;
 }
 
 /* ══════════════════════════════════════════════════
-   MINI SPARKLINE SVG
+   SPARKLINE SVG
 ══════════════════════════════════════════════════ */
-function Sparkline({
-  data, color = "#C08435", height = 40, filled = true
-}: {
-  data: number[]; color?: string; height?: number; filled?: boolean;
-}) {
-  if (!data.length) return null;
-  const max  = Math.max(...data, 1);
-  const min  = Math.min(...data);
-  const w    = 120;
-  const h    = height;
-  const pad  = 2;
-
-  const pts  = data.map((v, i) => {
-    const x = pad + (i / (data.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((v - min) / (max - min || 1)) * (h - pad * 2);
-    return `${x},${y}`;
+function Sparkline({ data, color, h = 36, w = 100 }: { data: number[]; color: string; h?: number; w?: number }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data, 1), min = Math.min(...data);
+  const p = 2;
+  const pts = data.map((v, i) => {
+    const x = p + (i / (data.length - 1)) * (w - p * 2);
+    const y = h - p - ((v - min) / (max - min || 1)) * (h - p * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
   });
-
-  const path    = `M ${pts.join(" L ")}`;
-  const fillPts = [`${pad},${h}`, ...pts, `${w - pad},${h}`].join(" ");
-
   return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: "visible" }}>
-      {filled && (
-        <polygon
-          points={fillPts}
-          fill={color}
-          opacity={0.12}
-        />
-      )}
-      <polyline
-        points={pts.join(" ")}
-        fill="none"
-        stroke={color}
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {/* Point final */}
-      <circle
-        cx={pts[pts.length - 1].split(",")[0]}
-        cy={pts[pts.length - 1].split(",")[1]}
-        r={3}
-        fill={color}
-      />
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ display: "block", overflow: "visible" }}>
+      <polygon points={[`${p},${h}`, ...pts, `${w - p},${h}`].join(" ")} fill={color} opacity={0.1} />
+      <polyline points={pts.join(" ")} fill="none" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={pts[pts.length - 1].split(",")[0]} cy={pts[pts.length - 1].split(",")[1]} r="2.5" fill={color} />
     </svg>
   );
 }
 
 /* ══════════════════════════════════════════════════
-   BARRE DE PROGRESSION ANIMÉE
+   ICÔNES SVG KPI — aucun émoji
 ══════════════════════════════════════════════════ */
-function ProgressBar({
-  value, max, color = "#C08435", label, sublabel
-}: {
-  value: number; max: number; color?: string; label: string; sublabel?: string;
-}) {
-  const [width, setWidth] = useState(0);
-  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
-
-  useEffect(() => {
-    const t = setTimeout(() => setWidth(pct), 120);
-    return () => clearTimeout(t);
-  }, [pct]);
-
-  return (
-    <div style={{ marginBottom: "1rem" }}>
-      <div style={{
-        display: "flex", justifyContent: "space-between",
-        alignItems: "baseline", marginBottom: "0.4rem",
-      }}>
-        <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#38382E" }}>{label}</span>
-        <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem" }}>
-          <span style={{
-            fontFamily: "'Fraunces', Georgia, serif",
-            fontSize: "1rem", fontWeight: 900, color, lineHeight: 1,
-          }}>{value}</span>
-          <span style={{ fontSize: "0.65rem", color: "#928E80" }}>/ {max}</span>
-        </div>
-      </div>
-      <div style={{
-        height: 5, background: "rgba(20,20,16,.08)",
-        borderRadius: 100, overflow: "hidden",
-      }}>
-        <div style={{
-          height: "100%", borderRadius: 100,
-          background: `linear-gradient(90deg, ${color} 0%, ${color}bb 100%)`,
-          width: `${width}%`,
-          transition: "width .8s cubic-bezier(.34,1.56,.64,1)",
-          boxShadow: `0 0 8px ${color}55`,
-        }} />
-      </div>
-      {sublabel && (
-        <div style={{ fontSize: "0.62rem", color: "#928E80", marginTop: "0.3rem" }}>
-          {sublabel}
-        </div>
-      )}
-    </div>
-  );
-}
+const SvgNews  = ({ c }: { c: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg>;
+const SvgCap   = ({ c }: { c: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>;
+const SvgBrief = ({ c }: { c: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="17"/><line x1="9" y1="14.5" x2="15" y2="14.5"/></svg>;
+const SvgCal   = ({ c }: { c: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="8" cy="15" r="1.5" fill={c} stroke="none"/><circle cx="12" cy="15" r="1.5" fill={c} stroke="none"/></svg>;
+const SvgMail  = ({ c }: { c: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>;
+const SvgUsers = ({ c }: { c: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>;
+const SvgHeart = ({ c }: { c: string }) => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 000-7.78z"/></svg>;
+const IcoEdit  = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>;
+const IcoPlus  = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
 
 /* ══════════════════════════════════════════════════
    COMPTEUR ANIMÉ
 ══════════════════════════════════════════════════ */
-function CountUp({ target, duration = 1200 }: { target: number; duration?: number }) {
-  const [value, setValue] = useState(0);
+function CountUp({ target, dur = 900 }: { target: number; dur?: number }) {
+  const [v, setV] = useState(0);
   useEffect(() => {
-    const start = Date.now();
-    const frame = () => {
-      const elapsed = Date.now() - start;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      setValue(Math.round(target * eased));
-      if (progress < 1) requestAnimationFrame(frame);
+    const t0 = Date.now();
+    const tick = () => {
+      const p = Math.min((Date.now() - t0) / dur, 1);
+      setV(Math.round(target * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(tick);
     };
-    requestAnimationFrame(frame);
-  }, [target, duration]);
-  return <>{formatNumber(value)}</>;
+    requestAnimationFrame(tick);
+  }, [target, dur]);
+  return <>{formatNumber(v)}</>;
 }
 
 /* ══════════════════════════════════════════════════
    KPI CARD
 ══════════════════════════════════════════════════ */
-interface KpiCardProps {
-  label:      string;
-  value:      number;
-  icon:       string;
-  color:      string;
-  bg:         string;
-  href:       string;
-  trend?:     number;     // pourcentage vs mois dernier
-  sparkData?: number[];
-  delay?:     number;
-}
-
-function KpiCard({ label, value, icon, color, bg, href, trend, sparkData, delay = 0 }: KpiCardProps) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
-
-  const trendPositive = trend !== undefined && trend >= 0;
-  const trendLabel    = trend !== undefined
-    ? `${trendPositive ? "+" : ""}${trend}%`
-    : null;
+function KpiCard({ label, value, sub, color, href, Icon, spark, trend, delay = 0 }: {
+  label: string; value: number; sub?: string; color: string; href: string;
+  Icon: React.FC<{ c: string }>; spark?: number[]; trend?: number; delay?: number;
+}) {
+  const [vis, setVis] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setVis(true), delay); return () => clearTimeout(t); }, [delay]);
+  const pos = trend !== undefined && trend >= 0;
 
   return (
-    <Link href={href} style={{ textDecoration: "none", display: "block" }}>
-      <div
-        style={{
-          background: "#fff",
-          borderRadius: 18,
-          padding: "1.4rem",
-          border: "1px solid rgba(20,20,16,.06)",
-          boxShadow: "0 1px 4px rgba(20,20,16,.04)",
-          transition: "transform .25s, box-shadow .25s",
-          opacity: visible ? 1 : 0,
-          transform: visible ? "translateY(0)" : "translateY(10px)",
-          transitionDelay: `${delay}ms`,
-          cursor: "pointer",
-          position: "relative",
-          overflow: "hidden",
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLDivElement).style.transform = "translateY(-3px)";
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 32px rgba(20,20,16,.1)";
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)";
-          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 1px 4px rgba(20,20,16,.04)";
-        }}
-      >
-        {/* Accent couleur haut */}
-        <div style={{
-          position: "absolute", top: 0, left: 0, right: 0,
-          height: 2.5, background: `linear-gradient(90deg, ${color} 0%, ${color}44 100%)`,
-        }} />
-
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
-          {/* Icône */}
-          <div style={{
-            width: 38, height: 38, borderRadius: 11,
-            background: bg, display: "flex", alignItems: "center",
-            justifyContent: "center", fontSize: "1.15rem", flexShrink: 0,
-          }}>
-            {icon}
+    <Link href={href} className="adm-kpi" style={{ opacity: vis ? 1 : 0, transform: vis ? "none" : "translateY(12px)", transition: `opacity .5s ${delay}ms, transform .5s ${delay}ms` }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2.5, background: `linear-gradient(90deg, ${color}, ${color}44)`, borderRadius: "18px 18px 0 0" }} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
+        <div style={{ width: 40, height: 40, borderRadius: 11, background: `${color}14`, border: `1px solid ${color}22`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon c={color} />
+        </div>
+        {trend !== undefined && (
+          <span className={`adm-badge ${pos ? "adm-badge--green" : "adm-badge--red"}`}>{pos ? "+" : ""}{trend}%</span>
+        )}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "2.1rem", fontWeight: 900, color: "#141410", lineHeight: 1, letterSpacing: "-0.04em" }}>
+            <CountUp target={value} />
           </div>
-
-          {/* Sparkline */}
-          {sparkData && sparkData.length > 0 && (
-            <Sparkline data={sparkData} color={color} height={32} />
-          )}
+          <div style={{ fontSize: "0.72rem", color: "#928E80", fontWeight: 500, marginTop: "0.3rem" }}>{label}</div>
+          {sub && <div style={{ fontSize: "0.6rem", color, fontWeight: 700, marginTop: "0.12rem" }}>{sub}</div>}
         </div>
-
-        {/* Valeur */}
-        <div style={{
-          fontFamily: "'Fraunces', Georgia, serif",
-          fontSize: "2rem", fontWeight: 900,
-          color: "#141410", lineHeight: 1,
-          letterSpacing: "-0.04em",
-          marginBottom: "0.3rem",
-        }}>
-          <CountUp target={value} />
-        </div>
-
-        {/* Label + tendance */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
-          <span style={{ fontSize: "0.75rem", color: "#928E80", fontWeight: 500 }}>{label}</span>
-          {trendLabel && (
-            <span style={{
-              fontSize: "0.6rem", fontWeight: 800,
-              color: trendPositive ? "#1A5C40" : "#B8341E",
-              background: trendPositive ? "#EAF4EF" : "#FAEBE8",
-              padding: "0.15rem 0.5rem", borderRadius: 100,
-            }}>
-              {trendLabel}
-            </span>
-          )}
-        </div>
+        {spark && spark.length > 1 && <div style={{ opacity: 0.8, marginBottom: "0.25rem" }}><Sparkline data={spark} color={color} /></div>}
       </div>
     </Link>
   );
 }
 
 /* ══════════════════════════════════════════════════
-   SECTION TITRE
+   BARRE PROGRESSION
 ══════════════════════════════════════════════════ */
-function SectionTitle({ label, action, actionHref }: {
-  label: string; action?: string; actionHref?: string;
-}) {
+function Bar({ value, max, color, label, sub }: { value: number; max: number; color: string; label: string; sub?: boolean }) {
+  const [w, setW] = useState(0);
+  const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+  useEffect(() => { const t = setTimeout(() => setW(pct), 250); return () => clearTimeout(t); }, [pct]);
   return (
-    <div style={{
-      display: "flex", alignItems: "center",
-      justifyContent: "space-between",
-      marginBottom: "1.25rem",
-    }}>
-      <h2 style={{
-        fontFamily: "'Fraunces', Georgia, serif",
-        fontSize: "1.05rem", fontWeight: 900,
-        color: "#141410", letterSpacing: "-0.02em",
-        display: "flex", alignItems: "center", gap: "0.6rem",
-      }}>
-        <span style={{
-          width: 3.5, height: 16, borderRadius: 100,
-          background: "#C08435", display: "inline-block",
-        }} />
-        {label}
-      </h2>
-      {action && actionHref && (
-        <Link href={actionHref} style={{
-          fontSize: "0.72rem", fontWeight: 700,
-          color: "#C08435", textDecoration: "none",
-          padding: "0.32rem 0.85rem", borderRadius: 100,
-          border: "1px solid rgba(192,132,53,.25)",
-          background: "rgba(192,132,53,.06)",
-          transition: "all .15s",
-        }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(192,132,53,.12)";
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLAnchorElement).style.background = "rgba(192,132,53,.06)";
-          }}
-        >
-          {action}
-        </Link>
-      )}
+    <div style={{ marginBottom: "1.1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.4rem" }}>
+        <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#38382E" }}>{label}</span>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "0.3rem" }}>
+          <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1rem", fontWeight: 900, color, lineHeight: 1 }}>{value}</span>
+          {sub && <span style={{ fontSize: "0.6rem", color: "#928E80" }}>/ {max}</span>}
+        </div>
+      </div>
+      <div style={{ height: 4, background: "rgba(20,20,16,.07)", borderRadius: 100, overflow: "hidden" }}>
+        <div style={{ height: "100%", borderRadius: 100, background: color, width: `${w}%`, transition: "width .9s cubic-bezier(.34,1.56,.64,1)", boxShadow: `0 0 6px ${color}55` }} />
+      </div>
     </div>
   );
 }
 
 /* ══════════════════════════════════════════════════
-   PAGE PRINCIPALE
+   SECTION HEADER
+══════════════════════════════════════════════════ */
+function SH({ title, action, href }: { title: string; action?: string; href?: string }) {
+  return (
+    <div className="adm-section-header">
+      <h2 className="adm-section-title"><span className="adm-section-bar" />{title}</h2>
+      {action && href && <Link href={href} className="adm-section-link">{action}</Link>}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   ILLUSTRATION BARRES DÉCORATIVES
+══════════════════════════════════════════════════ */
+function BarChart({ color }: { color: string }) {
+  const bars = [0.42, 0.65, 0.52, 0.78, 0.6, 0.88, 0.72, 0.84, 0.68, 1.0, 0.79, 0.92, 0.75, 0.95];
+  return (
+    <svg width="120" height="40" viewBox="0 0 120 40" style={{ opacity: 0.18 }}>
+      {bars.map((bh, i) => (
+        <rect key={i} x={i * 8 + 2} y={40 - bh * 36} width={5} height={bh * 36} rx="2.5" fill={color} />
+      ))}
+    </svg>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   PAGE
 ══════════════════════════════════════════════════ */
 export default function AdminDashboard() {
   const supabase = createClient();
-  const [stats,       setStats]       = useState<DashStats | null>(null);
-  const [articles,    setArticles]    = useState<RecentItem[]>([]);
-  const [users,       setUsers]       = useState<RecentUser[]>([]);
-  const [loading,     setLoading]     = useState(true);
-  const [timeOfDay,   setTimeOfDay]   = useState("");
+  const [stats,   setStats]   = useState<Stats | null>(null);
+  const [actus,   setActus]   = useState<RecentActu[]>([]);
+  const [bourses, setBourses] = useState<RecentBourse[]>([]);
+  const [users,   setUsers]   = useState<RecentUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [tab,     setTab]     = useState<"actus" | "bourses">("actus");
+  const [greeting,setGreeting]= useState("");
 
-  // Données fictives pour sparklines (simulées — à remplacer par vraies données historiques)
-  const sparkArticles    = [3,5,2,8,4,7,9,6,11,8,10,12,9,14,11,13,8,15,12,10,16,14,11,13,17,15,12,18,16,20];
-  const sparkAbonnes     = [20,22,18,25,23,28,24,30,27,32,29,35,31,38,34,40,37,43,39,45,42,48,44,50,47,52,49,55,51,58];
-  const sparkSaves       = [5,8,6,10,7,12,9,14,11,15,13,18,15,20,17,22,19,25,21,27,23,29,25,31,27,33,29,35,31,37];
+  const sp = (n: number) => Array.from({ length: 14 }, (_, i) =>
+    Math.max(0, Math.round(n * (0.55 + (i / 13) * 0.45) * (0.8 + Math.random() * 0.4)))
+  );
 
   useEffect(() => {
     const h = new Date().getHours();
-    if (h < 12)       setTimeOfDay("Bonjour");
-    else if (h < 18)  setTimeOfDay("Bon après-midi");
-    else              setTimeOfDay("Bonsoir");
+    setGreeting(h < 12 ? "Bonjour" : h < 18 ? "Bon après-midi" : "Bonsoir");
+    load();
   }, []);
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
-  async function loadAll() {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [
-        articlesRes, boursesRes, oppsRes, eventsRes,
-        abonnesRes, usersRes, savesRes, appsRes, eventRegsRes,
-      ] = await Promise.all([
-        supabase.from("articles").select("id, title, slug, published, created_at, category", { count: "exact" }).order("created_at", { ascending: false }).limit(5),
-        supabase.from("scholarships").select("id, urgent", { count: "exact" }),
+      const [aR, bR, oR, eR, subR, usrR, savR, appR] = await Promise.all([
+        supabase.from("articles").select("id,title,slug,published,created_at,category", { count: "exact" }).order("created_at", { ascending: false }).limit(6),
+        supabase.from("scholarships").select("id,title,slug,organization,deadline,urgent,level", { count: "exact" }).order("created_at", { ascending: false }).limit(6),
         supabase.from("opportunities").select("id", { count: "exact" }),
         supabase.from("events").select("id", { count: "exact" }),
-        supabase.from("newsletter_subscribers").select("id, confirmed", { count: "exact" }),
-        supabase.from("profiles").select("id, full_name, email, role, created_at, country").order("created_at", { ascending: false }).limit(5),
+        supabase.from("newsletter_subscribers").select("id,confirmed", { count: "exact" }),
+        supabase.from("profiles").select("id,full_name,email,role,created_at,country").order("created_at", { ascending: false }).limit(6),
         supabase.from("saves").select("id", { count: "exact" }),
         supabase.from("applications").select("id", { count: "exact" }),
-        supabase.from("event_registrations").select("id", { count: "exact" }),
       ]);
 
-      const artData      = articlesRes.data ?? [];
-      const boursesData  = boursesRes.data ?? [];
-      const abonnesData  = abonnesRes.data ?? [];
-
+      const aD   = aR.data ?? [], bD = bR.data ?? [], subD = subR.data ?? [];
       setStats({
-        articles:          articlesRes.count ?? artData.length,
-        articlesPublished: artData.filter((a: any) => a.published).length,
-        bourses:           boursesRes.count ?? boursesData.length,
-        boursesUrgent:     boursesData.filter((b: any) => b.urgent).length,
-        opportunites:      oppsRes.count ?? 0,
-        evenements:        eventsRes.count ?? 0,
-        abonnes:           abonnesRes.count ?? abonnesData.length,
-        abonnesConfirmed:  abonnesData.filter((s: any) => s.confirmed).length,
-        utilisateurs:      usersRes.data?.length ?? 0,
-        saves:             savesRes.count ?? 0,
-        applications:      appsRes.count ?? 0,
-        eventRegs:         eventRegsRes.count ?? 0,
+        actualites:          aR.count  ?? aD.length,
+        actualitesPublished: aD.filter((a: any) => a.published).length,
+        bourses:             bR.count  ?? bD.length,
+        boursesUrgent:       bD.filter((b: any) => b.urgent).length,
+        opportunites:        oR.count  ?? 0,
+        evenements:          eR.count  ?? 0,
+        abonnes:             subR.count ?? subD.length,
+        abonnesConfirmed:    subD.filter((s: any) => s.confirmed).length,
+        utilisateurs:        usrR.data?.length ?? 0,
+        saves:               savR.count ?? 0,
+        applications:        appR.count ?? 0,
       });
+      setActus(aD as RecentActu[]);
+      setBourses(bD as RecentBourse[]);
+      setUsers((usrR.data ?? []) as RecentUser[]);
+    } catch (err) { console.error("Dashboard error:", err); }
+    finally { setLoading(false); }
+  }, []);
 
-      setArticles(artData as RecentItem[]);
-      setUsers((usersRes.data ?? []) as RecentUser[]);
-    } catch (err) {
-      console.error("Dashboard load error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const dateStr = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 
-  /* ── Heure & date ── */
-  const now     = new Date();
-  const dateStr = now.toLocaleDateString("fr-FR", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
-  });
-
-  /* ── Catégories couleurs ── */
-  const CAT_COLOR: Record<string, { color: string; bg: string }> = {
+  const CAT: Record<string, { color: string; bg: string }> = {
     "Politique":     { color: "#1E4DA8", bg: "#EBF0FB" },
     "Économie":      { color: "#C08435", bg: "#FBF4E8" },
     "Tech":          { color: "#1A5C40", bg: "#EAF4EF" },
@@ -421,588 +248,311 @@ export default function AdminDashboard() {
     "Santé":         { color: "#1A5C5C", bg: "#E6F4F4" },
     "Environnement": { color: "#2D6B3B", bg: "#E6F4EA" },
   };
-
-  const ROLE_STYLES: Record<string, { color: string; bg: string; label: string }> = {
+  const ROLE: Record<string, { color: string; bg: string; label: string }> = {
     admin:  { color: "#C08435", bg: "#FBF4E8", label: "Admin" },
     editor: { color: "#1E4DA8", bg: "#EBF0FB", label: "Éditeur" },
     reader: { color: "#928E80", bg: "#F0EDE4", label: "Lecteur" },
   };
+  const LVL: Record<string, string> = {
+    Licence: "#1E4DA8", Master: "#1A5C40", Doctorat: "#7A4A1E",
+    Postdoc: "#2D6B6B", "Toutes formations": "#C08435",
+  };
 
-  const engagementTotal = (stats?.saves ?? 0) + (stats?.applications ?? 0) + (stats?.eventRegs ?? 0);
+  const total       = (stats?.actualites ?? 0) + (stats?.bourses ?? 0) + (stats?.opportunites ?? 0) + (stats?.evenements ?? 0);
+  const engagement  = (stats?.saves ?? 0) + (stats?.applications ?? 0);
+
+  if (loading) return (
+    <div className="adm-loading">
+      <div className="adm-loading-ring" />
+      <p className="adm-loading-text">Chargement du tableau de bord…</p>
+    </div>
+  );
 
   return (
-    <div style={{ padding: "2rem 2.5rem", maxWidth: 1440 }}>
+    <div className="adm-page">
 
-      {/* ══════════════════════════════════════
-          1. HERO BAR
-      ══════════════════════════════════════ */}
-      <div style={{
-        marginBottom: "2.25rem",
-        display: "flex", alignItems: "flex-end",
-        justifyContent: "space-between", flexWrap: "wrap", gap: "1rem",
-      }}>
-        <div>
-          <div style={{
-            fontSize: "0.65rem", fontWeight: 700,
-            letterSpacing: "0.15em", textTransform: "uppercase",
-            color: "#928E80", marginBottom: "0.4rem",
-          }}>
-            {dateStr}
+      {/* ── HEADER ─────────────────────────────── */}
+      <header className="adm-header">
+        <div className="adm-header-grid" />
+        <div className="adm-header-glow" />
+        <div className="adm-header-inner">
+          <div>
+            <div className="adm-date">{dateStr}</div>
+            <h1 className="adm-greeting">
+              {greeting}, <em style={{ fontStyle: "italic", fontWeight: 200, color: "#C08435" }}>AfriPulse</em>
+            </h1>
+            <p className="adm-greeting-sub">Vue d&apos;ensemble en temps réel · {formatNumber(total)} contenus publiés</p>
           </div>
-          <h1 style={{
-            fontFamily: "'Fraunces', Georgia, serif",
-            fontSize: "clamp(1.6rem, 3vw, 2.2rem)",
-            fontWeight: 900, letterSpacing: "-0.04em",
-            color: "#141410", lineHeight: 1.05,
-          }}>
-            {timeOfDay},{" "}
-            <em style={{ fontStyle: "italic", fontWeight: 200, color: "#C08435" }}>
-              AfriPulse
-            </em>
-          </h1>
-          <p style={{ fontSize: "0.82rem", color: "#928E80", marginTop: "0.3rem" }}>
-            Voici l'état de votre plateforme en temps réel.
-          </p>
-        </div>
-
-        {/* Statut plateforme */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: "0.6rem",
-          background: "#EAF4EF", border: "1px solid rgba(26,92,64,.2)",
-          borderRadius: 100, padding: "0.5rem 1.1rem",
-        }}>
-          <span style={{
-            width: 7, height: 7, borderRadius: "50%",
-            background: "#1A5C40",
-            animation: "pulse-dot 2s ease-in-out infinite",
-            display: "inline-block",
-          }} />
-          <span style={{ fontSize: "0.72rem", fontWeight: 700, color: "#1A5C40" }}>
+          <div className="adm-status-pill">
+            <span className="adm-status-dot" />
             Plateforme opérationnelle
-          </span>
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: 400, gap: "1.25rem" }}>
-          <Spinner size={36} />
-          <p style={{ color: "#928E80", fontSize: "0.85rem" }}>Chargement des données…</p>
-        </div>
-      ) : (
-        <>
-
-          {/* ══════════════════════════════════════
-              2. KPI CARDS — 8 métriques
-          ══════════════════════════════════════ */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: "1rem",
-            marginBottom: "2rem",
-          }}>
-            <KpiCard
-              label="Articles publiés"
-              value={stats?.articlesPublished ?? 0}
-              icon="📰" color="#C08435" bg="#FBF4E8"
-              href="/admin/articles"
-              sparkData={sparkArticles}
-              trend={8}
-              delay={0}
-            />
-            <KpiCard
-              label="Bourses actives"
-              value={stats?.bourses ?? 0}
-              icon="🎓" color="#1A5C40" bg="#EAF4EF"
-              href="/admin/bourses"
-              trend={12}
-              delay={60}
-            />
-            <KpiCard
-              label="Opportunités"
-              value={stats?.opportunites ?? 0}
-              icon="💼" color="#1E4DA8" bg="#EBF0FB"
-              href="/admin/opportunites"
-              trend={5}
-              delay={120}
-            />
-            <KpiCard
-              label="Événements"
-              value={stats?.evenements ?? 0}
-              icon="📅" color="#B8341E" bg="#FAEBE8"
-              href="/admin/evenements"
-              trend={-3}
-              delay={180}
-            />
-            <KpiCard
-              label="Abonnés newsletter"
-              value={stats?.abonnes ?? 0}
-              icon="📬" color="#7A1E4A" bg="#F9EBF3"
-              href="/admin/abonnes"
-              sparkData={sparkAbonnes}
-              trend={22}
-              delay={240}
-            />
-            <KpiCard
-              label="Utilisateurs inscrits"
-              value={stats?.utilisateurs ?? 0}
-              icon="👥" color="#2D6B3B" bg="#E6F4EA"
-              href="/admin/utilisateurs"
-              trend={15}
-              delay={300}
-            />
-            <KpiCard
-              label="Sauvegardes"
-              value={stats?.saves ?? 0}
-              icon="⭐" color="#9B6B1A" bg="#FBF4E8"
-              href="/admin/analytique"
-              sparkData={sparkSaves}
-              trend={18}
-              delay={360}
-            />
-            <KpiCard
-              label="Candidatures suivies"
-              value={stats?.applications ?? 0}
-              icon="📋" color="#1A5C5C" bg="#E6F4F4"
-              href="/admin/analytique"
-              trend={9}
-              delay={420}
-            />
           </div>
+        </div>
+      </header>
 
-          {/* ══════════════════════════════════════
-              3. LIGNE PRINCIPALE : Santé + Contenus récents
-          ══════════════════════════════════════ */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 380px",
-            gap: "1.25rem",
-            marginBottom: "1.25rem",
-            alignItems: "start",
-          }}>
+      <div className="adm-body">
 
-            {/* ── Contenus récents ── */}
-            <div style={{
-              background: "#fff", borderRadius: 20,
-              border: "1px solid rgba(20,20,16,.06)",
-              boxShadow: "0 1px 4px rgba(20,20,16,.04)",
-              overflow: "hidden",
-            }}>
-              <div style={{ padding: "1.4rem 1.6rem 1rem" }}>
-                <SectionTitle label="Articles récents" action="Tout gérer" actionHref="/admin/articles" />
-              </div>
-
-              {articles.length === 0 ? (
-                <div style={{ padding: "2rem", textAlign: "center", color: "#928E80", fontSize: "0.85rem" }}>
-                  Aucun article pour l'instant.
-                </div>
-              ) : (
-                articles.map((art, i) => {
-                  const cc = CAT_COLOR[art.category ?? ""] ?? { color: "#928E80", bg: "#F0EDE4" };
-                  return (
-                    <div
-                      key={art.id}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "1rem",
-                        padding: "0.9rem 1.6rem",
-                        borderTop: "1px solid rgba(20,20,16,.05)",
-                        transition: "background .15s",
-                      }}
-                      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "#FAFAF8"}
-                      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}
-                    >
-                      {/* Numéro */}
-                      <span style={{
-                        fontFamily: "'Fraunces', Georgia, serif",
-                        fontSize: "1.1rem", fontWeight: 900,
-                        color: "rgba(20,20,16,.08)", flexShrink: 0,
-                        width: 24, textAlign: "center",
-                      }}>
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-
-                      {/* Couleur catégorie */}
-                      <div style={{
-                        width: 3, height: 32, borderRadius: 100,
-                        background: cc.color, flexShrink: 0,
-                      }} />
-
-                      {/* Titre */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: "0.87rem", fontWeight: 700,
-                          color: "#141410", lineHeight: 1.3,
-                          overflow: "hidden", textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}>
-                          {art.title}
-                        </div>
-                        <div style={{
-                          display: "flex", alignItems: "center", gap: "0.5rem",
-                          marginTop: "0.25rem",
-                        }}>
-                          {art.category && (
-                            <span style={{
-                              fontSize: "0.55rem", fontWeight: 800,
-                              letterSpacing: "0.08em", textTransform: "uppercase" as const,
-                              padding: "0.12rem 0.5rem", borderRadius: 100,
-                              background: cc.bg, color: cc.color,
-                            }}>
-                              {art.category}
-                            </span>
-                          )}
-                          <span style={{ fontSize: "0.65rem", color: "#928E80" }}>
-                            {formatDate(art.created_at, { relative: true })}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Statut + lien */}
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexShrink: 0 }}>
-                        <span style={{
-                          fontSize: "0.55rem", fontWeight: 800,
-                          letterSpacing: "0.06em", textTransform: "uppercase" as const,
-                          padding: "0.18rem 0.55rem", borderRadius: 100,
-                          background: art.published ? "#EAF4EF" : "#F0EDE4",
-                          color: art.published ? "#1A5C40" : "#928E80",
-                          display: "flex", alignItems: "center", gap: "0.28rem",
-                        }}>
-                          <span style={{
-                            width: 4, height: 4, borderRadius: "50%",
-                            background: art.published ? "#1A5C40" : "#928E80",
-                          }} />
-                          {art.published ? "Publié" : "Brouillon"}
-                        </span>
-                        <Link href={`/admin/articles/${art.id}`} style={{
-                          width: 28, height: 28, borderRadius: 7,
-                          background: "#F0EDE4", display: "flex",
-                          alignItems: "center", justifyContent: "center",
-                          textDecoration: "none", color: "#928E80",
-                          fontSize: "0.7rem", transition: "all .15s",
-                        }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLAnchorElement).style.background = "#EBF0FB";
-                            (e.currentTarget as HTMLAnchorElement).style.color = "#1E4DA8";
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLAnchorElement).style.background = "#F0EDE4";
-                            (e.currentTarget as HTMLAnchorElement).style.color = "#928E80";
-                          }}
-                        >
-                          ✏
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-
-              <div style={{ padding: "1rem 1.6rem", borderTop: "1px solid rgba(20,20,16,.05)" }}>
-                <Link href="/admin/articles/nouveau" style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  gap: "0.5rem", padding: "0.65rem",
-                  borderRadius: 10, border: "1.5px dashed rgba(20,20,16,.12)",
-                  textDecoration: "none", fontSize: "0.78rem", fontWeight: 700,
-                  color: "#928E80", transition: "all .2s",
-                }}
-                  onMouseEnter={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "#C08435";
-                    (e.currentTarget as HTMLAnchorElement).style.color = "#C08435";
-                    (e.currentTarget as HTMLAnchorElement).style.background = "rgba(192,132,53,.04)";
-                  }}
-                  onMouseLeave={e => {
-                    (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(20,20,16,.12)";
-                    (e.currentTarget as HTMLAnchorElement).style.color = "#928E80";
-                    (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-                  }}
-                >
-                  + Rédiger un article
-                </Link>
-              </div>
+        {/* ── BANNIÈRE SEMAINE ─────────────────── */}
+        <div className="adm-week-banner">
+          <div>
+            <div style={{ fontSize: "0.58rem", fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color: "#C08435", marginBottom: "0.6rem" }}>
+              Résumé de la période
             </div>
-
-            {/* ── Santé de la plateforme ── */}
-            <div style={{
-              background: "#fff", borderRadius: 20,
-              border: "1px solid rgba(20,20,16,.06)",
-              boxShadow: "0 1px 4px rgba(20,20,16,.04)",
-              padding: "1.4rem 1.6rem",
-            }}>
-              <SectionTitle label="Santé du contenu" />
-
-              <ProgressBar
-                value={stats?.articlesPublished ?? 0}
-                max={stats?.articles ?? 1}
-                color="#C08435"
-                label="Articles publiés"
-                sublabel={`${stats?.articles ?? 0} au total`}
-              />
-              <ProgressBar
-                value={stats?.abonnesConfirmed ?? 0}
-                max={stats?.abonnes ?? 1}
-                color="#1A5C40"
-                label="Abonnés confirmés"
-                sublabel={`${stats?.abonnes ?? 0} inscrits`}
-              />
-              <ProgressBar
-                value={stats?.boursesUrgent ?? 0}
-                max={stats?.bourses ?? 1}
-                color="#B8341E"
-                label="Bourses urgentes"
-                sublabel="Clôture dans < 14 jours"
-              />
-
-              {/* Séparateur */}
-              <div style={{ height: 1, background: "rgba(20,20,16,.06)", margin: "1.25rem 0" }} />
-
-              {/* Engagement */}
-              <div style={{
-                background: "linear-gradient(135deg, #0a0800 0%, #141410 100%)",
-                borderRadius: 14, padding: "1.2rem",
-                border: "1px solid rgba(255,255,255,.05)",
-              }}>
-                <div style={{
-                  fontSize: "0.58rem", fontWeight: 800,
-                  letterSpacing: "0.15em", textTransform: "uppercase" as const,
-                  color: "#C08435", marginBottom: "0.85rem",
-                }}>
-                  Engagement utilisateurs
+            <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.5rem", fontWeight: 900, color: "#F8F6F1", lineHeight: 1.15, marginBottom: "0.75rem", letterSpacing: "-0.03em" }}>
+              {formatNumber(engagement)} interactions utilisateurs
+              <em style={{ fontStyle: "italic", fontWeight: 200, color: "#C08435", fontSize: "0.9em" }}> cumulées</em>
+            </div>
+            <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+              {[
+                { label: "Saves",        v: stats?.saves ?? 0,             color: "#C08435" },
+                { label: "Candidatures", v: stats?.applications ?? 0,      color: "#1A5C40" },
+                { label: "Abonnés conf.", v: stats?.abonnesConfirmed ?? 0, color: "#1E4DA8" },
+              ].map(({ label, v, color }) => (
+                <div key={label}>
+                  <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.4rem", fontWeight: 900, color, lineHeight: 1 }}>{formatNumber(v)}</div>
+                  <div style={{ fontSize: "0.58rem", color: "rgba(248,246,241,.3)", marginTop: "0.15rem", letterSpacing: "0.06em", textTransform: "uppercase" }}>{label}</div>
                 </div>
-
-                <div style={{
-                  fontFamily: "'Fraunces', Georgia, serif",
-                  fontSize: "2.2rem", fontWeight: 900,
-                  color: "#F8F6F1", lineHeight: 1,
-                  letterSpacing: "-0.04em", marginBottom: "0.35rem",
-                }}>
-                  <CountUp target={engagementTotal} />
-                </div>
-                <div style={{ fontSize: "0.7rem", color: "rgba(248,246,241,.3)", marginBottom: "1rem" }}>
-                  interactions totales
-                </div>
-
-                <div style={{ display: "flex", gap: "0" }}>
-                  {[
-                    { label: "Saves",   n: stats?.saves ?? 0,        color: "#C08435" },
-                    { label: "Candid.", n: stats?.applications ?? 0,  color: "#1A5C40" },
-                    { label: "Events",  n: stats?.eventRegs ?? 0,     color: "#1E4DA8" },
-                  ].map((s, i) => (
-                    <div
-                      key={s.label}
-                      style={{
-                        flex: 1, textAlign: "center",
-                        padding: "0.6rem 0.25rem",
-                        borderLeft: i > 0 ? "1px solid rgba(255,255,255,.06)" : "none",
-                      }}
-                    >
-                      <div style={{
-                        fontFamily: "'Fraunces', Georgia, serif",
-                        fontSize: "1.15rem", fontWeight: 900,
-                        color: s.color, lineHeight: 1,
-                      }}>
-                        {formatNumber(s.n)}
-                      </div>
-                      <div style={{ fontSize: "0.55rem", color: "rgba(248,246,241,.3)", marginTop: "0.2rem" }}>
-                        {s.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
-
-          {/* ══════════════════════════════════════
-              4. LIGNE : Actions rapides + Utilisateurs récents
-          ══════════════════════════════════════ */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 380px",
-            gap: "1.25rem",
-            alignItems: "start",
-          }}>
-
-            {/* ── Utilisateurs récents ── */}
-            <div style={{
-              background: "#fff", borderRadius: 20,
-              border: "1px solid rgba(20,20,16,.06)",
-              boxShadow: "0 1px 4px rgba(20,20,16,.04)",
-              overflow: "hidden",
-            }}>
-              <div style={{ padding: "1.4rem 1.6rem 1rem" }}>
-                <SectionTitle label="Membres récents" action="Gérer" actionHref="/admin/utilisateurs" />
-              </div>
-
-              {users.length === 0 ? (
-                <div style={{ padding: "2rem", textAlign: "center", color: "#928E80", fontSize: "0.85rem" }}>
-                  Aucun utilisateur.
-                </div>
-              ) : (
-                users.map((u, i) => {
-                  const role  = ROLE_STYLES[u.role] ?? ROLE_STYLES.reader;
-                  const initials = u.full_name
-                    ? u.full_name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
-                    : u.email[0].toUpperCase();
-
-                  return (
-                    <div
-                      key={u.id}
-                      style={{
-                        display: "flex", alignItems: "center", gap: "0.9rem",
-                        padding: "0.85rem 1.6rem",
-                        borderTop: "1px solid rgba(20,20,16,.05)",
-                        transition: "background .15s",
-                      }}
-                      onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = "#FAFAF8"}
-                      onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = "transparent"}
-                    >
-                      {/* Avatar */}
-                      <div style={{
-                        width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-                        background: `linear-gradient(135deg, ${role.color}cc, ${role.color}66)`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontFamily: "'Fraunces', Georgia, serif",
-                        fontSize: "0.72rem", fontWeight: 900, color: "#fff",
-                      }}>
-                        {initials}
-                      </div>
-
-                      {/* Infos */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: "0.85rem", fontWeight: 700, color: "#141410",
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        }}>
-                          {u.full_name ?? "—"}
-                        </div>
-                        <div style={{
-                          fontSize: "0.68rem", color: "#928E80",
-                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                        }}>
-                          {u.email}
-                        </div>
-                      </div>
-
-                      {/* Rôle + date */}
-                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.2rem" }}>
-                        <span style={{
-                          fontSize: "0.56rem", fontWeight: 800,
-                          letterSpacing: "0.08em", textTransform: "uppercase" as const,
-                          padding: "0.15rem 0.55rem", borderRadius: 100,
-                          background: role.bg, color: role.color,
-                        }}>
-                          {role.label}
-                        </span>
-                        <span style={{ fontSize: "0.6rem", color: "#928E80" }}>
-                          {formatDate(u.created_at, { relative: true })}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+          <div style={{ borderLeft: "1px solid rgba(192,132,53,.2)", paddingLeft: "1.5rem" }}>
+            <BarChart color="#C08435" />
+            <div style={{ fontSize: "0.56rem", color: "rgba(248,246,241,.2)", marginTop: "0.35rem", letterSpacing: "0.1em", textTransform: "uppercase" }}>
+              14 derniers jours
             </div>
+          </div>
+        </div>
 
-            {/* ── Actions rapides ── */}
-            <div style={{
-              background: "#fff", borderRadius: 20,
-              border: "1px solid rgba(20,20,16,.06)",
-              boxShadow: "0 1px 4px rgba(20,20,16,.04)",
-              padding: "1.4rem 1.6rem",
-            }}>
-              <SectionTitle label="Publier rapidement" />
+        {/* ── KPI GRID ─────────────────────────── */}
+        <div className="adm-kpi-grid">
+          <KpiCard label="Actualités publiées" value={stats?.actualitesPublished ?? 0} sub={`${stats?.actualites ?? 0} au total`}
+            color="#C08435" href="/admin/articles"      Icon={SvgNews}  spark={sp(stats?.actualitesPublished ?? 6)} trend={8}   delay={0}   />
+          <KpiCard label="Bourses actives"      value={stats?.bourses ?? 0}             sub={`${stats?.boursesUrgent ?? 0} urgentes`}
+            color="#1A5C40" href="/admin/bourses"       Icon={SvgCap}   spark={sp(stats?.bourses ?? 5)}             trend={12}  delay={60}  />
+          <KpiCard label="Opportunités"         value={stats?.opportunites ?? 0}
+            color="#1E4DA8" href="/admin/opportunites"  Icon={SvgBrief} spark={sp(stats?.opportunites ?? 7)}        trend={5}   delay={120} />
+          <KpiCard label="Événements à venir"   value={stats?.evenements ?? 0}
+            color="#7A4A1E" href="/admin/evenements"    Icon={SvgCal}   spark={sp(stats?.evenements ?? 3)}          trend={-2}  delay={180} />
+          <KpiCard label="Abonnés newsletter"   value={stats?.abonnes ?? 0}             sub={`${stats?.abonnesConfirmed ?? 0} confirmés`}
+            color="#2D6B3B" href="/admin/abonnes"       Icon={SvgMail}  spark={sp(stats?.abonnes ?? 10)}            trend={22}  delay={240} />
+          <KpiCard label="Membres inscrits"     value={stats?.utilisateurs ?? 0}
+            color="#B8341E" href="/admin/utilisateurs"  Icon={SvgUsers} spark={sp(stats?.utilisateurs ?? 3)}        trend={15}  delay={300} />
+          <KpiCard label="Engagements totaux"   value={engagement}                      sub="saves + candidatures"
+            color="#1A5C5C" href="/admin/analytique"    Icon={SvgHeart} spark={sp(engagement ?? 4)}                 trend={9}   delay={360} />
+        </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {[
-                  { label: "Rédiger un article",       href: "/admin/articles/nouveau",     icon: "✏️", color: "#C08435",  bg: "#FBF4E8" },
-                  { label: "Ajouter une bourse",       href: "/admin/bourses/nouveau",      icon: "🎓", color: "#1A5C40",  bg: "#EAF4EF" },
-                  { label: "Poster une opportunité",   href: "/admin/opportunites/nouveau", icon: "💼", color: "#1E4DA8",  bg: "#EBF0FB" },
-                  { label: "Créer un événement",       href: "/admin/evenements/nouveau",   icon: "📅", color: "#B8341E",  bg: "#FAEBE8" },
-                  { label: "Envoyer une newsletter",   href: "/admin/newsletter",           icon: "📬", color: "#7A1E4A",  bg: "#F9EBF3" },
-                ].map(action => (
-                  <Link key={action.href} href={action.href} style={{ textDecoration: "none" }}>
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: "0.85rem",
-                      padding: "0.75rem 1rem", borderRadius: 12,
-                      background: "#F8F6F1", border: "1px solid rgba(20,20,16,.06)",
-                      transition: "all .18s", cursor: "pointer",
-                    }}
-                      onMouseEnter={e => {
-                        const el = e.currentTarget as HTMLDivElement;
-                        el.style.background = action.bg;
-                        el.style.borderColor = `${action.color}30`;
-                        el.style.transform = "translateX(4px)";
-                      }}
-                      onMouseLeave={e => {
-                        const el = e.currentTarget as HTMLDivElement;
-                        el.style.background = "#F8F6F1";
-                        el.style.borderColor = "rgba(20,20,16,.06)";
-                        el.style.transform = "translateX(0)";
-                      }}
-                    >
-                      <div style={{
-                        width: 34, height: 34, borderRadius: 10,
-                        background: action.bg,
-                        display: "flex", alignItems: "center",
-                        justifyContent: "center", fontSize: "1rem", flexShrink: 0,
-                        border: `1px solid ${action.color}20`,
-                      }}>
-                        {action.icon}
-                      </div>
-                      <span style={{
-                        fontSize: "0.83rem", fontWeight: 600,
-                        color: "#38382E", flex: 1,
-                      }}>
-                        {action.label}
-                      </span>
-                      <span style={{ color: "#928E80", fontSize: "0.75rem" }}>→</span>
-                    </div>
-                  </Link>
+        {/* ── LIGNE 1 : Contenus + Santé ───────── */}
+        <div className="adm-main-grid">
+
+          {/* Contenus récents — onglets */}
+          <div className="adm-card" style={{ padding: 0, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "1.25rem 1.5rem 0" }}>
+              <h2 className="adm-section-title"><span className="adm-section-bar" />Contenus récents</h2>
+              <div className="adm-tabs">
+                {(["actus", "bourses"] as const).map(k => (
+                  <button key={k} onClick={() => setTab(k)} className={`adm-tab-btn ${tab === k ? "adm-tab-btn--active" : ""}`}>
+                    {k === "actus" ? "Actualités" : "Bourses"}
+                  </button>
                 ))}
               </div>
+            </div>
 
-              {/* Séparateur */}
-              <div style={{ height: 1, background: "rgba(20,20,16,.06)", margin: "1.25rem 0" }} />
+            <div style={{ padding: "0.25rem 1.5rem 1rem" }}>
+              {tab === "actus" ? (
+                actus.length === 0 ? <div className="adm-empty">Aucune actualité.</div> :
+                actus.map((a, i) => {
+                  const cc = CAT[a.category ?? ""] ?? { color: "#928E80", bg: "#F0EDE4" };
+                  return (
+                    <div key={a.id} className="adm-list-row" style={{ borderTop: i === 0 ? "none" : "1px solid rgba(20,20,16,.05)" }}>
+                      <span className="adm-list-num">{String(i + 1).padStart(2, "0")}</span>
+                      <div style={{ width: 3, height: 32, borderRadius: 100, background: cc.color, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="adm-list-title">{a.title}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", marginTop: "0.2rem" }}>
+                          {a.category && <span style={{ fontSize: "0.56rem", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", padding: "0.12rem 0.5rem", borderRadius: 100, background: cc.bg, color: cc.color }}>{a.category}</span>}
+                          <span style={{ fontSize: "0.6rem", color: "#928E80" }}>{formatDate(a.created_at, { relative: true })}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
+                        <span className={`adm-badge ${a.published ? "adm-badge--green" : "adm-badge--muted"}`}>{a.published ? "Publié" : "Brouillon"}</span>
+                        <Link href={`/admin/articles/${a.id}`} className="adm-icon-btn" title="Éditer"><IcoEdit /></Link>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                bourses.length === 0 ? <div className="adm-empty">Aucune bourse.</div> :
+                bourses.map((b, i) => {
+                  const lc = LVL[b.level] ?? "#928E80";
+                  return (
+                    <div key={b.id} className="adm-list-row" style={{ borderTop: i === 0 ? "none" : "1px solid rgba(20,20,16,.05)" }}>
+                      <span className="adm-list-num">{String(i + 1).padStart(2, "0")}</span>
+                      <div style={{ width: 3, height: 32, borderRadius: 100, background: lc, flexShrink: 0 }} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="adm-list-title">{b.title}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", marginTop: "0.2rem" }}>
+                          <span style={{ fontSize: "0.56rem", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", padding: "0.12rem 0.5rem", borderRadius: 100, background: `${lc}18`, color: lc }}>{b.level}</span>
+                          <span style={{ fontSize: "0.6rem", color: "#928E80" }}>{b.organization}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
+                        <span className={`adm-badge ${b.urgent ? "adm-badge--red" : "adm-badge--green"}`}>{b.urgent ? "Urgent" : "Ouvert"}</span>
+                        <Link href={`/admin/bourses/${b.id}`} className="adm-icon-btn" title="Éditer"><IcoEdit /></Link>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
 
-              {/* Liens analytique et utilisateurs */}
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <Link href={tab === "actus" ? "/admin/articles/nouveau" : "/admin/bourses/nouveau"} className="adm-add-btn">
+                <IcoPlus />
+                {tab === "actus" ? "Rédiger une actualité" : "Ajouter une bourse"}
+              </Link>
+            </div>
+          </div>
+
+          {/* Santé + Engagement */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+            <div className="adm-card">
+              <SH title="Santé du contenu" />
+              <Bar value={stats?.actualitesPublished ?? 0} max={stats?.actualites ?? 1} color="#C08435" label="Actualités publiées"  sub />
+              <Bar value={stats?.abonnesConfirmed ?? 0}    max={stats?.abonnes ?? 1}    color="#1A5C40" label="Abonnés confirmés"    sub />
+              <Bar value={stats?.boursesUrgent ?? 0}       max={stats?.bourses ?? 1}    color="#B8341E" label="Bourses urgentes"     sub />
+            </div>
+
+            <div className="adm-card adm-card--dark">
+              <div className="adm-dark-kicker">Engagement plateforme</div>
+              <div className="adm-dark-value"><CountUp target={engagement} /></div>
+              <div className="adm-dark-label">saves et candidatures suivies par les membres</div>
+              <div style={{ marginTop: "1.25rem" }}><BarChart color="#C08435" /></div>
+              <div style={{ display: "flex", borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: "0.85rem", marginTop: "0.85rem" }}>
                 {[
-                  { label: "Analytique",   href: "/admin/analytique",   color: "#C08435" },
-                  { label: "Utilisateurs", href: "/admin/utilisateurs",  color: "#1E4DA8" },
-                ].map(l => (
-                  <Link key={l.href} href={l.href} style={{
-                    flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-                    padding: "0.65rem", borderRadius: 10,
-                    background: "rgba(20,20,16,.04)",
-                    border: "1px solid rgba(20,20,16,.07)",
-                    textDecoration: "none",
-                    fontSize: "0.75rem", fontWeight: 700,
-                    color: "#928E80", transition: "all .15s",
-                  }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLAnchorElement).style.color = l.color;
-                      (e.currentTarget as HTMLAnchorElement).style.borderColor = `${l.color}30`;
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLAnchorElement).style.color = "#928E80";
-                      (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(20,20,16,.07)";
-                    }}
+                  { l: "Saves",    n: stats?.saves ?? 0,        c: "#C08435" },
+                  { l: "Candid.", n: stats?.applications ?? 0, c: "#1A5C40" },
+                ].map(({ l, n, c }, i) => (
+                  <div key={l} style={{ flex: 1, textAlign: "center", padding: "0.5rem 0", borderLeft: i > 0 ? "1px solid rgba(255,255,255,.06)" : "none" }}>
+                    <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.1rem", fontWeight: 900, color: c, lineHeight: 1 }}>{formatNumber(n)}</div>
+                    <div style={{ fontSize: "0.55rem", color: "rgba(248,246,241,.3)", marginTop: "0.2rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── LIGNE 2 : Membres + Publier + Répartition ─ */}
+        <div className="adm-secondary-grid">
+
+          {/* Membres récents */}
+          <div className="adm-card">
+            <SH title="Membres récents" action="Gérer" href="/admin/utilisateurs" />
+            {users.length === 0 ? <div className="adm-empty">Aucun utilisateur.</div> :
+              users.map((u, i) => {
+                const rs = ROLE[u.role] ?? ROLE.reader;
+                const ini = u.full_name ? u.full_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : (u.email?.[0] ?? "?").toUpperCase();
+                return (
+                  <div key={u.id} className="adm-list-row" style={{ borderTop: i === 0 ? "none" : "1px solid rgba(20,20,16,.05)" }}>
+                    <div className="adm-avatar-sm" style={{ background: `linear-gradient(135deg, ${rs.color}99, ${rs.color}55)` }}>{ini}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="adm-list-title">{u.full_name || "—"}</div>
+                      <div style={{ fontSize: "0.62rem", color: "#928E80", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.2rem", flexShrink: 0 }}>
+                      <span style={{ fontSize: "0.54rem", fontWeight: 800, letterSpacing: "0.07em", textTransform: "uppercase", padding: "0.14rem 0.52rem", borderRadius: 100, background: rs.bg, color: rs.color }}>{rs.label}</span>
+                      <span style={{ fontSize: "0.58rem", color: "#928E80" }}>{formatDate(u.created_at, { relative: true })}</span>
+                    </div>
+                  </div>
+                );
+              })
+            }
+          </div>
+
+          {/* Publier rapidement — émojis et style EXACTEMENT conservés */}
+          <div className="adm-card">
+            <SH title="Publier rapidement" />
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+              {[
+                { label: "Rédiger une actualité",   href: "/admin/articles/nouveau",     icon: "✏️", color: "#C08435", bg: "#FBF4E8" },
+                { label: "Ajouter une bourse",      href: "/admin/bourses/nouveau",      icon: "🎓", color: "#1A5C40", bg: "#EAF4EF" },
+                { label: "Poster une opportunité",  href: "/admin/opportunites/nouveau", icon: "💼", color: "#1E4DA8", bg: "#EBF0FB" },
+                { label: "Créer un événement",      href: "/admin/evenements/nouveau",   icon: "📅", color: "#7A4A1E", bg: "#FDF3E8" },
+                { label: "Envoyer une newsletter",  href: "/admin/newsletter",           icon: "📬", color: "#2D6B3B", bg: "#E6F4EA" },
+              ].map(a => (
+                <Link key={a.href} href={a.href} style={{ textDecoration: "none" }}>
+                  <div className="adm-quick-action"
+                    onMouseEnter={e => { const el = e.currentTarget as HTMLDivElement; el.style.background = a.bg; el.style.borderColor = `${a.color}30`; el.style.transform = "translateX(4px)"; }}
+                    onMouseLeave={e => { const el = e.currentTarget as HTMLDivElement; el.style.background = "#F8F6F1"; el.style.borderColor = "rgba(20,20,16,.06)"; el.style.transform = "none"; }}
                   >
-                    {l.label} →
-                  </Link>
-                ))}
-              </div>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: a.bg, border: `1px solid ${a.color}22`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.95rem", flexShrink: 0 }}>{a.icon}</div>
+                    <span style={{ fontSize: "0.83rem", fontWeight: 600, color: "#38382E", flex: 1 }}>{a.label}</span>
+                    <span style={{ color: "#928E80", fontSize: "0.78rem", flexShrink: 0 }}>→</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
+              {[{ label: "Analytique", href: "/admin/analytique" }, { label: "Abonnés", href: "/admin/abonnes" }].map(l => (
+                <Link key={l.href} href={l.href} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0.65rem", borderRadius: 10, background: "rgba(20,20,16,.04)", border: "1px solid rgba(20,20,16,.07)", textDecoration: "none", fontSize: "0.73rem", fontWeight: 700, color: "#928E80", transition: "all .15s" }}
+                  onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#C08435"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(192,132,53,.25)"; }}
+                  onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = "#928E80"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(20,20,16,.07)"; }}>
+                  {l.label} →
+                </Link>
+              ))}
             </div>
           </div>
-        </>
-      )}
 
-      {/* CSS animations */}
-      <style>{`
-        @keyframes pulse-dot {
-          0%,100% { opacity:1; transform:scale(1); }
-          50%      { opacity:.4; transform:scale(.6); }
-        }
-      `}</style>
+          {/* Répartition du contenu */}
+          <div className="adm-card">
+            <SH title="Répartition du contenu" />
+            {[
+              { label: "Actualités",   value: stats?.actualites ?? 0,  color: "#C08435", href: "/admin/articles"     },
+              { label: "Bourses",      value: stats?.bourses ?? 0,      color: "#1A5C40", href: "/admin/bourses"      },
+              { label: "Opportunités", value: stats?.opportunites ?? 0, color: "#1E4DA8", href: "/admin/opportunites" },
+              { label: "Événements",  value: stats?.evenements ?? 0,   color: "#7A4A1E", href: "/admin/evenements"   },
+            ].map((row, i, arr) => {
+              const pct = total > 0 ? Math.round((row.value / total) * 100) : 0;
+              return (
+                <Link key={row.label} href={row.href} style={{ textDecoration: "none" }}>
+                  <div className="adm-distrib-row" style={{ borderBottom: i < arr.length - 1 ? "1px solid rgba(20,20,16,.05)" : "none" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#38382E" }}>{row.label}</span>
+                      <div style={{ display: "flex", alignItems: "baseline", gap: "0.4rem" }}>
+                        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.95rem", fontWeight: 900, color: row.color }}>{row.value}</span>
+                        <span style={{ fontSize: "0.6rem", color: "#928E80" }}>{pct}%</span>
+                      </div>
+                    </div>
+                    <div style={{ height: 3, background: "rgba(20,20,16,.07)", borderRadius: 100, overflow: "hidden" }}>
+                      <div style={{ height: "100%", borderRadius: 100, background: row.color, width: `${pct}%`, transition: "width .8s ease" }} />
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+
+            {/* Total */}
+            <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(20,20,16,.06)", display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontSize: "0.72rem", color: "#928E80" }}>Total contenus</span>
+              <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.5rem", fontWeight: 900, color: "#141410" }}>{formatNumber(total)}</span>
+            </div>
+
+            {/* Accès rapides */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem", marginTop: "0.75rem" }}>
+              {[
+                { label: "Actualités",   href: "/admin/articles",     color: "#C08435" },
+                { label: "Bourses",      href: "/admin/bourses",      color: "#1A5C40" },
+                { label: "Opportunités", href: "/admin/opportunites", color: "#1E4DA8" },
+                { label: "Événements",  href: "/admin/evenements",   color: "#7A4A1E" },
+              ].map(l => (
+                <Link key={l.href} href={l.href} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem", padding: "0.5rem", borderRadius: 8, background: `${l.color}0d`, border: `1px solid ${l.color}22`, textDecoration: "none", fontSize: "0.65rem", fontWeight: 700, color: l.color, transition: "all .15s" }}>
+                  Gérer →
+                </Link>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
     </div>
   );
 }
