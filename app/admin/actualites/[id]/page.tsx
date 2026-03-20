@@ -285,7 +285,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
         <div className="aa-editor-actions">
           {/* Aperçu — ouvre le slug dans un nouvel onglet */}
           <Link
-            href={`/actualites/${previewSlug}`}
+            href={`/actualites/${previewSlug}${!state.published ? "?preview=1" : ""}`}
             target="_blank"
             className="aa-editor-preview-btn"
           >

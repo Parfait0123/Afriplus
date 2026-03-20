@@ -2,1788 +2,1176 @@
 
 /**
  * components/admin/BlockBuilder.tsx
- * Composant bloc builder réutilisable — actualités, bourses, opportunités, événements
+ * Éditeur de blocs visuel simplifié pour non-développeurs.
  *
- * Usage :
- *   <BlockBuilder
- *     blocks={blocks}
- *     onChange={setBlocks}
- *     allowedTypes={["paragraph","heading","image","pullquote","factbox"]}  // optionnel — filtre les types disponibles
- *   />
+ * Principes UX :
+ * - Chaque type de bloc a un nom clair et une description en français
+ * - Les champs sont étiquetés avec des placeholders concrets
+ * - Pas de jargon technique
+ * - Drag & drop entre blocs (↑ ↓)
+ * - Preview inline pour les blocs courants
  */
 
-import { useState, useEffect, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Block } from "@/types/database";
+import { useState, useCallback, useRef } from "react";
+import type { Block } from "@/types/blocks";
 
-/* ── Tous les types disponibles ─────────────────────────── */
-export const ALL_BLOCK_TYPES: {
-  type: string;
-  label: string;
-  icon: string;
-  desc: string;
-}[] = [
-  { type: "paragraph", label: "Paragraphe", icon: "¶", desc: "Texte courant" },
-  { type: "heading", label: "Titre", icon: "H", desc: "H2 ou H3" },
-  { type: "image", label: "Image", icon: "🖼", desc: "Avec légende et crédit" },
-  { type: "video", label: "Vidéo", icon: "▶", desc: "YouTube, Vimeo…" },
-  { type: "pullquote", label: "Citation", icon: '"', desc: "Mise en exergue" },
+/* ── Définitions des blocs — noms grand public ─────────── */
+const BLOCK_DEFS = [
   {
-    type: "factbox",
-    label: "Encadré chiffres",
-    icon: "□",
-    desc: "Faits clés en liste",
+    group: "Texte",
+    items: [
+      {
+        type: "paragraph" as const,
+        icon: "¶",
+        label: "Paragraphe",
+        desc: "Un bloc de texte classique",
+        color: "#1A5C40",
+      },
+      {
+        type: "heading" as const,
+        icon: "T",
+        label: "Titre de section",
+        desc: "Titre visible dans le sommaire",
+        color: "#1E4DA8",
+      },
+      {
+        type: "pullquote" as const,
+        icon: "❝",
+        label: "Citation mise en avant",
+        desc: "Met en valeur une phrase importante",
+        color: "#7A4A1E",
+      },
+    ],
   },
   {
-    type: "checklist",
-    label: "Liste à cocher",
-    icon: "✓",
-    desc: "Critères, items",
-  },
-  { type: "steps", label: "Étapes", icon: "①", desc: "Processus numéroté" },
-  { type: "benefits", label: "Avantages", icon: "★", desc: "Icône + valeur" },
-  { type: "compare", label: "Comparatif", icon: "⇆", desc: "Tableau colonnes" },
-  {
-    type: "profile",
-    label: "Profil",
-    icon: "👤",
-    desc: "Traits caractéristiques",
-  },
-  {
-    type: "agenda",
-    label: "Programme",
-    icon: "📅",
-    desc: "Sessions horodatées",
+    group: "Médias",
+    items: [
+      {
+        type: "image" as const,
+        icon: "🖼",
+        label: "Image",
+        desc: "Insérer une image avec légende",
+        color: "#1A5C5C",
+      },
+      {
+        type: "video" as const,
+        icon: "▶",
+        label: "Vidéo",
+        desc: "YouTube, Vimeo ou autre lien vidéo",
+        color: "#B8341E",
+      },
+    ],
   },
   {
-    type: "speakers",
-    label: "Intervenants",
-    icon: "🎤",
-    desc: "Liste de personnes",
+    group: "Informations",
+    items: [
+      {
+        type: "factbox" as const,
+        icon: "💡",
+        label: "Boîte de faits",
+        desc: "Liste de chiffres ou faits clés",
+        color: "#C08435",
+      },
+      {
+        type: "checklist" as const,
+        icon: "✅",
+        label: "Liste de points",
+        desc: "Points avec coche (critères, conditions…)",
+        color: "#1A5C40",
+      },
+      {
+        type: "steps" as const,
+        icon: "1→",
+        label: "Étapes numérotées",
+        desc: "Processus à suivre dans l'ordre",
+        color: "#1E4DA8",
+      },
+      {
+        type: "benefits" as const,
+        icon: "★",
+        label: "Avantages / Bénéfices",
+        desc: "Grille avec icônes et valeurs",
+        color: "#1A5C40",
+      },
+      {
+        type: "compare" as const,
+        icon: "⊞",
+        label: "Tableau comparatif",
+        desc: "Comparer plusieurs options côte à côte",
+        color: "#7A4A1E",
+      },
+    ],
   },
-  { type: "location", label: "Lieu", icon: "📍", desc: "Adresse + carte" },
   {
-    type: "apply",
-    label: "CTA Candidature",
-    icon: "→",
-    desc: "Bouton d'action",
+    group: "Actions",
+    items: [
+      {
+        type: "alert" as const,
+        icon: "⚠",
+        label: "Note d'information",
+        desc: "Info, avertissement ou conseil en couleur",
+        color: "#C08435",
+      },
+      {
+        type: "apply" as const,
+        icon: "→",
+        label: "Bouton de candidature",
+        desc: "CTA avec lien, date limite et note",
+        color: "#1A5C40",
+      },
+      {
+        type: "external" as const,
+        icon: "↗",
+        label: "Lien externe",
+        desc: "Lien vers un site avec aperçu",
+        color: "#1E4DA8",
+      },
+      {
+        type: "download" as const,
+        icon: "↓",
+        label: "Fichier à télécharger",
+        desc: "Bouton pour télécharger un document",
+        color: "#928E80",
+      },
+      {
+        type: "related" as const,
+        icon: "↪",
+        label: "Renvoi vers un article",
+        desc: "\"À lire aussi\" vers un autre article",
+        color: "#7A4A1E",
+      },
+    ],
   },
-  { type: "alert", label: "Alerte", icon: "!", desc: "Info, warning, conseil" },
   {
-    type: "external",
-    label: "Lien externe",
-    icon: "↗",
-    desc: "Ressource externe",
+    group: "Événement",
+    items: [
+      {
+        type: "agenda" as const,
+        icon: "📅",
+        label: "Programme / Agenda",
+        desc: "Liste des sessions avec horaires",
+        color: "#1A5C5C",
+      },
+      {
+        type: "speakers" as const,
+        icon: "🎤",
+        label: "Intervenants",
+        desc: "Grille de cartes personnes",
+        color: "#7A4A1E",
+      },
+      {
+        type: "location" as const,
+        icon: "📍",
+        label: "Lieu",
+        desc: "Adresse avec carte intégrée optionnelle",
+        color: "#1E4DA8",
+      },
+    ],
   },
-  { type: "related", label: "Lire aussi", icon: "↩", desc: "Article lié" },
   {
-    type: "download",
-    label: "Téléchargement",
-    icon: "↓",
-    desc: "Fichier à télécharger",
+    group: "Mise en page",
+    items: [
+      {
+        type: "divider" as const,
+        icon: "—",
+        label: "Séparateur",
+        desc: "Ligne de séparation entre deux sections",
+        color: "#928E80",
+      },
+    ],
   },
-  {
-    type: "divider",
-    label: "Séparateur",
-    icon: "—",
-    desc: "Ligne horizontale",
-  },
-];
+] as const;
 
-/* ── Présets par contexte ────────────────────────────────── */
-export const BLOCK_PRESETS: Record<string, string[]> = {
-  article: [
-    "paragraph",
-    "heading",
-    "image",
-    "video",
-    "pullquote",
-    "factbox",
-    "alert",
-    "external",
-    "related",
-    "download",
-    "divider",
-  ],
-  scholarship: [
-    "paragraph",
-    "heading",
-    "benefits",
-    "checklist",
-    "steps",
-    "factbox",
-    "alert",
-    "apply",
-    "external",
-    "download",
-  ],
-  opportunity: [
-    "paragraph",
-    "heading",
-    "benefits",
-    "checklist",
-    "steps",
-    "compare",
-    "location",
-    "apply",
-    "alert",
-    "external",
-  ],
-  event: [
-    "paragraph",
-    "heading",
-    "agenda",
-    "speakers",
-    "benefits",
-    "location",
-    "apply",
-    "alert",
-    "factbox",
-    "compare",
-  ],
-  full: ALL_BLOCK_TYPES.map((b) => b.type),
-};
-
-/* ── makeBlock ───────────────────────────────────────────── */
-export function makeBlock(type: string): Block {
+/* ── Créer un bloc vide ─────────────────────────────────── */
+function emptyBlock(type: Block["type"]): Block {
   switch (type) {
-    case "paragraph":
-      return { type: "paragraph", text: "" };
-    case "heading":
-      return { type: "heading", text: "", level: 2 };
-    case "image":
-      return { type: "image", url: "", alt: "", caption: "", credit: "" };
-    case "video":
-      return { type: "video", url: "", caption: "", platform: "youtube" };
-    case "pullquote":
-      return { type: "pullquote", text: "", author: "", role: "" };
-    case "factbox":
-      return { type: "factbox", title: "En chiffres", facts: [""] };
-    case "checklist":
-      return {
-        type: "checklist",
-        title: "",
-        items: [{ label: "", detail: "" }],
-      };
-    case "steps":
-      return { type: "steps", title: "", items: [{ label: "", desc: "" }] };
-    case "benefits":
-      return {
-        type: "benefits",
-        title: "",
-        items: [{ icon: "✓", label: "", value: "", highlight: false }],
-      };
-    case "compare":
-      return {
-        type: "compare",
-        title: "",
-        columns: [{ label: "Option A" }, { label: "Option B" }],
-        rows: [{ label: "Critère", values: ["", ""] }],
-      };
-    case "profile":
-      return {
-        type: "profile",
-        title: "",
-        traits: [{ icon: "✦", label: "", description: "" }],
-      };
-    case "agenda":
-      return {
-        type: "agenda",
-        title: "Programme",
-        sessions: [
-          { time: "09:00", title: "", speaker: "", tag: "", highlight: false },
-        ],
-      };
-    case "speakers":
-      return {
-        type: "speakers",
-        title: "Intervenants",
-        people: [{ name: "", role: "", org: "", emoji: "👤" }],
-      };
-    case "location":
-      return { type: "location", label: "", address: "" };
-    case "apply":
-      return {
-        type: "apply",
-        label: "Postuler maintenant",
-        url: "",
-        note: "",
-        deadline: "",
-      };
-    case "alert":
-      return { type: "alert", message: "", variant: "info" };
-    case "external":
-      return {
-        type: "external",
-        url: "",
-        label: "",
-        description: "",
-        favicon: "",
-      };
-    case "related":
-      return { type: "related", slug: "", label: "" };
-    case "download":
-      return { type: "download", url: "", label: "", size: "" };
-    case "divider":
-      return { type: "divider" };
-    default:
-      return { type: "paragraph", text: "" };
+    case "paragraph":  return { type, text: "" };
+    case "heading":    return { type, text: "", level: 2 };
+    case "pullquote":  return { type, text: "", author: "", role: "" };
+    case "image":      return { type, url: "", alt: "", caption: "" };
+    case "video":      return { type, url: "", caption: "" };
+    case "factbox":    return { type, title: "Chiffres clés", facts: [""] };
+    case "checklist":  return { type, title: "", items: [{ label: "", detail: "" }] };
+    case "steps":      return { type, title: "", items: [{ label: "", desc: "" }] };
+    case "benefits":   return { type, items: [{ icon: "✅", label: "", value: "" }] };
+    case "compare":    return { type, title: "", columns: [{ label: "Option A" }, { label: "Option B" }], rows: [{ label: "", values: ["", ""] }] };
+    case "alert":      return { type, message: "", variant: "info" };
+    case "apply":      return { type, label: "Postuler maintenant", url: "", deadline: "", note: "" };
+    case "external":   return { type, url: "", label: "", description: "" };
+    case "download":   return { type, url: "", label: "Télécharger le document", size: "" };
+    case "related":    return { type, slug: "", label: "" };
+    case "agenda":     return { type, title: "Programme", sessions: [{ time: "09h00", title: "", speaker: "" }] };
+    case "speakers":   return { type, title: "Intervenants", people: [{ name: "", role: "", org: "" }] };
+    case "location":   return { type, label: "", address: "", mapUrl: "" };
+    case "divider":    return { type };
+    default:           return { type: "paragraph", text: "" };
   }
 }
 
-/* ── Icônes SVG ─────────────────────────────────────────── */
-const IcoUp = () => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="18 15 12 9 6 15" />
-  </svg>
-);
-const IcoDown = () => (
-  <svg
-    width="12"
-    height="12"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="6 9 12 15 18 9" />
-  </svg>
-);
-const IcoTrash = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <polyline points="3 6 5 6 21 6" />
-    <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2" />
-  </svg>
-);
-const IcoPlus = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <line x1="12" y1="5" x2="12" y2="19" />
-    <line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-);
-const IcoSearch = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-const IcoLink = () => (
-  <svg
-    width="13"
-    height="13"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-  </svg>
-);
+/* ── Styles réutilisables ───────────────────────────────── */
+const inp: React.CSSProperties = {
+  width: "100%", padding: "0.6rem 0.85rem",
+  borderRadius: 10, border: "1.5px solid rgba(20,20,16,.1)",
+  background: "#F8F6F1", fontSize: "0.85rem", color: "#141410",
+  fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+};
+const lbl: React.CSSProperties = {
+  fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.08em",
+  textTransform: "uppercase", color: "#928E80",
+  display: "block", marginBottom: "0.35rem",
+};
+const field: React.CSSProperties = {
+  display: "flex", flexDirection: "column", gap: "0.25rem",
+};
+const addRowBtn: React.CSSProperties = {
+  display: "inline-flex", alignItems: "center", gap: "0.4rem",
+  padding: "0.4rem 0.85rem", borderRadius: 8,
+  border: "1.5px dashed rgba(20,20,16,.15)", background: "transparent",
+  color: "#928E80", cursor: "pointer", fontSize: "0.75rem", fontFamily: "inherit",
+};
+const removeBtn: React.CSSProperties = {
+  width: 28, height: 28, borderRadius: 7, border: "none",
+  background: "#FAEBE8", color: "#B8341E", cursor: "pointer",
+  fontFamily: "inherit", fontWeight: 700, fontSize: "0.75rem",
+  display: "flex", alignItems: "center", justifyContent: "center",
+  flexShrink: 0,
+};
 
-/* ══════════════════════════════════════════════════════════
-   BLOC : "RELATED" avec recherche d'article
-══════════════════════════════════════════════════════════ */
-function RelatedBlockEditor({
-  block,
-  onChange,
-}: {
-  block: Extract<Block, { type: "related" }>;
-  onChange: (b: Block) => void;
-}) {
-  const sb = createClient();
-  const [query, setQuery] = useState(block.label ?? "");
-  const [results, setResults] = useState<
-    { id: string; title: string; slug: string; category: string }[]
-  >([]);
-  const [searching, setSearching] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [urlInput, setUrlInput] = useState(""); // entrée URL/slug directe
-  const [mode, setMode] = useState<"search" | "url">("search");
-  const debRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+/* ── Éditeur d'un bloc ──────────────────────────────────── */
+function BlockEditor({ block, onChange }: { block: Block; onChange: (b: Block) => void }) {
+  const set = useCallback((patch: Partial<Block>) =>
+    onChange({ ...block, ...patch } as Block), [block, onChange]);
 
-  /* Recherche debounced */
-  useEffect(() => {
-    if (query.length < 2) {
-      setResults([]);
-      return;
-    }
-    if (debRef.current) clearTimeout(debRef.current);
-    debRef.current = setTimeout(async () => {
-      setSearching(true);
-      const { data } = await (sb.from("articles") as any)
-        .select("id,title,slug,category")
-        .ilike("title", `%${query}%`)
-        .eq("published", true)
-        .limit(6);
-      setResults(data ?? []);
-      setSearching(false);
-      setOpen(true);
-    }, 280);
-    return () => {
-      if (debRef.current) clearTimeout(debRef.current);
-    };
-  }, [query]);
+  switch (block.type) {
 
-  /* Extraire le slug depuis une URL */
-  const extractSlug = (raw: string): string => {
-    try {
-      const url = new URL(
-        raw.startsWith("http") ? raw : `https://x.com/${raw}`,
-      );
-      const parts = url.pathname.split("/").filter(Boolean);
-      return parts[parts.length - 1] ?? raw;
-    } catch {
+    case "paragraph":
       return (
-        raw
-          .replace(/^\/+|\/+$/g, "")
-          .split("/")
-          .pop() ?? raw
+        <div style={field}>
+          <label style={lbl}>Texte</label>
+          <textarea value={block.text}
+            onChange={e => set({ text: e.target.value })} rows={4}
+            style={{ ...inp, resize: "vertical", lineHeight: 1.7 }}
+            placeholder="Écrivez votre paragraphe ici…" />
+        </div>
       );
-    }
-  };
 
-  const selectArticle = (a: { title: string; slug: string }) => {
-    setQuery(a.title);
-    onChange({
-      ...block,
-      slug: a.slug,
-      label: block.label || `À lire aussi : ${a.title}`,
-    });
-    setOpen(false);
-    setResults([]);
-  };
-
-  const applyUrl = () => {
-    const slug = extractSlug(urlInput.trim());
-    onChange({ ...block, slug });
-    setUrlInput("");
-    setMode("search");
-  };
-
-  return (
-    <div className="aa-block-body">
-      {/* Switcher mode */}
-      <div className="bb-related-modes">
-        <button
-          className={`bb-related-mode-btn ${mode === "search" ? "bb-related-mode-btn--active" : ""}`}
-          onClick={() => setMode("search")}
-        >
-          <IcoSearch /> Recherche par titre
-        </button>
-        <button
-          className={`bb-related-mode-btn ${mode === "url" ? "bb-related-mode-btn--active" : ""}`}
-          onClick={() => setMode("url")}
-        >
-          <IcoLink /> Coller un lien ou slug
-        </button>
-      </div>
-
-      {/* Mode : recherche */}
-      {mode === "search" && (
-        <div className="bb-related-search-wrap">
-          <label className="aa-field-label">Rechercher un article *</label>
-          <div className="bb-related-input-wrap">
-            <span className="bb-related-search-icon">
-              <IcoSearch />
-            </span>
-            <input
-              className="aa-field bb-related-input"
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setOpen(true);
-              }}
-              onFocus={() => query.length >= 2 && setOpen(true)}
-              placeholder="Tapez le titre de l'article…"
-            />
-            {searching && <span className="bb-related-spinner" />}
+    case "heading":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Niveau</label>
+            <select value={block.level ?? 2}
+              onChange={e => set({ level: Number(e.target.value) as 2 | 3 })}
+              style={inp}>
+              <option value={2}>Titre principal (H2)</option>
+              <option value={3}>Sous-titre (H3)</option>
+            </select>
           </div>
-
-          {/* Résultats */}
-          {open && results.length > 0 && (
-            <div className="bb-related-results">
-              {results.map((a) => (
-                <button
-                  key={a.id}
-                  className="bb-related-result-row"
-                  onMouseDown={() => selectArticle(a)}
-                >
-                  <span className="bb-related-result-cat">{a.category}</span>
-                  <span className="bb-related-result-title">{a.title}</span>
-                  <span className="bb-related-result-slug">/{a.slug}</span>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {open && !searching && query.length >= 2 && results.length === 0 && (
-            <div className="bb-related-no-result">
-              Aucun article trouvé pour « {query} »
-            </div>
-          )}
+          <div style={field}>
+            <label style={lbl}>Texte du titre</label>
+            <input value={block.text}
+              onChange={e => set({ text: e.target.value })} style={inp}
+              placeholder="Ex : Les résultats économiques" />
+          </div>
         </div>
-      )}
+      );
 
-      {/* Mode : URL directe */}
-      {mode === "url" && (
-        <div>
-          <label className="aa-field-label">
-            URL ou slug de l&apos;article
-          </label>
-          <div className="bb-related-url-row">
-            <input
-              className="aa-field"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="https://afripulse.com/actualites/mon-article  ou  mon-article"
-            />
-            <button className="bb-related-apply-btn" onClick={applyUrl}>
-              Extraire
-            </button>
+    case "pullquote":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Texte de la citation</label>
+            <textarea value={block.text}
+              onChange={e => set({ text: e.target.value })} rows={3}
+              style={{ ...inp, resize: "vertical" }}
+              placeholder="Ex : « L'Afrique est le continent de l'avenir. »" />
           </div>
-          <p className="aa-field-hint">
-            Collez l&apos;URL complète ou juste le slug — on extrait
-            automatiquement.
-          </p>
-        </div>
-      )}
-
-      {/* Slug sélectionné */}
-      {block.slug && (
-        <div className="bb-related-selected">
-          <span className="bb-related-selected-label">Slug sélectionné :</span>
-          <code className="bb-related-selected-slug">{block.slug}</code>
-          <button
-            className="bb-related-clear"
-            onClick={() => {
-              onChange({ ...block, slug: "", label: "" });
-              setQuery("");
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* Label */}
-      <div style={{ marginTop: ".75rem" }}>
-        <label className="aa-field-label">Label affiché (optionnel)</label>
-        <input
-          className="aa-field"
-          value={block.label ?? ""}
-          onChange={(e) => onChange({ ...block, label: e.target.value })}
-          placeholder="À lire aussi : titre personnalisé…"
-        />
-      </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════════════════════════
-   ÉDITEUR D'UN BLOC
-══════════════════════════════════════════════════════════ */
-export function BlockEditor({
-  block,
-  idx,
-  total,
-  onChange,
-  onDelete,
-  onMove,
-}: {
-  block: Block;
-  idx: number;
-  total: number;
-  onChange: (b: Block) => void;
-  onDelete: () => void;
-  onMove: (dir: "up" | "down") => void;
-}) {
-  const meta = ALL_BLOCK_TYPES.find((b) => b.type === block.type);
-
-  const header = (
-    <div className="aa-block-header">
-      <div className="aa-block-header-left">
-        <span className="aa-block-header-icon">{meta?.icon ?? "?"}</span>
-        <span className="aa-block-type-label">{meta?.label ?? block.type}</span>
-        {meta?.desc && <span className="aa-block-type-desc">{meta.desc}</span>}
-      </div>
-      <div className="aa-block-controls">
-        <button
-          className="aa-block-ctrl-btn"
-          onClick={() => onMove("up")}
-          disabled={idx === 0}
-          title="Monter"
-        >
-          <IcoUp />
-        </button>
-        <button
-          className="aa-block-ctrl-btn"
-          onClick={() => onMove("down")}
-          disabled={idx === total - 1}
-          title="Descendre"
-        >
-          <IcoDown />
-        </button>
-        <button
-          className="aa-block-ctrl-btn aa-block-ctrl-btn--del"
-          onClick={onDelete}
-          title="Supprimer"
-        >
-          <IcoTrash />
-        </button>
-      </div>
-    </div>
-  );
-
-  const body = (() => {
-    switch (block.type) {
-      case "paragraph":
-        return (
-          <div className="aa-block-body">
-            <textarea
-              className="aa-field aa-field--textarea"
-              value={block.text}
-              rows={4}
-              placeholder="Rédigez votre paragraphe…"
-              onChange={(e) => onChange({ ...block, text: e.target.value })}
-            />
-          </div>
-        );
-
-      case "heading":
-        return (
-          <div className="aa-block-body aa-block-grid2">
-            <div>
-              <label className="aa-field-label">Texte du titre</label>
-              <input
-                className="aa-field"
-                value={block.text}
-                placeholder="Titre de section…"
-                onChange={(e) => onChange({ ...block, text: e.target.value })}
-              />
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div style={field}>
+              <label style={lbl}>Auteur (optionnel)</label>
+              <input value={block.author ?? ""}
+                onChange={e => set({ author: e.target.value })} style={inp}
+                placeholder="Ex : Kofi Annan" />
             </div>
-            <div>
-              <label className="aa-field-label">Niveau</label>
-              <select
-                className="aa-field aa-field--select"
-                value={block.level ?? 2}
-                onChange={(e) =>
-                  onChange({
-                    ...block,
-                    level: parseInt(e.target.value) as 2 | 3,
-                  })
-                }
-              >
-                <option value={2}>H2 — Titre principal</option>
-                <option value={3}>H3 — Sous-titre</option>
-              </select>
+            <div style={field}>
+              <label style={lbl}>Titre / Fonction (optionnel)</label>
+              <input value={block.role ?? ""}
+                onChange={e => set({ role: e.target.value })} style={inp}
+                placeholder="Ex : Ancien SG de l'ONU" />
             </div>
           </div>
-        );
+        </div>
+      );
 
-      case "image":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">URL de l&apos;image *</label>
-            <input
-              className="aa-field"
-              value={block.url}
-              placeholder="https://images.unsplash.com/…"
-              onChange={(e) => onChange({ ...block, url: e.target.value })}
-            />
+    case "image":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>URL de l&apos;image</label>
+            <input type="url" value={block.url}
+              onChange={e => set({ url: e.target.value })} style={inp}
+              placeholder="https://…" />
             {block.url && (
-              <img
-                src={block.url}
-                alt="aperçu"
-                className="aa-block-img-preview"
-              />
+              <img src={block.url} alt="aperçu"
+                style={{ marginTop: "0.5rem", borderRadius: 8, maxHeight: 180,
+                  objectFit: "cover", width: "100%" }} />
             )}
-            <div className="aa-block-grid2" style={{ marginTop: ".6rem" }}>
-              <div>
-                <label className="aa-field-label">Texte alternatif *</label>
-                <input
-                  className="aa-field"
-                  value={block.alt}
-                  placeholder="Description accessible"
-                  onChange={(e) => onChange({ ...block, alt: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Crédit photo</label>
-                <input
-                  className="aa-field"
-                  value={block.credit ?? ""}
-                  placeholder="© Auteur / Source"
-                  onChange={(e) =>
-                    onChange({ ...block, credit: e.target.value })
-                  }
-                />
-              </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div style={field}>
+              <label style={lbl}>Texte alternatif (description)</label>
+              <input value={block.alt}
+                onChange={e => set({ alt: e.target.value })} style={inp}
+                placeholder="Ex : Vue aérienne de Nairobi" />
             </div>
-            <div style={{ marginTop: ".6rem" }}>
-              <label className="aa-field-label">Légende</label>
-              <input
-                className="aa-field"
-                value={block.caption ?? ""}
-                placeholder="Légende visible sous l'image…"
-                onChange={(e) =>
-                  onChange({ ...block, caption: e.target.value })
-                }
-              />
+            <div style={field}>
+              <label style={lbl}>Légende (optionnel)</label>
+              <input value={block.caption ?? ""}
+                onChange={e => set({ caption: e.target.value })} style={inp}
+                placeholder="Ex : © AFP / Jean Dupont" />
             </div>
           </div>
-        );
+        </div>
+      );
 
-      case "video":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">URL d&apos;embed</label>
-            <input
-              className="aa-field"
-              value={block.url}
-              placeholder="https://www.youtube.com/embed/…"
-              onChange={(e) => onChange({ ...block, url: e.target.value })}
-            />
-            <div className="aa-block-grid2" style={{ marginTop: ".6rem" }}>
-              <div>
-                <label className="aa-field-label">Plateforme</label>
-                <select
-                  className="aa-field aa-field--select"
-                  value={block.platform ?? "youtube"}
-                  onChange={(e) =>
-                    onChange({ ...block, platform: e.target.value as any })
-                  }
-                >
-                  <option value="youtube">YouTube</option>
-                  <option value="vimeo">Vimeo</option>
-                  <option value="other">Autre</option>
-                </select>
-              </div>
-              <div>
-                <label className="aa-field-label">Légende</label>
-                <input
-                  className="aa-field"
-                  value={block.caption ?? ""}
-                  placeholder="Description de la vidéo"
-                  onChange={(e) =>
-                    onChange({ ...block, caption: e.target.value })
-                  }
-                />
-              </div>
+    case "video":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Lien de la vidéo (YouTube, Vimeo…)</label>
+            <input type="url" value={block.url}
+              onChange={e => set({ url: e.target.value })} style={inp}
+              placeholder="https://www.youtube.com/embed/…" />
+            <div style={{ fontSize: "0.65rem", color: "#928E80", marginTop: "0.25rem" }}>
+              💡 Sur YouTube : clic droit sur la vidéo → &quot;Copier le code d&apos;intégration&quot;, puis prendre l&apos;URL du src
             </div>
           </div>
-        );
-
-      case "pullquote":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Citation *</label>
-            <textarea
-              className="aa-field aa-field--textarea"
-              rows={3}
-              value={block.text}
-              placeholder="La citation mise en exergue…"
-              onChange={(e) => onChange({ ...block, text: e.target.value })}
-            />
-            <div className="aa-block-grid2" style={{ marginTop: ".6rem" }}>
-              <div>
-                <label className="aa-field-label">Auteur</label>
-                <input
-                  className="aa-field"
-                  value={block.author ?? ""}
-                  placeholder="Nom de la personne"
-                  onChange={(e) =>
-                    onChange({ ...block, author: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Titre / Rôle</label>
-                <input
-                  className="aa-field"
-                  value={block.role ?? ""}
-                  placeholder="Fonction, organisation…"
-                  onChange={(e) => onChange({ ...block, role: e.target.value })}
-                />
-              </div>
-            </div>
+          <div style={field}>
+            <label style={lbl}>Légende (optionnel)</label>
+            <input value={block.caption ?? ""}
+              onChange={e => set({ caption: e.target.value })} style={inp}
+              placeholder="Ex : Discours d'ouverture du sommet" />
           </div>
-        );
+        </div>
+      );
 
-      case "factbox":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre de l&apos;encadré</label>
-            <input
-              className="aa-field"
-              value={block.title}
-              placeholder="En chiffres / Points clés"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <label className="aa-field-label" style={{ marginTop: ".6rem" }}>
-              Faits — un par ligne
-            </label>
-            <textarea
-              className="aa-field aa-field--textarea"
-              rows={5}
-              value={block.facts.join("\n")}
-              placeholder={
-                "55 États signataires\n3,2 Md$ de transactions\nObjectif 2030 : 40 Md$"
-              }
-              onChange={(e) =>
-                onChange({ ...block, facts: e.target.value.split("\n") })
-              }
-            />
+    case "factbox":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Titre de la boîte</label>
+            <input value={block.title}
+              onChange={e => set({ title: e.target.value })} style={inp}
+              placeholder="Ex : Chiffres clés" />
           </div>
-        );
-
-      case "checklist":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre (optionnel)</label>
-            <input
-              className="aa-field"
-              value={block.title ?? ""}
-              placeholder="Critères d'éligibilité…"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <div className="aa-repeater-list" style={{ marginTop: ".6rem" }}>
-              {block.items.map((item, i) => (
-                <div key={i} className="aa-repeater-row">
-                  <div className="aa-repeater-row-inner">
-                    <input
-                      className="aa-field aa-repeater-main"
-                      value={item.label}
-                      placeholder="Élément"
-                      onChange={(e) => {
-                        const items = [...block.items];
-                        items[i] = { ...items[i], label: e.target.value };
-                        onChange({ ...block, items });
-                      }}
-                    />
-                    <input
-                      className="aa-field aa-repeater-detail"
-                      value={item.detail ?? ""}
-                      placeholder="Détail (optionnel)"
-                      onChange={(e) => {
-                        const items = [...block.items];
-                        items[i] = { ...items[i], detail: e.target.value };
-                        onChange({ ...block, items });
-                      }}
-                    />
-                  </div>
-                  <button
-                    className="aa-repeater-del"
-                    onClick={() =>
-                      onChange({
-                        ...block,
-                        items: block.items.filter((_, j) => j !== i),
-                      })
-                    }
-                  >
-                    <IcoTrash />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              className="aa-repeater-add"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  items: [...block.items, { label: "", detail: "" }],
-                })
-              }
-            >
-              <IcoPlus /> Ajouter un élément
-            </button>
-          </div>
-        );
-
-      case "steps":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre (optionnel)</label>
-            <input
-              className="aa-field"
-              value={block.title ?? ""}
-              placeholder="Comment postuler…"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <div className="aa-repeater-list" style={{ marginTop: ".6rem" }}>
-              {block.items.map((item, i) => (
-                <div key={i} className="aa-step-row">
-                  <div className="aa-step-num">{i + 1}</div>
-                  <div className="aa-step-fields">
-                    <input
-                      className="aa-field"
-                      value={item.label}
-                      placeholder="Titre de l'étape"
-                      onChange={(e) => {
-                        const items = [...block.items];
-                        items[i] = { ...items[i], label: e.target.value };
-                        onChange({ ...block, items });
-                      }}
-                    />
-                    <textarea
-                      className="aa-field aa-field--textarea"
-                      rows={2}
-                      value={item.desc}
-                      placeholder="Description…"
-                      onChange={(e) => {
-                        const items = [...block.items];
-                        items[i] = { ...items[i], desc: e.target.value };
-                        onChange({ ...block, items });
-                      }}
-                    />
-                  </div>
-                  <button
-                    className="aa-repeater-del"
-                    onClick={() =>
-                      onChange({
-                        ...block,
-                        items: block.items.filter((_, j) => j !== i),
-                      })
-                    }
-                  >
-                    <IcoTrash />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              className="aa-repeater-add"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  items: [...block.items, { label: "", desc: "" }],
-                })
-              }
-            >
-              <IcoPlus /> Ajouter une étape
-            </button>
-          </div>
-        );
-
-      case "benefits":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre (optionnel)</label>
-            <input
-              className="aa-field"
-              value={block.title ?? ""}
-              placeholder="Ce que comprend…"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <div className="aa-repeater-list" style={{ marginTop: ".6rem" }}>
-              {block.items.map((item, i) => (
-                <div key={i} className="aa-benefit-row">
-                  <input
-                    className="aa-field aa-field--icon"
-                    value={item.icon}
-                    placeholder="🎓"
-                    maxLength={4}
-                    onChange={(e) => {
-                      const items = [...block.items];
-                      items[i] = { ...items[i], icon: e.target.value };
-                      onChange({ ...block, items });
-                    }}
-                  />
-                  <input
-                    className="aa-field aa-benefit-label"
-                    value={item.label}
-                    placeholder="Label"
-                    onChange={(e) => {
-                      const items = [...block.items];
-                      items[i] = { ...items[i], label: e.target.value };
-                      onChange({ ...block, items });
-                    }}
-                  />
-                  <input
-                    className="aa-field aa-benefit-value"
-                    value={item.value}
-                    placeholder="Valeur"
-                    onChange={(e) => {
-                      const items = [...block.items];
-                      items[i] = { ...items[i], value: e.target.value };
-                      onChange({ ...block, items });
-                    }}
-                  />
-                  <label className="aa-benefit-highlight">
-                    <input
-                      type="checkbox"
-                      checked={item.highlight ?? false}
-                      onChange={(e) => {
-                        const items = [...block.items];
-                        items[i] = { ...items[i], highlight: e.target.checked };
-                        onChange({ ...block, items });
-                      }}
-                    />
-                    Vedette
-                  </label>
-                  <button
-                    className="aa-repeater-del"
-                    onClick={() =>
-                      onChange({
-                        ...block,
-                        items: block.items.filter((_, j) => j !== i),
-                      })
-                    }
-                  >
-                    <IcoTrash />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              className="aa-repeater-add"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  items: [
-                    ...block.items,
-                    { icon: "✓", label: "", value: "", highlight: false },
-                  ],
-                })
-              }
-            >
-              <IcoPlus /> Ajouter un avantage
-            </button>
-          </div>
-        );
-
-      case "profile":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre (optionnel)</label>
-            <input
-              className="aa-field"
-              value={block.title ?? ""}
-              placeholder="Profil du candidat idéal…"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <div className="aa-repeater-list" style={{ marginTop: ".6rem" }}>
-              {block.traits.map((t, i) => (
-                <div key={i} className="aa-benefit-row">
-                  <input
-                    className="aa-field aa-field--icon"
-                    value={t.icon}
-                    placeholder="✦"
-                    maxLength={4}
-                    onChange={(e) => {
-                      const traits = [...block.traits];
-                      traits[i] = { ...traits[i], icon: e.target.value };
-                      onChange({ ...block, traits });
-                    }}
-                  />
-                  <input
-                    className="aa-field aa-benefit-label"
-                    value={t.label}
-                    placeholder="Trait"
-                    onChange={(e) => {
-                      const traits = [...block.traits];
-                      traits[i] = { ...traits[i], label: e.target.value };
-                      onChange({ ...block, traits });
-                    }}
-                  />
-                  <input
-                    className="aa-field aa-benefit-value"
-                    value={t.description}
-                    placeholder="Description"
-                    onChange={(e) => {
-                      const traits = [...block.traits];
-                      traits[i] = { ...traits[i], description: e.target.value };
-                      onChange({ ...block, traits });
-                    }}
-                  />
-                  <button
-                    className="aa-repeater-del"
-                    onClick={() =>
-                      onChange({
-                        ...block,
-                        traits: block.traits.filter((_, j) => j !== i),
-                      })
-                    }
-                  >
-                    <IcoTrash />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              className="aa-repeater-add"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  traits: [
-                    ...block.traits,
-                    { icon: "✦", label: "", description: "" },
-                  ],
-                })
-              }
-            >
-              <IcoPlus /> Ajouter un trait
-            </button>
-          </div>
-        );
-
-      case "compare":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre du tableau</label>
-            <input
-              className="aa-field"
-              value={block.title ?? ""}
-              placeholder="Comparaison…"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <label className="aa-field-label" style={{ marginTop: ".6rem" }}>
-              Colonnes
-            </label>
-            <div className="aa-compare-cols">
-              {block.columns.map((col, ci) => (
-                <div key={ci} className="aa-compare-col-row">
-                  <input
-                    className="aa-field"
-                    value={col.label}
-                    placeholder={`Colonne ${ci + 1}`}
-                    onChange={(e) => {
-                      const cols = [...block.columns];
-                      cols[ci] = { ...cols[ci], label: e.target.value };
-                      onChange({ ...block, columns: cols });
-                    }}
-                  />
-                  <input
-                    className="aa-field aa-field--color"
-                    type="color"
-                    value={col.color ?? "#141410"}
-                    onChange={(e) => {
-                      const cols = [...block.columns];
-                      cols[ci] = { ...cols[ci], color: e.target.value };
-                      onChange({ ...block, columns: cols });
-                    }}
-                  />
-                  {block.columns.length > 2 && (
-                    <button
-                      className="aa-repeater-del"
-                      onClick={() => {
-                        const cols = block.columns.filter((_, j) => j !== ci);
-                        const rows = block.rows.map((r) => ({
-                          ...r,
-                          values: r.values.filter((_, j) => j !== ci),
-                        }));
-                        onChange({ ...block, columns: cols, rows });
-                      }}
-                    >
-                      <IcoTrash />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                className="aa-repeater-add"
-                onClick={() =>
-                  onChange({
-                    ...block,
-                    columns: [
-                      ...block.columns,
-                      { label: `Col ${block.columns.length + 1}` },
-                    ],
-                    rows: block.rows.map((r) => ({
-                      ...r,
-                      values: [...r.values, ""],
-                    })),
-                  })
-                }
-              >
-                <IcoPlus /> Ajouter une colonne
+          <label style={lbl}>Éléments de la liste</label>
+          {block.facts.map((f, i) => (
+            <div key={i} style={{ display: "flex", gap: "0.5rem" }}>
+              <input value={f}
+                onChange={e => {
+                  const facts = [...block.facts];
+                  facts[i] = e.target.value;
+                  set({ facts });
+                }}
+                style={{ ...inp, flex: 1 }}
+                placeholder={`Ex : 54 pays membres de l'Union Africaine`} />
+              <button style={removeBtn}
+                onClick={() => set({ facts: block.facts.filter((_, j) => j !== i) })}>
+                ✕
               </button>
             </div>
-            <label className="aa-field-label" style={{ marginTop: ".6rem" }}>
-              Lignes
-            </label>
-            {block.rows.map((row, ri) => (
-              <div key={ri} className="aa-compare-row">
-                <input
-                  className="aa-field aa-compare-row-label"
-                  value={row.label}
-                  placeholder="Critère"
-                  onChange={(e) => {
-                    const rows = [...block.rows];
-                    rows[ri] = { ...rows[ri], label: e.target.value };
-                    onChange({ ...block, rows });
+          ))}
+          <button style={addRowBtn}
+            onClick={() => set({ facts: [...block.facts, ""] })}>
+            + Ajouter un élément
+          </button>
+        </div>
+      );
+
+    case "checklist":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Titre (optionnel)</label>
+            <input value={block.title ?? ""}
+              onChange={e => set({ title: e.target.value })} style={inp}
+              placeholder="Ex : Critères d'éligibilité" />
+          </div>
+          <label style={lbl}>Points de la liste</label>
+          {block.items.map((item, i) => (
+            <div key={i} style={{ background: "#F8F6F1", borderRadius: 10,
+              padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                <input value={item.label}
+                  onChange={e => {
+                    const items = [...block.items];
+                    items[i] = { ...items[i], label: e.target.value };
+                    set({ items });
                   }}
-                />
-                {row.values.map((val, vi) => (
-                  <input
-                    key={vi}
-                    className="aa-field aa-compare-row-val"
-                    value={val}
-                    placeholder={block.columns[vi]?.label ?? `Col${vi + 1}`}
-                    onChange={(e) => {
-                      const rows = [...block.rows];
-                      const values = [...rows[ri].values];
-                      values[vi] = e.target.value;
-                      rows[ri] = { ...rows[ri], values };
-                      onChange({ ...block, rows });
-                    }}
-                  />
-                ))}
-                <button
-                  className="aa-repeater-del"
-                  onClick={() =>
-                    onChange({
-                      ...block,
-                      rows: block.rows.filter((_, j) => j !== ri),
-                    })
-                  }
-                >
-                  <IcoTrash />
+                  style={{ ...inp, flex: 1 }}
+                  placeholder="Ex : Être ressortissant africain" />
+                <button style={removeBtn}
+                  onClick={() => set({ items: block.items.filter((_, j) => j !== i) })}>
+                  ✕
                 </button>
               </div>
+              <input value={item.detail ?? ""}
+                onChange={e => {
+                  const items = [...block.items];
+                  items[i] = { ...items[i], detail: e.target.value };
+                  set({ items });
+                }}
+                style={inp}
+                placeholder="Précision supplémentaire (optionnel)" />
+            </div>
+          ))}
+          <button style={addRowBtn}
+            onClick={() => set({ items: [...block.items, { label: "", detail: "" }] })}>
+            + Ajouter un point
+          </button>
+        </div>
+      );
+
+    case "steps":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Titre (optionnel)</label>
+            <input value={block.title ?? ""}
+              onChange={e => set({ title: e.target.value })} style={inp}
+              placeholder="Ex : Comment postuler ?" />
+          </div>
+          <label style={lbl}>Les étapes</label>
+          {block.items.map((step, i) => (
+            <div key={i} style={{ background: "#F8F6F1", borderRadius: 10,
+              padding: "0.75rem", display: "flex", gap: "0.75rem" }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%",
+                background: "#141410", color: "#fff", display: "flex",
+                alignItems: "center", justifyContent: "center",
+                fontWeight: 900, fontSize: "0.78rem", flexShrink: 0 }}>
+                {i + 1}
+              </div>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                <input value={step.label}
+                  onChange={e => {
+                    const items = [...block.items];
+                    items[i] = { ...items[i], label: e.target.value };
+                    set({ items });
+                  }}
+                  style={inp} placeholder="Titre de l'étape" />
+                <textarea value={step.desc}
+                  onChange={e => {
+                    const items = [...block.items];
+                    items[i] = { ...items[i], desc: e.target.value };
+                    set({ items });
+                  }}
+                  rows={2} style={{ ...inp, resize: "vertical" }}
+                  placeholder="Description détaillée de cette étape…" />
+              </div>
+              <button style={{ ...removeBtn, alignSelf: "flex-start" }}
+                onClick={() => set({ items: block.items.filter((_, j) => j !== i) })}>
+                ✕
+              </button>
+            </div>
+          ))}
+          <button style={addRowBtn}
+            onClick={() => set({ items: [...block.items, { label: "", desc: "" }] })}>
+            + Ajouter une étape
+          </button>
+        </div>
+      );
+
+    case "benefits":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <label style={lbl}>Avantages (icône + titre + valeur)</label>
+          {block.items.map((b, i) => (
+            <div key={i} style={{ display: "grid",
+              gridTemplateColumns: "56px 1fr 1fr auto", gap: "0.5rem",
+              alignItems: "center", background: "#F8F6F1",
+              borderRadius: 10, padding: "0.65rem" }}>
+              <input value={b.icon}
+                onChange={e => {
+                  const items = [...block.items];
+                  items[i] = { ...items[i], icon: e.target.value };
+                  set({ items });
+                }}
+                style={{ ...inp, textAlign: "center", fontSize: "1.3rem" }}
+                placeholder="🌍" />
+              <input value={b.label}
+                onChange={e => {
+                  const items = [...block.items];
+                  items[i] = { ...items[i], label: e.target.value };
+                  set({ items });
+                }}
+                style={inp} placeholder="Ex : Financement" />
+              <input value={b.value}
+                onChange={e => {
+                  const items = [...block.items];
+                  items[i] = { ...items[i], value: e.target.value };
+                  set({ items });
+                }}
+                style={inp} placeholder="Ex : 100% des frais couverts" />
+              <button style={removeBtn}
+                onClick={() => set({ items: block.items.filter((_, j) => j !== i) })}>
+                ✕
+              </button>
+            </div>
+          ))}
+          <button style={addRowBtn}
+            onClick={() => set({ items: [...block.items, { icon: "✅", label: "", value: "" }] })}>
+            + Ajouter un avantage
+          </button>
+        </div>
+      );
+
+    case "compare":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Titre du tableau (optionnel)</label>
+            <input value={block.title ?? ""}
+              onChange={e => set({ title: e.target.value })} style={inp}
+              placeholder="Ex : Comparaison des programmes" />
+          </div>
+          <label style={lbl}>Colonnes</label>
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+            {block.columns.map((col, i) => (
+              <div key={i} style={{ display: "flex", gap: "0.35rem", alignItems: "center" }}>
+                <input value={col.label}
+                  onChange={e => {
+                    const columns = [...block.columns];
+                    columns[i] = { label: e.target.value };
+                    set({ columns });
+                  }}
+                  style={{ ...inp, width: 140 }} placeholder={`Colonne ${i + 1}`} />
+                {block.columns.length > 1 && (
+                  <button style={removeBtn}
+                    onClick={() => set({
+                      columns: block.columns.filter((_, j) => j !== i),
+                      rows: block.rows.map(r => ({
+                        ...r, values: r.values.filter((_, j) => j !== i)
+                      }))
+                    })}>✕</button>
+                )}
+              </div>
             ))}
-            <button
-              className="aa-repeater-add"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  rows: [
-                    ...block.rows,
-                    { label: "", values: block.columns.map(() => "") },
-                  ],
-                })
-              }
-            >
-              <IcoPlus /> Ajouter une ligne
+            <button style={addRowBtn}
+              onClick={() => set({
+                columns: [...block.columns, { label: `Colonne ${block.columns.length + 1}` }],
+                rows: block.rows.map(r => ({ ...r, values: [...r.values, ""] }))
+              })}>
+              + Colonne
             </button>
           </div>
-        );
-
-      case "agenda":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre du programme</label>
-            <input
-              className="aa-field"
-              value={block.title ?? ""}
-              placeholder="Programme de la journée…"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <div className="aa-repeater-list" style={{ marginTop: ".6rem" }}>
-              {block.sessions.map((s, i) => (
-                <div key={i} className="aa-agenda-row">
-                  <input
-                    className="aa-field aa-agenda-time"
-                    value={s.time}
-                    placeholder="09:00"
-                    onChange={(e) => {
-                      const sessions = [...block.sessions];
-                      sessions[i] = { ...sessions[i], time: e.target.value };
-                      onChange({ ...block, sessions });
-                    }}
-                  />
-                  <div className="aa-agenda-right">
-                    <div className="aa-block-grid2">
-                      <input
-                        className="aa-field"
-                        value={s.title}
-                        placeholder="Titre de la session"
-                        onChange={(e) => {
-                          const sessions = [...block.sessions];
-                          sessions[i] = {
-                            ...sessions[i],
-                            title: e.target.value,
-                          };
-                          onChange({ ...block, sessions });
-                        }}
-                      />
-                      <input
-                        className="aa-field"
-                        value={s.speaker ?? ""}
-                        placeholder="Intervenant"
-                        onChange={(e) => {
-                          const sessions = [...block.sessions];
-                          sessions[i] = {
-                            ...sessions[i],
-                            speaker: e.target.value,
-                          };
-                          onChange({ ...block, sessions });
-                        }}
-                      />
-                    </div>
-                    <div
-                      className="aa-block-grid2"
-                      style={{ marginTop: ".4rem" }}
-                    >
-                      <input
-                        className="aa-field"
-                        value={s.tag ?? ""}
-                        placeholder="Tag (ex: Keynote)"
-                        onChange={(e) => {
-                          const sessions = [...block.sessions];
-                          sessions[i] = { ...sessions[i], tag: e.target.value };
-                          onChange({ ...block, sessions });
-                        }}
-                      />
-                      <label className="aa-inline-check">
-                        <input
-                          type="checkbox"
-                          checked={s.highlight ?? false}
-                          onChange={(e) => {
-                            const sessions = [...block.sessions];
-                            sessions[i] = {
-                              ...sessions[i],
-                              highlight: e.target.checked,
-                            };
-                            onChange({ ...block, sessions });
-                          }}
-                        />
-                        Session en avant
-                      </label>
-                    </div>
-                  </div>
-                  <button
-                    className="aa-repeater-del"
-                    onClick={() =>
-                      onChange({
-                        ...block,
-                        sessions: block.sessions.filter((_, j) => j !== i),
-                      })
-                    }
-                  >
-                    <IcoTrash />
-                  </button>
-                </div>
+          <label style={lbl}>Lignes</label>
+          {block.rows.map((row, ri) => (
+            <div key={ri} style={{ display: "flex", gap: "0.5rem",
+              background: "#F8F6F1", borderRadius: 10, padding: "0.65rem" }}>
+              <input value={row.label}
+                onChange={e => {
+                  const rows = [...block.rows];
+                  rows[ri] = { ...rows[ri], label: e.target.value };
+                  set({ rows });
+                }}
+                style={{ ...inp, width: 140, flexShrink: 0 }}
+                placeholder="Critère" />
+              {row.values.map((val, vi) => (
+                <input key={vi} value={val}
+                  onChange={e => {
+                    const rows = [...block.rows];
+                    rows[ri].values[vi] = e.target.value;
+                    set({ rows: [...rows] });
+                  }}
+                  style={inp} placeholder={block.columns[vi]?.label || `Val ${vi + 1}`} />
               ))}
+              <button style={removeBtn}
+                onClick={() => set({ rows: block.rows.filter((_, j) => j !== ri) })}>
+                ✕
+              </button>
             </div>
-            <button
-              className="aa-repeater-add"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  sessions: [
-                    ...block.sessions,
-                    {
-                      time: "",
-                      title: "",
-                      speaker: "",
-                      tag: "",
-                      highlight: false,
-                    },
-                  ],
-                })
-              }
-            >
-              <IcoPlus /> Ajouter une session
-            </button>
-          </div>
-        );
+          ))}
+          <button style={addRowBtn}
+            onClick={() => set({
+              rows: [...block.rows,
+                { label: "", values: block.columns.map(() => "") }]
+            })}>
+            + Ajouter une ligne
+          </button>
+        </div>
+      );
 
-      case "speakers":
-        return (
-          <div className="aa-block-body">
-            <label className="aa-field-label">Titre</label>
-            <input
-              className="aa-field"
-              value={block.title ?? ""}
-              placeholder="Intervenants confirmés…"
-              onChange={(e) => onChange({ ...block, title: e.target.value })}
-            />
-            <div className="aa-repeater-list" style={{ marginTop: ".6rem" }}>
-              {block.people.map((p, i) => (
-                <div key={i} className="aa-speaker-row">
-                  <input
-                    className="aa-field aa-field--icon"
-                    value={p.emoji ?? "👤"}
-                    placeholder="👤"
-                    maxLength={4}
-                    onChange={(e) => {
-                      const people = [...block.people];
-                      people[i] = { ...people[i], emoji: e.target.value };
-                      onChange({ ...block, people });
-                    }}
-                  />
-                  <div className="aa-speaker-fields">
-                    <div className="aa-block-grid3">
-                      <input
-                        className="aa-field"
-                        value={p.name}
-                        placeholder="Nom"
-                        onChange={(e) => {
-                          const people = [...block.people];
-                          people[i] = { ...people[i], name: e.target.value };
-                          onChange({ ...block, people });
-                        }}
-                      />
-                      <input
-                        className="aa-field"
-                        value={p.role}
-                        placeholder="Rôle"
-                        onChange={(e) => {
-                          const people = [...block.people];
-                          people[i] = { ...people[i], role: e.target.value };
-                          onChange({ ...block, people });
-                        }}
-                      />
-                      <input
-                        className="aa-field"
-                        value={p.org ?? ""}
-                        placeholder="Organisation"
-                        onChange={(e) => {
-                          const people = [...block.people];
-                          people[i] = { ...people[i], org: e.target.value };
-                          onChange({ ...block, people });
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <button
-                    className="aa-repeater-del"
-                    onClick={() =>
-                      onChange({
-                        ...block,
-                        people: block.people.filter((_, j) => j !== i),
-                      })
-                    }
-                  >
-                    <IcoTrash />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              className="aa-repeater-add"
-              onClick={() =>
-                onChange({
-                  ...block,
-                  people: [
-                    ...block.people,
-                    { name: "", role: "", org: "", emoji: "👤" },
-                  ],
-                })
-              }
-            >
-              <IcoPlus /> Ajouter un intervenant
-            </button>
+    case "alert":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Type de note</label>
+            <select value={block.variant ?? "info"}
+              onChange={e => set({ variant: e.target.value as "info" | "warning" | "tip" })}
+              style={inp}>
+              <option value="info">ℹ️ Information</option>
+              <option value="warning">⚠️ Avertissement important</option>
+              <option value="tip">💡 Conseil pratique</option>
+            </select>
           </div>
-        );
+          <div style={field}>
+            <label style={lbl}>Message</label>
+            <textarea value={block.message}
+              onChange={e => set({ message: e.target.value })} rows={3}
+              style={{ ...inp, resize: "vertical" }}
+              placeholder="Ex : Les candidatures ferment le 31 mars à 23h59." />
+          </div>
+        </div>
+      );
 
-      case "location":
-        return (
-          <div className="aa-block-body">
-            <div className="aa-block-grid2">
-              <div>
-                <label className="aa-field-label">Nom du lieu *</label>
-                <input
-                  className="aa-field"
-                  value={block.label}
-                  placeholder="Nairobi, Kenya"
-                  onChange={(e) =>
-                    onChange({ ...block, label: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Adresse complète</label>
-                <input
-                  className="aa-field"
-                  value={block.address ?? ""}
-                  placeholder="Avenue Jomo Kenyatta, Nairobi"
-                  onChange={(e) =>
-                    onChange({ ...block, address: e.target.value })
-                  }
-                />
-              </div>
+    case "apply":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Texte du bouton</label>
+            <input value={block.label}
+              onChange={e => set({ label: e.target.value })} style={inp}
+              placeholder="Ex : Postuler maintenant" />
+          </div>
+          <div style={field}>
+            <label style={lbl}>Lien de candidature (URL)</label>
+            <input type="url" value={block.url}
+              onChange={e => set({ url: e.target.value })} style={inp}
+              placeholder="https://…" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+            <div style={field}>
+              <label style={lbl}>Date limite (texte)</label>
+              <input value={block.deadline ?? ""}
+                onChange={e => set({ deadline: e.target.value })} style={inp}
+                placeholder="Ex : 30 Avr 2026" />
             </div>
-            <div style={{ marginTop: ".6rem" }}>
-              <label className="aa-field-label">
-                URL Google Maps embed (optionnel)
-              </label>
-              <input
-                className="aa-field"
-                value={block.mapUrl ?? ""}
-                placeholder="https://www.google.com/maps/embed?pb=…"
-                onChange={(e) => onChange({ ...block, mapUrl: e.target.value })}
-              />
+            <div style={field}>
+              <label style={lbl}>Note sous le bouton (optionnel)</label>
+              <input value={block.note ?? ""}
+                onChange={e => set({ note: e.target.value })} style={inp}
+                placeholder="Ex : Lien officiel · Site externe" />
             </div>
           </div>
-        );
+        </div>
+      );
 
-      case "apply":
-        return (
-          <div className="aa-block-body">
-            <div className="aa-block-grid2">
-              <div>
-                <label className="aa-field-label">Label du bouton *</label>
-                <input
-                  className="aa-field"
-                  value={block.label}
-                  placeholder="Postuler maintenant"
-                  onChange={(e) =>
-                    onChange({ ...block, label: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">URL cible *</label>
-                <input
-                  className="aa-field"
-                  value={block.url}
-                  placeholder="https://…"
-                  onChange={(e) => onChange({ ...block, url: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="aa-block-grid2" style={{ marginTop: ".6rem" }}>
-              <div>
-                <label className="aa-field-label">Date limite</label>
-                <input
-                  className="aa-field"
-                  value={block.deadline ?? ""}
-                  placeholder="31 Mars 2026"
-                  onChange={(e) =>
-                    onChange({ ...block, deadline: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Note complémentaire</label>
-                <input
-                  className="aa-field"
-                  value={block.note ?? ""}
-                  placeholder="Dossier uniquement via portail…"
-                  onChange={(e) => onChange({ ...block, note: e.target.value })}
-                />
-              </div>
-            </div>
+    case "external":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Lien URL</label>
+            <input type="url" value={block.url}
+              onChange={e => set({ url: e.target.value })} style={inp}
+              placeholder="https://…" />
           </div>
-        );
-
-      case "alert":
-        return (
-          <div className="aa-block-body">
-            <div className="aa-block-grid2">
-              <div>
-                <label className="aa-field-label">Variante</label>
-                <select
-                  className="aa-field aa-field--select"
-                  value={block.variant ?? "info"}
-                  onChange={(e) =>
-                    onChange({ ...block, variant: e.target.value as any })
-                  }
-                >
-                  <option value="info">ℹ Info — bleu teal</option>
-                  <option value="warning">⚠ Avertissement — orange</option>
-                  <option value="tip">💡 Conseil — vert</option>
-                </select>
-              </div>
-              <div />
-            </div>
-            <label className="aa-field-label" style={{ marginTop: ".6rem" }}>
-              Message
-            </label>
-            <textarea
-              className="aa-field aa-field--textarea"
-              rows={3}
-              value={block.message}
-              placeholder="Message d'alerte ou de conseil…"
-              onChange={(e) => onChange({ ...block, message: e.target.value })}
-            />
+          <div style={field}>
+            <label style={lbl}>Titre du lien</label>
+            <input value={block.label}
+              onChange={e => set({ label: e.target.value })} style={inp}
+              placeholder="Ex : Rapport officiel ONU — Développement 2026" />
           </div>
-        );
+          <div style={field}>
+            <label style={lbl}>Description courte (optionnel)</label>
+            <input value={block.description ?? ""}
+              onChange={e => set({ description: e.target.value })} style={inp}
+              placeholder="Ex : Le rapport complet en 184 pages" />
+          </div>
+          <div style={field}>
+            <label style={lbl}>Icône (émoji ou URL — optionnel)</label>
+            <input value={block.favicon ?? ""}
+              onChange={e => set({ favicon: e.target.value })} style={inp}
+              placeholder="Ex : 📄 ou https://…/icon.png" />
+          </div>
+        </div>
+      );
 
-      case "external":
-        return (
-          <div className="aa-block-body">
-            <div className="aa-block-grid2">
-              <div>
-                <label className="aa-field-label">URL *</label>
-                <input
-                  className="aa-field"
-                  value={block.url}
-                  placeholder="https://…"
-                  onChange={(e) => onChange({ ...block, url: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Label du lien *</label>
-                <input
-                  className="aa-field"
-                  value={block.label}
-                  placeholder="Lire le rapport complet"
-                  onChange={(e) =>
-                    onChange({ ...block, label: e.target.value })
-                  }
-                />
-              </div>
+    case "download":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Lien URL du fichier</label>
+            <input type="url" value={block.url}
+              onChange={e => set({ url: e.target.value })} style={inp}
+              placeholder="https://…/rapport.pdf" />
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "0.75rem" }}>
+            <div style={field}>
+              <label style={lbl}>Nom du fichier</label>
+              <input value={block.label}
+                onChange={e => set({ label: e.target.value })} style={inp}
+                placeholder="Ex : Rapport AfriPulse 2026" />
             </div>
-            <div className="aa-block-grid2" style={{ marginTop: ".6rem" }}>
-              <div>
-                <label className="aa-field-label">Description courte</label>
-                <input
-                  className="aa-field"
-                  value={block.description ?? ""}
-                  placeholder="Contenu de la ressource…"
-                  onChange={(e) =>
-                    onChange({ ...block, description: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Favicon / Emoji</label>
-                <input
-                  className="aa-field"
-                  value={block.favicon ?? ""}
-                  placeholder="🌐 ou 📄"
-                  maxLength={4}
-                  onChange={(e) =>
-                    onChange({ ...block, favicon: e.target.value })
-                  }
-                />
-              </div>
+            <div style={field}>
+              <label style={lbl}>Taille (optionnel)</label>
+              <input value={block.size ?? ""}
+                onChange={e => set({ size: e.target.value })} style={inp}
+                placeholder="Ex : 2.4 Mo" />
             </div>
           </div>
-        );
+        </div>
+      );
 
-      /* ── Related : composant spécialisé avec recherche ── */
-      case "related":
-        return <RelatedBlockEditor block={block} onChange={onChange} />;
-
-      case "download":
-        return (
-          <div className="aa-block-body">
-            <div className="aa-block-grid3">
-              <div>
-                <label className="aa-field-label">URL du fichier *</label>
-                <input
-                  className="aa-field"
-                  value={block.url}
-                  placeholder="https://…/fichier.pdf"
-                  onChange={(e) => onChange({ ...block, url: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Label du bouton *</label>
-                <input
-                  className="aa-field"
-                  value={block.label}
-                  placeholder="Télécharger le rapport"
-                  onChange={(e) =>
-                    onChange({ ...block, label: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className="aa-field-label">Taille du fichier</label>
-                <input
-                  className="aa-field"
-                  value={block.size ?? ""}
-                  placeholder="2,4 Mo"
-                  onChange={(e) => onChange({ ...block, size: e.target.value })}
-                />
-              </div>
+    case "related":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Slug de l&apos;article lié</label>
+            <input value={block.slug}
+              onChange={e => set({ slug: e.target.value })} style={inp}
+              placeholder="Ex : accord-union-africaine-2026" />
+            <div style={{ fontSize: "0.65rem", color: "#928E80", marginTop: "0.2rem" }}>
+              💡 Le slug est la partie de l&apos;URL après /actualites/
             </div>
           </div>
-        );
-
-      case "divider":
-        return (
-          <div className="aa-block-body aa-divider-preview">
-            <div className="aa-divider-line" />
-            <span className="aa-divider-label">Séparateur horizontal</span>
+          <div style={field}>
+            <label style={lbl}>Texte à afficher (optionnel)</label>
+            <input value={block.label ?? ""}
+              onChange={e => set({ label: e.target.value })} style={inp}
+              placeholder="Laissez vide pour afficher le titre de l'article automatiquement" />
           </div>
-        );
+        </div>
+      );
 
-      default:
-        return (
-          <div className="aa-block-body">
-            <p className="aa-block-unknown">
-              Type non géré : {(block as any).type}
-            </p>
+    case "agenda":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Titre du programme (optionnel)</label>
+            <input value={block.title ?? ""}
+              onChange={e => set({ title: e.target.value })} style={inp}
+              placeholder="Ex : Programme du jour" />
           </div>
-        );
-    }
-  })();
+          <label style={lbl}>Sessions</label>
+          {block.sessions.map((s, i) => (
+            <div key={i} style={{ display: "grid",
+              gridTemplateColumns: "90px 1fr 1fr auto",
+              gap: "0.5rem", alignItems: "center",
+              background: "#F8F6F1", borderRadius: 10, padding: "0.65rem" }}>
+              <input value={s.time}
+                onChange={e => {
+                  const sessions = [...block.sessions];
+                  sessions[i] = { ...sessions[i], time: e.target.value };
+                  set({ sessions });
+                }}
+                style={inp} placeholder="09h00" />
+              <input value={s.title}
+                onChange={e => {
+                  const sessions = [...block.sessions];
+                  sessions[i] = { ...sessions[i], title: e.target.value };
+                  set({ sessions });
+                }}
+                style={inp} placeholder="Intitulé de la session" />
+              <input value={s.speaker ?? ""}
+                onChange={e => {
+                  const sessions = [...block.sessions];
+                  sessions[i] = { ...sessions[i], speaker: e.target.value };
+                  set({ sessions });
+                }}
+                style={inp} placeholder="Intervenant (optionnel)" />
+              <button style={removeBtn}
+                onClick={() => set({ sessions: block.sessions.filter((_, j) => j !== i) })}>
+                ✕
+              </button>
+            </div>
+          ))}
+          <button style={addRowBtn}
+            onClick={() => set({ sessions: [...block.sessions, { time: "", title: "", speaker: "" }] })}>
+            + Ajouter une session
+          </button>
+        </div>
+      );
 
-  return (
-    <div className="aa-block-wrap">
-      {header}
-      {body}
-    </div>
-  );
+    case "speakers":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Titre de la section (optionnel)</label>
+            <input value={block.title ?? ""}
+              onChange={e => set({ title: e.target.value })} style={inp}
+              placeholder="Ex : Les intervenants" />
+          </div>
+          <label style={lbl}>Personnes</label>
+          {block.people.map((p, i) => (
+            <div key={i} style={{ display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr auto",
+              gap: "0.5rem", background: "#F8F6F1",
+              borderRadius: 10, padding: "0.65rem" }}>
+              <input value={p.name}
+                onChange={e => {
+                  const people = [...block.people];
+                  people[i] = { ...people[i], name: e.target.value };
+                  set({ people });
+                }}
+                style={inp} placeholder="Nom complet" />
+              <input value={p.role}
+                onChange={e => {
+                  const people = [...block.people];
+                  people[i] = { ...people[i], role: e.target.value };
+                  set({ people });
+                }}
+                style={inp} placeholder="Titre / Rôle" />
+              <input value={p.org ?? ""}
+                onChange={e => {
+                  const people = [...block.people];
+                  people[i] = { ...people[i], org: e.target.value };
+                  set({ people });
+                }}
+                style={inp} placeholder="Organisation" />
+              <button style={removeBtn}
+                onClick={() => set({ people: block.people.filter((_, j) => j !== i) })}>
+                ✕
+              </button>
+            </div>
+          ))}
+          <button style={addRowBtn}
+            onClick={() => set({ people: [...block.people, { name: "", role: "", org: "" }] })}>
+            + Ajouter une personne
+          </button>
+        </div>
+      );
+
+    case "location":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Nom du lieu</label>
+            <input value={block.label}
+              onChange={e => set({ label: e.target.value })} style={inp}
+              placeholder="Ex : Palais des Congrès de Dakar" />
+          </div>
+          <div style={field}>
+            <label style={lbl}>Adresse complète (optionnel)</label>
+            <input value={block.address ?? ""}
+              onChange={e => set({ address: e.target.value })} style={inp}
+              placeholder="Ex : Avenue Cheikh Anta Diop, Dakar, Sénégal" />
+          </div>
+          <div style={field}>
+            <label style={lbl}>Lien Google Maps (optionnel)</label>
+            <input type="url" value={block.mapUrl ?? ""}
+              onChange={e => set({ mapUrl: e.target.value })} style={inp}
+              placeholder="https://maps.google.com/maps?…&output=embed" />
+            <div style={{ fontSize: "0.65rem", color: "#928E80", marginTop: "0.2rem" }}>
+              💡 Sur Google Maps : partager → intégrer → copier l&apos;URL du src
+            </div>
+          </div>
+        </div>
+      );
+
+    case "profile":
+      return (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+          <div style={field}>
+            <label style={lbl}>Titre (optionnel)</label>
+            <input value={(block as any).title ?? ""}
+              onChange={e => set({ title: e.target.value } as any)} style={inp}
+              placeholder="Ex : Notre équipe" />
+          </div>
+          <div style={{ fontSize: "0.65rem", color: "#928E80", padding: "0.5rem",
+            background: "#FBF4E8", borderRadius: 8 }}>
+            💡 Bloc profil — géré via types/database
+          </div>
+        </div>
+      );
+
+    case "divider":
+      return (
+        <div style={{ textAlign: "center", padding: "0.5rem 0",
+          color: "#928E80", fontSize: "0.82rem" }}>
+          ─── Ligne de séparation ───
+        </div>
+      );
+
+    default:
+      return <div style={{ color: "#928E80", fontSize: "0.82rem" }}>Type inconnu</div>;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
-   BLOC BUILDER COMPLET (wrapper avec menu + liste)
+   COMPOSANT PRINCIPAL
 ══════════════════════════════════════════════════════════ */
-export default function BlockBuilder({
-  blocks,
-  onChange,
-  allowedTypes,
-  preset = "full",
-}: {
+interface BlockBuilderProps {
   blocks: Block[];
   onChange: (blocks: Block[]) => void;
-  allowedTypes?: string[];
-  preset?: keyof typeof BLOCK_PRESETS;
-}) {
-  const [addMenu, setAddMenu] = useState(false);
-  const [searchBloc, setSearchBloc] = useState("");
+  preset?: "article" | "scholarship" | "opportunity" | "event";
+}
 
-  const allowed = allowedTypes ?? BLOCK_PRESETS[preset] ?? BLOCK_PRESETS.full;
-  const typeList = ALL_BLOCK_TYPES.filter((b) => allowed.includes(b.type));
-  const filtered = searchBloc
-    ? typeList.filter(
-        (b) =>
-          b.label.toLowerCase().includes(searchBloc.toLowerCase()) ||
-          b.desc.toLowerCase().includes(searchBloc.toLowerCase()),
-      )
-    : typeList;
+export default function BlockBuilder({ blocks, onChange }: BlockBuilderProps) {
+  const [showPicker, setShowPicker] = useState(false);
+  const [openBlocks, setOpenBlocks] = useState<Set<number>>(new Set());
 
-  const addBlock = (type: string) => {
-    onChange([...blocks, makeBlock(type)]);
-    setAddMenu(false);
-    setSearchBloc("");
+  const addBlock = (type: Block["type"]) => {
+    onChange([...blocks, emptyBlock(type)]);
+    // Auto-ouvrir le nouveau bloc
+    setOpenBlocks(prev => new Set([...prev, blocks.length]));
+    setShowPicker(false);
   };
-  const updateBlock = (idx: number, b: Block) =>
-    onChange(blocks.map((x, i) => (i === idx ? b : x)));
-  const deleteBlock = (idx: number) =>
-    onChange(blocks.filter((_, i) => i !== idx));
-  const moveBlock = (idx: number, dir: "up" | "down") => {
-    const arr = [...blocks];
-    const t = dir === "up" ? idx - 1 : idx + 1;
-    if (t < 0 || t >= arr.length) return;
-    [arr[idx], arr[t]] = [arr[t], arr[idx]];
-    onChange(arr);
+
+  const updateBlock = useCallback((i: number, b: Block) => {
+    onChange(blocks.map((old, j) => j === i ? b : old));
+  }, [blocks, onChange]);
+
+  const removeBlock = (i: number) => {
+    onChange(blocks.filter((_, j) => j !== i));
+    setOpenBlocks(prev => {
+      const next = new Set<number>();
+      Array.from(prev).forEach(n => { if (n < i) next.add(n); else if (n > i) next.add(n - 1); });
+      return next;
+    });
+  };
+
+  const moveUp = (i: number) => {
+    if (i === 0) return;
+    const a = [...blocks];
+    [a[i - 1], a[i]] = [a[i], a[i - 1]];
+    onChange(a);
+  };
+
+  const moveDown = (i: number) => {
+    if (i === blocks.length - 1) return;
+    const a = [...blocks];
+    [a[i], a[i + 1]] = [a[i + 1], a[i]];
+    onChange(a);
+  };
+
+  const toggleBlock = (i: number) => {
+    setOpenBlocks(prev => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
+  // Trouver la def d'un bloc pour son label/icône/couleur
+  const getDef = (type: Block["type"]) => {
+    for (const group of BLOCK_DEFS) {
+      const found = group.items.find(d => d.type === type);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  // Prévisualisation courte du contenu d'un bloc
+  const blockPreview = (block: Block): string => {
+    switch (block.type) {
+      case "paragraph":  return block.text.slice(0, 60) || "Paragraphe vide…";
+      case "heading":    return block.text || "Titre vide…";
+      case "pullquote":  return `❝ ${block.text.slice(0, 50)}` || "Citation vide…";
+      case "image":      return block.url ? "Image : " + block.url.split("/").pop() : "Aucune image";
+      case "video":      return block.url ? "Vidéo : " + block.url.slice(0, 40) : "Aucune vidéo";
+      case "factbox":    return `${block.facts.filter(Boolean).length} élément(s) · ${block.title}`;
+      case "checklist":  return `${block.items.length} point(s)${block.title ? " · " + block.title : ""}`;
+      case "steps":      return `${block.items.length} étape(s)${block.title ? " · " + block.title : ""}`;
+      case "benefits":   return `${block.items.length} avantage(s)`;
+      case "compare":    return `${block.rows.length} ligne(s) · ${block.columns.length} colonne(s)`;
+      case "alert":      return block.message.slice(0, 60) || "Message vide…";
+      case "apply":      return block.label || "CTA vide";
+      case "external":   return block.label || block.url.slice(0, 50) || "Lien vide…";
+      case "download":   return block.label || "Fichier vide";
+      case "related":    return block.slug || "Slug manquant";
+      case "agenda":     return `${block.sessions.length} session(s)`;
+      case "speakers":   return `${block.people.length} personne(s)`;
+      case "location":   return block.label || "Lieu vide";
+      case "divider":    return "─────────────────";
+      default: return "";
+    }
   };
 
   return (
-    <div className="bb-wrap">
-      {/* En-tête */}
-      <div className="aa-blocks-header">
-        <span className="aa-section-label" style={{ margin: 0 }}>
-          Corps du contenu
-        </span>
-        <span className="aa-blocks-count">
-          {blocks.length} bloc{blocks.length !== 1 ? "s" : ""}
-        </span>
+    <div style={{ marginTop: "1.5rem" }}>
+      <div style={{ display: "flex", alignItems: "center",
+        justifyContent: "space-between", marginBottom: "0.85rem" }}>
+        <div style={{ fontSize: "0.62rem", fontWeight: 800,
+          letterSpacing: "0.12em", textTransform: "uppercase", color: "#928E80" }}>
+          Blocs de contenu ({blocks.length})
+        </div>
+        {blocks.length > 0 && (
+          <button onClick={() => setOpenBlocks(
+            openBlocks.size < blocks.length
+              ? new Set<number>(blocks.map((_, i) => i))
+              : new Set()
+          )}
+            style={{ fontSize: "0.7rem", color: "#928E80", background: "none",
+              border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+            {openBlocks.size < blocks.length ? "Tout déplier" : "Tout replier"}
+          </button>
+        )}
       </div>
 
-      {/* Vide */}
-      {blocks.length === 0 && (
-        <div className="aa-blocks-empty">
-          <div className="aa-blocks-empty-icon">✦</div>
-          <div className="aa-blocks-empty-label">
-            Ajoutez votre premier bloc de contenu
+      {/* Liste des blocs */}
+      {blocks.length === 0 ? (
+        <div style={{ background: "#fff", borderRadius: 16,
+          border: "2px dashed rgba(20,20,16,.1)", padding: "2.5rem",
+          textAlign: "center", marginBottom: "0.75rem" }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.6rem" }}>📝</div>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif",
+            fontSize: "1rem", fontWeight: 700, color: "#141410", marginBottom: "0.3rem" }}>
+            Aucun bloc
           </div>
+          <div style={{ fontSize: "0.8rem", color: "#928E80" }}>
+            Cliquez sur &quot;+ Ajouter un bloc&quot; pour construire votre contenu
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem",
+          marginBottom: "0.75rem" }}>
+          {blocks.map((block, i) => {
+            const def     = getDef(block.type);
+            const isOpen  = openBlocks.has(i);
+            const preview = blockPreview(block);
+
+            return (
+              <div key={i} style={{ background: "#fff", borderRadius: 14,
+                border: "1px solid rgba(20,20,16,.08)",
+                boxShadow: "0 1px 6px rgba(20,20,16,.04)",
+                overflow: "hidden" }}>
+
+                {/* En-tête du bloc — toujours visible */}
+                <div style={{ display: "flex", alignItems: "center",
+                  padding: "0.75rem 1rem", cursor: "pointer",
+                  background: isOpen ? "#FAFAF8" : "#fff",
+                  borderBottom: isOpen ? "1px solid rgba(20,20,16,.07)" : "none",
+                  gap: "0.75rem" }}
+                  onClick={() => toggleBlock(i)}>
+
+                  {/* Icône + label */}
+                  <div style={{ width: 32, height: 32, borderRadius: 8,
+                    background: def ? `${def.color}14` : "#F0EDE4",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "0.85rem", fontWeight: 900,
+                    color: def?.color ?? "#928E80", flexShrink: 0 }}>
+                    {def?.icon ?? "?"}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: "0.78rem", fontWeight: 700,
+                      color: "#141410" }}>
+                      {def?.label ?? block.type}
+                    </div>
+                    {!isOpen && (
+                      <div style={{ fontSize: "0.65rem", color: "#928E80",
+                        overflow: "hidden", textOverflow: "ellipsis",
+                        whiteSpace: "nowrap", marginTop: "0.1rem" }}>
+                        {preview}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contrôles */}
+                  <div style={{ display: "flex", gap: "0.25rem", alignItems: "center" }}
+                    onClick={e => e.stopPropagation()}>
+                    <button onClick={() => moveUp(i)} disabled={i === 0}
+                      style={{ width: 26, height: 26, borderRadius: 7,
+                        border: "1px solid rgba(20,20,16,.1)", background: "transparent",
+                        color: i === 0 ? "rgba(20,20,16,.2)" : "#38382E",
+                        cursor: i === 0 ? "default" : "pointer", fontFamily: "inherit",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "0.7rem" }}>
+                      ↑
+                    </button>
+                    <button onClick={() => moveDown(i)} disabled={i === blocks.length - 1}
+                      style={{ width: 26, height: 26, borderRadius: 7,
+                        border: "1px solid rgba(20,20,16,.1)", background: "transparent",
+                        color: i === blocks.length - 1 ? "rgba(20,20,16,.2)" : "#38382E",
+                        cursor: i === blocks.length - 1 ? "default" : "pointer",
+                        fontFamily: "inherit",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "0.7rem" }}>
+                      ↓
+                    </button>
+                    <button onClick={() => removeBlock(i)}
+                      style={{ width: 26, height: 26, borderRadius: 7,
+                        border: "1px solid rgba(184,52,30,.2)", background: "#FAEBE8",
+                        color: "#B8341E", cursor: "pointer", fontFamily: "inherit",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "0.72rem", fontWeight: 700 }}>
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Chevron ouvert/fermé */}
+                  <div style={{ color: "#928E80", fontSize: "0.7rem",
+                    transform: isOpen ? "rotate(180deg)" : "none",
+                    transition: "transform .15s", flexShrink: 0 }}>
+                    ▼
+                  </div>
+                </div>
+
+                {/* Corps du bloc — visible si ouvert */}
+                {isOpen && (
+                  <div style={{ padding: "1rem 1.1rem" }}>
+                    <BlockEditor block={block} onChange={b => updateBlock(i, b)} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* Liste */}
-      {blocks.map((block, idx) => (
-        <BlockEditor
-          key={`${block.type}-${idx}`}
-          block={block}
-          idx={idx}
-          total={blocks.length}
-          onChange={(b) => updateBlock(idx, b)}
-          onDelete={() => deleteBlock(idx)}
-          onMove={(dir) => moveBlock(idx, dir)}
-        />
-      ))}
+      {/* Bouton principal + picker */}
+      <button onClick={() => setShowPicker(!showPicker)}
+        style={{ width: "100%", padding: "0.85rem", borderRadius: 12,
+          border: `2px dashed ${showPicker ? "#141410" : "rgba(20,20,16,.15)"}`,
+          background: showPicker ? "#141410" : "transparent",
+          color: showPicker ? "#fff" : "#928E80",
+          fontSize: "0.85rem", fontWeight: 600, cursor: "pointer",
+          fontFamily: "inherit", transition: "all .18s" }}>
+        {showPicker ? "✕ Annuler" : "+ Ajouter un bloc"}
+      </button>
 
-      {/* Ajout */}
-      <div className="bb-add-wrap">
-        <button
-          className={`aa-add-block-btn${addMenu ? " open" : ""}`}
-          onClick={() => setAddMenu((v) => !v)}
-        >
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          {addMenu ? "Fermer" : "Ajouter un bloc"}
-        </button>
-
-        {addMenu && (
-          <div className="bb-block-menu-inline">
-            <div className="bb-block-menu-search-row">
-              <input
-                className="aa-field bb-block-menu-search"
-                placeholder="Rechercher un type de bloc…"
-                value={searchBloc}
-                onChange={(e) => setSearchBloc(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="bb-block-menu-grid">
-              {filtered.map((bt) => (
-                <button
-                  key={bt.type}
-                  className="bb-block-menu-item"
-                  onClick={() => addBlock(bt.type)}
-                >
-                  <span className="bb-menu-icon">{bt.icon}</span>
-                  <span className="bb-menu-label">{bt.label}</span>
-                  <span className="bb-menu-desc">{bt.desc}</span>
-                </button>
-              ))}
-              {filtered.length === 0 && (
-                <p className="bb-menu-empty">Aucun résultat</p>
-              )}
-            </div>
+      {/* Picker de types de blocs — organisé par groupes */}
+      {showPicker && (
+        <div style={{ background: "#fff", borderRadius: 16,
+          border: "1px solid rgba(20,20,16,.08)", padding: "1.25rem",
+          marginTop: "0.5rem", boxShadow: "0 8px 32px rgba(20,20,16,.1)" }}>
+          <div style={{ fontSize: "0.6rem", fontWeight: 800,
+            letterSpacing: "0.12em", textTransform: "uppercase",
+            color: "#928E80", marginBottom: "1rem" }}>
+            Quel type de contenu voulez-vous ajouter ?
           </div>
-        )}
-      </div>
+
+          {BLOCK_DEFS.map(group => (
+            <div key={group.group} style={{ marginBottom: "1.1rem" }}>
+              <div style={{ fontSize: "0.55rem", fontWeight: 800,
+                letterSpacing: "0.15em", textTransform: "uppercase",
+                color: "rgba(20,20,16,.3)", marginBottom: "0.5rem",
+                paddingBottom: "0.35rem",
+                borderBottom: "1px solid rgba(20,20,16,.06)" }}>
+                {group.group}
+              </div>
+              <div style={{ display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))",
+                gap: "0.4rem" }}>
+                {group.items.map(def => (
+                  <button key={def.type} onClick={() => addBlock(def.type)}
+                    style={{ padding: "0.7rem 0.85rem", borderRadius: 10,
+                      border: "1.5px solid rgba(20,20,16,.08)",
+                      background: "#F8F6F1", cursor: "pointer",
+                      textAlign: "left", fontFamily: "inherit",
+                      transition: "all .15s" }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = def.color;
+                      (e.currentTarget as HTMLElement).style.background = `${def.color}0d`;
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(20,20,16,.08)";
+                      (e.currentTarget as HTMLElement).style.background = "#F8F6F1";
+                    }}>
+                    <div style={{ display: "flex", alignItems: "center",
+                      gap: "0.5rem", marginBottom: "0.2rem" }}>
+                      <span style={{ fontSize: "1rem" }}>{def.icon}</span>
+                      <span style={{ fontSize: "0.78rem", fontWeight: 700,
+                        color: "#141410" }}>{def.label}</span>
+                    </div>
+                    <div style={{ fontSize: "0.65rem", color: "#928E80",
+                      lineHeight: 1.4 }}>{def.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
