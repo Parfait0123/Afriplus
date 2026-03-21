@@ -1,11 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import NewsletterBand from "@/components/sections/NewsletterBand";
-import { articles, type Category } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
+
+type Category = "Politique"|"Économie"|"Tech"|"Sport"|"Culture"|"Santé"|"Environnement";
+
+/* ── Type article Supabase ── */
+interface ArticleRow {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string | null;
+  category: Category;
+  author_name: string;
+  reading_time: number;
+  cover_url: string | null;
+  image_gradient: string;
+  featured: boolean;
+  published_at: string | null;
+  created_at: string;
+}
 
 /* ─── Config catégories ─── */
 const CATEGORIES: Category[] = ["Politique","Économie","Tech","Sport","Culture","Santé","Environnement"];
@@ -48,11 +66,16 @@ function CategoryPill({ cat, inverted = false }: { cat: string; inverted?: boole
 function Byline({ author, date, readTime, light = false }: { author:string; date:string; readTime:number; light?:boolean }) {
   const col = light ? "rgba(248,246,241,.45)" : "#928E80";
   const bold = light ? "rgba(248,246,241,.8)" : "#38382E";
+  const fmtDate = (iso: string) => {
+    try {
+      return new Date(iso).toLocaleDateString("fr-FR", { day:"numeric", month:"short", year:"numeric" });
+    } catch { return iso; }
+  };
   return (
     <div style={{ display:"flex", alignItems:"center", gap:"0.9rem", fontSize:"0.6rem", color:col }}>
       <span style={{ fontWeight:700, color:bold }}>{author}</span>
       <span style={{ width:3, height:3, borderRadius:"50%", background:col, flexShrink:0 }}/>
-      <span>{date}</span>
+      <span>{fmtDate(date)}</span>
       <span style={{ width:3, height:3, borderRadius:"50%", background:col, flexShrink:0 }}/>
       <span>{readTime} min</span>
     </div>
@@ -60,16 +83,83 @@ function Byline({ author, date, readTime, light = false }: { author:string; date
 }
 
 export default function ActualitesPage() {
+  const sb = createClient();
+  const [articles, setArticles] = useState<ArticleRow[]>([]);
+  const [loading,  setLoading]  = useState(true);
   const [filter, setFilter] = useState<"Tout" | Category>("Tout");
 
+  useEffect(() => {
+    sb.from("articles")
+      .select("id,slug,title,excerpt,category,author_name,reading_time,cover_url,image_gradient,featured,published_at,created_at")
+      .eq("published", true)
+      .order("published_at", { ascending: false })
+      .then(({ data }) => {
+        setArticles((data ?? []) as ArticleRow[]);
+        setLoading(false);
+      });
+  }, []);
+  
   /* ── Découpage éditorial ── */
-  const hero      = articles[0];                   // Manchette pleine page
-  const col1      = articles.slice(1, 4);          // Colonne gauche 3 articles
-  const spotlight = articles[4];                   // Pleine largeur sombre
-  const trio      = articles.slice(5, 8);          // 3 cartes égales
-  const longform  = articles.slice(8, 10);         // 2 grands formats
-  const remaining = articles.slice(10);            // Grille paginée
+  const hero      = articles[0];
+  const col1      = articles.slice(1, 4);
+  const spotlight = articles[4];
+  const trio      = articles.slice(5, 8);
+  const longform  = articles.slice(8, 10);
+  const remaining = articles.slice(10);
   const filtered  = filter === "Tout" ? remaining : remaining.filter(a => a.category === filter);
+
+  /* ── Helpers pour mapper les champs Supabase ── */
+  const imgBg = (art: ArticleRow) =>
+    art.cover_url ? `url(${art.cover_url})` : art.image_gradient;
+  const imgStyle = (art: ArticleRow): React.CSSProperties =>
+    art.cover_url
+      ? { background: `url(${art.cover_url}) center/cover no-repeat` }
+      : { background: art.image_gradient };
+
+  /* ── Skeleton de chargement ── */
+  if (loading) return (
+    <>
+      <Navbar />
+      <main style={{ background:"#EEEADE", minHeight:"100vh" }}>
+        <div style={{ background:"#141410", paddingTop:"clamp(4.5rem,8vh,6.5rem)", paddingBottom:"3rem" }}>
+          <div className="nw-wrap">
+            <div style={{ display:"flex", gap:"1rem", marginBottom:"2rem" }}>
+              <div style={{ width:200, height:14, borderRadius:6, background:"rgba(248,246,241,.08)", animation:"nw-pulse 1.4s ease infinite" }}/>
+            </div>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div style={{ width:260, height:52, borderRadius:8, background:"rgba(248,246,241,.06)", animation:"nw-pulse 1.4s ease .1s infinite" }}/>
+              <div style={{ width:180, height:16, borderRadius:6, background:"rgba(248,246,241,.04)", animation:"nw-pulse 1.4s ease .2s infinite" }}/>
+            </div>
+          </div>
+          <div style={{ height:3, background:"linear-gradient(90deg,#C08435,#E8B86D,#C08435)", marginTop:"2rem" }}/>
+        </div>
+        <div className="nw-wrap" style={{ paddingTop:"2.5rem", paddingBottom:"5rem" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:"2rem", marginBottom:"3rem" }}>
+            <div style={{ height:480, borderRadius:20, background:"rgba(20,20,16,.08)", animation:"nw-pulse 1.4s ease infinite" }}/>
+            <div style={{ display:"flex", flexDirection:"column", gap:"1rem" }}>
+              {[0,1,2].map(i => <div key={i} style={{ height:140, borderRadius:14, background:"rgba(20,20,16,.06)", animation:`nw-pulse 1.4s ease ${i*.1}s infinite` }}/>)}
+            </div>
+          </div>
+        </div>
+        <style>{`@keyframes nw-pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
+      </main>
+      <Footer />
+    </>
+  );
+
+  /* ── Pas encore d'articles ── */
+  if (articles.length === 0) return (
+    <>
+      <Navbar />
+      <main style={{ background:"#EEEADE", minHeight:"80vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        <div style={{ textAlign:"center" }}>
+          <p style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.5rem", color:"rgba(20,20,16,.2)", fontWeight:900 }}>—</p>
+          <p style={{ color:"#928E80", marginTop:"0.5rem" }}>Aucun article publié pour l&apos;instant.</p>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
 
   return (
     <>
@@ -136,7 +226,7 @@ export default function ActualitesPage() {
             <Link href={`/actualites/${hero.slug}`} className="nw-hero-link">
               <article className="nw-hero">
                 {/* Image plein fond */}
-                <div className="nw-hero-img" style={{ background: hero.imageGradient }}>
+                <div className="nw-hero-img" style={imgStyle(hero)}>
                   <div className="nw-hero-overlay"/>
                   {/* Numéro fantôme */}
                   <div className="nw-hero-ghost-num">01</div>
@@ -153,7 +243,7 @@ export default function ActualitesPage() {
                   <p className="nw-hero-excerpt">{hero.excerpt}</p>
                   <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
                     paddingTop:"1.25rem", borderTop:"1px solid rgba(20,20,16,.08)" }}>
-                    <Byline author={hero.author} date={hero.date} readTime={hero.readTime}/>
+                    <Byline author={hero.author_name} date={hero.published_at ?? hero.created_at} readTime={hero.reading_time}/>
                     <span className="nw-read-cta">Lire →</span>
                   </div>
                 </div>
@@ -166,13 +256,13 @@ export default function ActualitesPage() {
               {col1.map((art, i) => (
                 <Link key={art.id} href={`/actualites/${art.slug}`} className="nw-sidebar-link">
                   <article className="nw-sidebar-art" style={{ borderBottom: i < col1.length-1 ? "1px solid rgba(20,20,16,.09)" : "none" }}>
-                    <div className="nw-sidebar-thumb" style={{ background: art.imageGradient }}>
+                    <div className="nw-sidebar-thumb" style={imgStyle(art)}>
                       <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,transparent,rgba(0,0,0,.25))" }}/>
                     </div>
                     <div style={{ flex:1, minWidth:0 }}>
                       <CategoryPill cat={art.category}/>
                       <h3 className="nw-sidebar-title">{art.title}</h3>
-                      <Byline author={art.author} date={art.date} readTime={art.readTime}/>
+                      <Byline author={art.author_name} date={art.published_at ?? art.created_at} readTime={art.reading_time}/>
                     </div>
                   </article>
                 </Link>
@@ -190,7 +280,7 @@ export default function ActualitesPage() {
             <Link href={`/actualites/${spotlight.slug}`} style={{ textDecoration:"none", display:"block" }}>
               <div className="nw-spotlight">
                 {/* Image côté droit */}
-                <div className="nw-spotlight-img" style={{ background: spotlight.imageGradient }}>
+                <div className="nw-spotlight-img" style={imgStyle(spotlight)}>
                   <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, #141410 0%, rgba(20,20,16,.4) 60%, transparent 100%)" }}/>
                 </div>
                 {/* Texte */}
@@ -203,7 +293,7 @@ export default function ActualitesPage() {
                   <h2 className="nw-spotlight-title">{spotlight.title}</h2>
                   <p className="nw-spotlight-excerpt">{spotlight.excerpt}</p>
                   <div style={{ display:"flex", alignItems:"center", gap:"2rem", marginTop:"2rem" }}>
-                    <Byline author={spotlight.author} date={spotlight.date} readTime={spotlight.readTime} light/>
+                    <Byline author={spotlight.author_name} date={spotlight.published_at ?? spotlight.created_at} readTime={spotlight.reading_time} light/>
                     <span style={{ marginLeft:"auto", fontSize:"0.8rem", fontWeight:700, color:"#C08435",
                       display:"flex", alignItems:"center", gap:"0.4rem", flexShrink:0,
                       borderBottom:"1.5px solid rgba(192,132,53,.3)", paddingBottom:"2px" }}>
@@ -233,7 +323,7 @@ export default function ActualitesPage() {
             {trio.map((art, i) => (
               <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration:"none" }}>
                 <article className="nw-trio-card">
-                  <div className="nw-trio-img" style={{ background: art.imageGradient }}>
+                  <div className="nw-trio-img" style={imgStyle(art)}>
                     <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65) 100%)" }}/>
                     <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
                       <CategoryPill cat={art.category} inverted/>
@@ -248,7 +338,7 @@ export default function ActualitesPage() {
                     <h3 className="nw-trio-title">{art.title}</h3>
                     <p className="nw-trio-excerpt">{art.excerpt}</p>
                     <div style={{ paddingTop:"0.85rem", borderTop:"1px solid rgba(20,20,16,.07)", marginTop:"0.5rem" }}>
-                      <Byline author={art.author} date={art.date} readTime={art.readTime}/>
+                      <Byline author={art.author_name} date={art.published_at ?? art.created_at} readTime={art.reading_time}/>
                     </div>
                   </div>
                 </article>
@@ -272,7 +362,7 @@ export default function ActualitesPage() {
               {longform.map((art, i) => (
                 <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration:"none" }}>
                   <article className="nw-longform-card">
-                    <div className="nw-longform-img" style={{ background: art.imageGradient }}>
+                    <div className="nw-longform-img" style={imgStyle(art)}>
                       <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.78))" }}/>
                       <div style={{ position:"absolute", top:"1.25rem", left:"1.25rem" }}>
                         <CategoryPill cat={art.category} inverted/>
@@ -292,7 +382,7 @@ export default function ActualitesPage() {
                       <p className="nw-longform-excerpt">{art.excerpt}</p>
                       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
                         paddingTop:"1.1rem", borderTop:"1px solid rgba(20,20,16,.07)" }}>
-                        <Byline author={art.author} date={art.date} readTime={art.readTime}/>
+                        <Byline author={art.author_name} date={art.published_at ?? art.created_at} readTime={art.reading_time}/>
                         <span className="nw-read-cta">Lire →</span>
                       </div>
                     </div>
@@ -350,7 +440,7 @@ export default function ActualitesPage() {
                     style={{ textDecoration:"none", gridColumn: isWide ? "span 2" : "span 1" }}>
                     <article className={`nw-card ${isWide ? "nw-card--wide" : ""}`}>
                       <div className={`nw-card-img ${isWide ? "nw-card-img--wide" : ""}`}
-                        style={{ background: art.imageGradient }}>
+                        style={imgStyle(art)}>
                         <div style={{ position:"absolute", inset:0,
                           background: isWide
                             ? "linear-gradient(180deg,rgba(0,0,0,.06) 0%,rgba(0,0,0,.72) 100%)"
@@ -373,7 +463,7 @@ export default function ActualitesPage() {
                         {isWide && <p className="nw-card-excerpt">{art.excerpt}</p>}
                         <div style={{ marginTop:"auto", paddingTop:"0.75rem",
                           borderTop:"1px solid rgba(20,20,16,.06)" }}>
-                          <Byline author={art.author} date={art.date} readTime={art.readTime}/>
+                          <Byline author={art.author_name} date={art.published_at ?? art.created_at} readTime={art.reading_time}/>
                         </div>
                       </div>
                     </article>

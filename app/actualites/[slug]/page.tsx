@@ -605,7 +605,27 @@ function ArticleClient({ slug }: { slug: string }) {
       return;
     }
 
-    setArticle(data as ArticleRow);
+    // content peut arriver comme string JSON depuis Supabase — parser si nécessaire
+    const rawContent = (data as any).content;
+    const parsedContent: ArticleContent = typeof rawContent === "string"
+      ? (() => { try { return JSON.parse(rawContent); } catch { return { intro: "", blocks: [] }; } })()
+      : (rawContent ?? { intro: "", blocks: [] });
+
+    setArticle({ ...data, content: parsedContent });
+
+    // Incrémenter le compteur de vues (sans attendre la réponse)
+    if (!isPreview) {
+     
+(sb as any).rpc("increment_article_views", { article_id: data.id })
+  .then(({ error: rpcErr }: any) => {
+    // Fallback si la RPC n'existe pas
+    if (rpcErr) {
+      (sb.from("articles") as any)
+        .update({ views: ((data as any).views ?? 0) + 1 })
+        .eq("id", data.id);
+    }
+  });
+    }
 
     // Articles liés — même catégorie d'abord
     const { data: rel } = await sb

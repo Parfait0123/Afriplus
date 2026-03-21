@@ -905,3 +905,15 @@ CREATE POLICY "avatars_storage_delete"
 -- ============================================================
 -- UPDATE public.profiles SET role = 'admin'
 -- WHERE email = 'ton-email@exemple.com';
+
+
+
+-- Fonction RPC pour incrémenter les vues de manière atomique
+CREATE OR REPLACE FUNCTION increment_article_views(article_id UUID)
+RETURNS void
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  UPDATE articles SET views = views + 1 WHERE id = article_id;
+$$;

@@ -67,6 +67,13 @@ export default function AdminActualitesPage() {
   const [actionLoading, setActionLoading] = useState(false);
   const [toast,         setToast]         = useState<{ msg: string; ok: boolean } | null>(null);
 
+  // Modal mot de passe pour suppression
+  const [delModal,      setDelModal]      = useState<string[] | null>(null); // ids à supprimer
+  const [delPassword,   setDelPassword]   = useState("");
+  const [delError,      setDelError]      = useState("");
+  const [delLoading,    setDelLoading]    = useState(false);
+  const [delShowPwd,    setDelShowPwd]    = useState(false);
+
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   const showToast = (msg: string, ok = true) => {
@@ -149,7 +156,7 @@ export default function AdminActualitesPage() {
     showToast(current ? "Retiré de la une" : "Mis à la une");
   };
 
-  /* ── Supprimer ── */
+  /* ── Supprimer (direct, utilisé par le bulk) ── */
   const deleteArticles = async (ids: string[]) => {
     setActionLoading(true);
     const { error } = await (sb.from("articles") as any).delete().in("id", ids);
@@ -162,6 +169,33 @@ export default function AdminActualitesPage() {
     } else {
       showToast("Erreur lors de la suppression", false);
     }
+  };
+
+  /* ── Suppression avec confirmation mot de passe (boutons inline) ── */
+  const confirmDeleteWithPassword = async () => {
+    if (!delPassword) { setDelError("Entrez votre mot de passe."); return; }
+    setDelLoading(true);
+    setDelError("");
+    const { data: { user } } = await sb.auth.getUser();
+    const { error } = await sb.auth.signInWithPassword({
+      email: user?.email ?? "",
+      password: delPassword,
+    });
+    if (error) {
+      setDelLoading(false);
+      setDelError("Mot de passe incorrect.");
+      setDelPassword("");
+      return;
+    }
+    // OK → supprimer
+    const ids = delModal!;
+    await (sb.from("articles") as any).delete().in("id", ids);
+    setArticles(prev => prev.filter(a => !ids.includes(a.id)));
+    loadStats();
+    setDelModal(null);
+    setDelPassword("");
+    setDelLoading(false);
+    showToast(`${ids.length} article${ids.length > 1 ? "s" : ""} supprimé${ids.length > 1 ? "s" : ""}`);
   };
 
   /* ── Bulk publish ── */
@@ -458,12 +492,11 @@ export default function AdminActualitesPage() {
                 {fmtNum(art.saves_count)}
               </span>
 
-              {/* Statut */}
-              <button onClick={e => togglePublished(art.id, art.published, e)}
-                style={{ display: "inline-flex", alignItems: "center", gap: ".35rem", fontFamily: "inherit", fontSize: ".62rem", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", padding: ".28rem .7rem", borderRadius: 100, cursor: "pointer", border: "none", background: art.published ? "rgba(26,92,64,.1)" : "rgba(20,20,16,.06)", color: art.published ? "#1A5C40" : "#928E80", transition: "all .15s" }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: art.published ? "#4A9E6F" : "#D0CCBF" }} />
+              {/* Statut — texte simple, non cliquable */}
+              <div style={{ fontSize: ".62rem", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: art.published ? "#1A5C40" : "#928E80" }}>
                 {art.published ? "Publié" : "Brouillon"}
-              </button>
+                </div>
+
 
               {/* ── Date publication ── */}
               <span style={{ fontSize: ".72rem", color: "#928E80", whiteSpace: "nowrap" }}>
@@ -502,7 +535,7 @@ export default function AdminActualitesPage() {
 
                 {/* Supprimer */}
                 <button title="Supprimer"
-                  onClick={e => { e.stopPropagation(); setConfirm({ type: "delete", ids: [art.id] }); }}
+                  onClick={e => { e.stopPropagation(); setDelModal([art.id]); setDelPassword(""); setDelError(""); }}
                   className="aa-act"
                   style={{ width: 28, height: 28, borderRadius: 8, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "rgba(184,52,30,.08)", color: "#B8341E" }}>
                   <IcoTrash />
@@ -512,6 +545,74 @@ export default function AdminActualitesPage() {
           );
         })}
       </div>
+
+      {/* ── Modal mot de passe suppression ── */}
+      {delModal !== null && (
+        <div style={{ position:"fixed", inset:0, zIndex:9900, background:"rgba(20,20,16,.6)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={e => { if (e.target === e.currentTarget) { setDelModal(null); setDelPassword(""); setDelError(""); } }}>
+          <div style={{ background:"#fff", borderRadius:24, padding:"2.25rem 2.5rem", maxWidth:420, width:"100%", boxShadow:"0 32px 80px rgba(20,20,16,.22)", animation:"del-modal-in .22s cubic-bezier(.34,1.56,.64,1)" }}>
+            <style>{`@keyframes del-modal-in { from { opacity:0; transform:scale(.94) translateY(8px); } to { opacity:1; transform:none; } } @keyframes del-spin { to { transform:rotate(360deg); } }`}</style>
+
+            {/* Icône */}
+            <div style={{ width:52, height:52, borderRadius:16, background:"rgba(184,52,30,.08)", border:"1px solid rgba(184,52,30,.15)", display:"flex", alignItems:"center", justifyContent:"center", marginBottom:"1.25rem" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B8341E" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </div>
+
+            <div style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.2rem", fontWeight:900, color:"#141410", marginBottom:".5rem", letterSpacing:"-.025em" }}>
+              Supprimer {delModal && delModal.length > 1 ? `${delModal.length} articles` : "cet article"} ?
+            </div>
+            <p style={{ fontSize:".82rem", color:"#928E80", lineHeight:1.65, marginBottom:"1.6rem" }}>
+              Cette action est <strong style={{ color:"#141410" }}>irréversible</strong>. Confirmez votre identité.
+            </p>
+
+            {/* Mot de passe */}
+            <div style={{ marginBottom:"1.1rem" }}>
+              <label style={{ fontSize:".6rem", fontWeight:700, letterSpacing:".1em", textTransform:"uppercase", color:"#928E80", display:"block", marginBottom:".45rem" }}>Mot de passe</label>
+              <div style={{ position:"relative" }}>
+                <input
+                  type={delShowPwd ? "text" : "password"}
+                  value={delPassword}
+                  onChange={e => { setDelPassword(e.target.value); setDelError(""); }}
+                  onKeyDown={e => { if (e.key === "Enter") confirmDeleteWithPassword(); }}
+                  placeholder="••••••••••••"
+                  autoFocus
+                  style={{ width:"100%", padding:".7rem 3rem .7rem 1rem", borderRadius:12, fontSize:".88rem", color:"#141410", fontFamily:"inherit", outline:"none", boxSizing:"border-box", border: delError ? "1.5px solid #B8341E" : "1.5px solid rgba(20,20,16,.14)", background: delError ? "rgba(184,52,30,.03)" : "#F8F6F1", transition:"border-color .15s" }}
+                />
+                <button type="button" onClick={() => setDelShowPwd(v => !v)}
+                  style={{ position:"absolute", right:".85rem", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#928E80", display:"flex", alignItems:"center", padding:0 }}>
+                  {delShowPwd
+                    ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+              {delError && (
+                <div style={{ marginTop:".45rem", display:"flex", alignItems:"center", gap:".35rem", fontSize:".72rem", color:"#B8341E", fontWeight:600 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  {delError}
+                </div>
+              )}
+            </div>
+
+            {/* Boutons */}
+            <div style={{ display:"flex", gap:".65rem" }}>
+              <button onClick={() => { setDelModal(null); setDelPassword(""); setDelError(""); }}
+                style={{ flex:1, padding:".7rem", borderRadius:12, cursor:"pointer", fontFamily:"inherit", fontSize:".82rem", fontWeight:600, background:"transparent", color:"#38382E", border:"1.5px solid rgba(20,20,16,.14)", transition:"background .15s" }}
+                onMouseEnter={e => (e.currentTarget.style.background="#F8F6F1")}
+                onMouseLeave={e => (e.currentTarget.style.background="transparent")}>
+                Annuler
+              </button>
+              <button onClick={confirmDeleteWithPassword} disabled={delLoading || !delPassword}
+                style={{ flex:1, padding:".7rem", borderRadius:12, cursor: delLoading||!delPassword?"default":"pointer", fontFamily:"inherit", fontSize:".82rem", fontWeight:700, border:"none", background: delLoading||!delPassword?"rgba(184,52,30,.35)":"#B8341E", color:"#fff", transition:"background .15s", display:"flex", alignItems:"center", justifyContent:"center", gap:".45rem" }}>
+                {delLoading
+                  ? <><div style={{ width:14, height:14, borderRadius:"50%", border:"2px solid rgba(255,255,255,.3)", borderTopColor:"#fff", animation:"del-spin .7s linear infinite" }}/> Vérification…</>
+                  : "Supprimer définitivement"
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ PAGINATION ══ */}
       {!loading && totalPages > 1 && (
