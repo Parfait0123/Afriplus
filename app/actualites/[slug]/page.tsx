@@ -588,6 +588,8 @@ function ArticleClient({ slug }: { slug: string }) {
   const bodyRef = useRef<HTMLDivElement>(null);
 
   /* ── Charger l'article depuis Supabase ── */
+  // Avant le useEffect de load, ajouter :
+const viewsIncrementedRef = useRef(false);
   const load = useCallback(async () => {
     let query = sb.from("articles").select("*").eq("slug", slug);
 
@@ -613,19 +615,17 @@ function ArticleClient({ slug }: { slug: string }) {
 
     setArticle({ ...data, content: parsedContent });
 
-    // Incrémenter le compteur de vues (sans attendre la réponse)
-    if (!isPreview) {
-     
-(sb as any).rpc("increment_article_views", { article_id: data.id })
-  .then(({ error: rpcErr }: any) => {
-    // Fallback si la RPC n'existe pas
-    if (rpcErr) {
-      (sb.from("articles") as any)
-        .update({ views: ((data as any).views ?? 0) + 1 })
-        .eq("id", data.id);
-    }
-  });
-    }
+    if (!isPreview && !viewsIncrementedRef.current) {
+  viewsIncrementedRef.current = true;
+  (sb as any).rpc("increment_article_views", { article_id: data.id })
+    .then(({ error: rpcErr }: any) => {
+      if (rpcErr) {
+        (sb.from("articles") as any)
+          .update({ views: ((data as any).views ?? 0) + 1 })
+          .eq("id", data.id);
+      }
+    });
+}
 
     // Articles liés — même catégorie d'abord
     const { data: rel } = await sb
