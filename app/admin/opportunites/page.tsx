@@ -26,6 +26,7 @@ export default function AdminOpportunitesPage() {
     <AdminTable
       title="Opportunités"
       icon="💼"
+      editBasePath="/admin/opportunites"
       rows={rows}
       newHref="/admin/opportunites/nouveau"
       newLabel="Ajouter une opportunité"
