@@ -55,7 +55,7 @@ interface EditorState {
   category: Category; authorName: string; readingTime: number;
   featured: boolean; published: boolean; coverUrl: string;
   tags: string[]; metaTitle: string; metaDesc: string;
-  slug: string; slugLocked: boolean;
+  slug: string; slugLocked: boolean;authorId: string | null;
 }
 
 function defaultState(profileName?: string): EditorState {
@@ -64,7 +64,7 @@ function defaultState(profileName?: string): EditorState {
     category:"Économie", authorName: profileName ?? "",
     readingTime:5, featured:false, published:false,
     coverUrl:"", tags:[], metaTitle:"", metaDesc:"",
-    slug:"", slugLocked:false,
+    slug:"", slugLocked:false, authorId: null,
   };
 }
 
@@ -181,6 +181,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             blocks:      parsedContent.blocks ?? [],
             category:    a.category,
             authorName:  a.author_name,
+            authorId:    a.author_id,
             readingTime: (a as any).reading_time ?? (a as any).read_time ?? 5,
             featured:    a.featured,
             published:   a.published,
@@ -260,6 +261,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       content,
       category:       state.category,
       author_name:    state.authorName,
+      author_id:     state.authorId,
       reading_time:   state.readingTime,
       read_time:      state.readingTime,
       featured:       state.featured,
@@ -958,8 +960,12 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             {profile?.full_name && state.authorName === profile.full_name && (
               <div className="aa-author-badge">
                 <div className="aa-author-avatar">
-                  {profile.full_name.split(" ").map((w: string) => w[0]).join("").slice(0,2).toUpperCase()}
-                </div>
+                 {profile.avatar_url
+                      ? <img src={profile.avatar_url} alt={profile.full_name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "15pt" }} />
+                      : profile.full_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+                    }
+                </div> 
                 <div>
                   <div className="aa-author-name">{profile.full_name}</div>
                   <div className="aa-author-role">{profile.role}</div>
@@ -972,7 +978,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             />
             {profile?.full_name && state.authorName !== profile.full_name && (
               <button className="aa-author-reset"
-                onClick={() => set("authorName", profile.full_name ?? "")}>
+                onClick={() => {set("authorName", profile.full_name ?? ""); set("authorId", profile.id ?? null);}}>
                 ← Remettre mon nom
               </button>
             )}

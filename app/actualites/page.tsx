@@ -100,12 +100,35 @@ export default function ActualitesPage() {
   }, []);
   
   /* ── Découpage éditorial ── */
-  const hero      = articles[0];
-  const col1      = articles.slice(1, 4);
-  const spotlight = articles[4];
-  const trio      = articles.slice(5, 8);
-  const longform  = articles.slice(8, 10);
-  const remaining = articles.slice(10);
+  const sortedArticles = [...articles].sort((a, b) => {
+  if (a.featured !== b.featured) {
+    return a.featured ? -1 : 1;
+  }
+  const sortedArticles = [...articles].sort((a, b) => {
+  if (a.featured !== b.featured) {
+    return a.featured ? -1 : 1;
+  }
+
+  return new Date(b.published_at?? "").getTime() - new Date(a.published_at?? "").getTime();
+});
+
+// Ensuite, vos variables restent identiques :
+const hero      = sortedArticles[0];          // Le 1er (Featured + Récent)
+const col1      = sortedArticles.slice(1, 4); // Du 2ème au 4ème
+const spotlight = sortedArticles[4];          // Le 5ème
+const trio      = sortedArticles.slice(5, 8);
+const longform  = sortedArticles.slice(8, 10);
+const remaining = sortedArticles.slice(10);
+
+});
+
+const hero      = sortedArticles[0];          
+const col1      = sortedArticles.slice(1, 4); 
+const spotlight = sortedArticles[4];          
+const trio      = sortedArticles.slice(5, 8);
+const longform  = sortedArticles.slice(8, 10);
+const remaining = sortedArticles.slice(10);
+
   const filtered  = filter === "Tout" ? remaining : remaining.filter(a => a.category === filter);
 
   /* ── Helpers pour mapper les champs Supabase ── */

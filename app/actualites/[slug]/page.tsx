@@ -29,15 +29,26 @@ interface ArticleRow {
   excerpt: string | null;
   content: ArticleContent | null;
   category: string;
+  author_id: string | null;
   author_name: string;
   date: string;
   reading_time: number;
   featured: boolean;
   published: boolean;
+  published_at: string | null;
   cover_url: string | null;
   image_gradient: string;
   tags: string[];
+  views: number;
   created_at: string;
+}
+
+/* ─── Profil auteur ─── */
+interface AuthorProfile {
+  id: string;
+  full_name: string;
+  avatar_url: string | null;
+  role: string;
 }
 
 /* ─── Icônes ─── */
@@ -580,52 +591,69 @@ function ArticleClient({ slug }: { slug: string }) {
   const isPreview    = searchParams.get("preview") === "1";
 
   const [article,     setArticle]     = useState<ArticleRow | null>(null);
+  const [author,      setAuthor]      = useState<AuthorProfile | null>(null);
   const [relArticles, setRelArticles] = useState<ArticleRow[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [progress,    setProgress]    = useState(0);
   const [bookmarked,  setBookmarked]  = useState(false);
   const [heroVisible, setHeroVisible] = useState(false);
-  const bodyRef = useRef<HTMLDivElement>(null);
+  const bodyRef          = useRef<HTMLDivElement>(null);
+  const viewsIncremented = useRef(false);
 
   /* ── Charger l'article depuis Supabase ── */
-  // Avant le useEffect de load, ajouter :
-const viewsIncrementedRef = useRef(false);
   const load = useCallback(async () => {
     let query = sb.from("articles").select("*").eq("slug", slug);
-
-    // En mode aperçu, on affiche aussi les brouillons
-    // En mode normal, seulement les publiés
-    if (!isPreview) {
-      query = query.eq("published", true);
-    }
+    if (!isPreview) query = query.eq("published", true);
 
     const { data: rawData, error } = await query.single();
     const data = rawData as ArticleRow | null;
 
-    if (error || !data) {
-      router.replace("/404");
-      return;
-    }
+    if (error || !data) { router.replace("/404"); return; }
 
-    // content peut arriver comme string JSON depuis Supabase — parser si nécessaire
+    // Parser content si Supabase retourne du JSONB en string
     const rawContent = (data as any).content;
     const parsedContent: ArticleContent = typeof rawContent === "string"
       ? (() => { try { return JSON.parse(rawContent); } catch { return { intro: "", blocks: [] }; } })()
       : (rawContent ?? { intro: "", blocks: [] });
 
     setArticle({ ...data, content: parsedContent });
+    console.log(data)
 
-    if (!isPreview && !viewsIncrementedRef.current) {
-  viewsIncrementedRef.current = true;
-  (sb as any).rpc("increment_article_views", { article_id: data.id })
-    .then(({ error: rpcErr }: any) => {
-      if (rpcErr) {
-        (sb.from("articles") as any)
-          .update({ views: ((data as any).views ?? 0) + 1 })
-          .eq("id", data.id);
-      }
-    });
-}
+    // Charger le profil de l'auteur si author_id existe
+    if (data.author_id) {
+      const { data: profileData } = await sb
+        .from("profiles")
+        .select("id,full_name,avatar_url,role")
+        .eq("id", data.author_id)
+        .single();
+      if (profileData) setAuthor(profileData as AuthorProfile);
+    }
+
+    // Incrémenter les vues — une seule fois par montage (guard contre StrictMode)
+    if (!isPreview && !viewsIncremented.current) {
+      viewsIncremented.current = true;
+      (sb as any).rpc("increment_article_views", { article_id: data.id })
+        .then(({ error: rpcErr }: any) => {
+          if (rpcErr) {
+            (sb.from("articles") as any)
+              .update({ views: ((data as any).views ?? 0) + 1 })
+              .eq("id", data.id);
+          }
+        });
+    }
+
+    // Vérifier si l'article est sauvegardé (utilisateur connecté)
+    const { data: { user } } = await sb.auth.getUser();
+    if (user) {
+      const { data: saveData } = await sb
+        .from("saves")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("content_type", "article")
+        .eq("content_slug", slug)
+        .maybeSingle();
+      if (saveData) setBookmarked(true);
+    }
 
     // Articles liés — même catégorie d'abord
     const { data: rel } = await sb
@@ -788,23 +816,31 @@ const viewsIncrementedRef = useRef(false);
               gap: "clamp(0.75rem, 2vw, 1.5rem)", flexWrap: "wrap",
               opacity: heroVisible ? 1 : 0, transition: "opacity .8s .42s" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
-                <div style={{ width: 38, height: 38, borderRadius: "50%",
-                  background: `linear-gradient(135deg,${cs.color},${cs.dark})`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.65rem", fontWeight: 900, color: "#fff",
-                  border: "2px solid rgba(255,255,255,.18)", flexShrink: 0 }}>
-                  {article.author_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
-                </div>
-                <div>
-                  <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#F8F6F1" }}>
-                    {article.author_name}
+                <Link href={article.author_id ? `/profil/${article.author_id}` : "#"}
+                  style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                  <div style={{ width: 38, height: 38, borderRadius: "50%",
+                    background: `linear-gradient(135deg,${cs.color},${cs.dark})`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "0.65rem", fontWeight: 900, color: "#fff",
+                    border: "2px solid rgba(255,255,255,.18)", flexShrink: 0,
+                    overflow: "hidden" }}>
+                    {author?.avatar_url
+                      ? <img src={author.avatar_url} alt={article.author_name}
+                          style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : article.author_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+                    }
                   </div>
-                  <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,.38)" }}>
-                    {new Date(article.created_at).toLocaleDateString("fr-FR", {
-                      day: "numeric", month: "long", year: "numeric"
-                    })}
+                  <div>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#F8F6F1" }}>
+                      {article.author_name}
+                    </div>
+                    <div style={{ fontSize: "0.6rem", color: "rgba(255,255,255,.38)" }}>
+                      {new Date(article.published_at ?? article.created_at).toLocaleDateString("fr-FR", {
+                        day: "numeric", month: "long", year: "numeric"
+                      })}
+                    </div>
                   </div>
-                </div>
+                </Link>
               </div>
               <div style={{ width: 1, height: 28, background: "rgba(255,255,255,.14)", flexShrink: 0 }}/>
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem",
@@ -843,7 +879,26 @@ const viewsIncrementedRef = useRef(false);
                 <div style={{ display: "flex", alignItems: "center", gap: "0.65rem",
                   padding: "1.5rem 0", borderBottom: "1px solid rgba(20,20,16,.07)",
                   flexWrap: "wrap" }}>
-                  <button onClick={() => setBookmarked(b => !b)} className="sl-btn"
+                  <button onClick={async () => {
+                    const { data: { user } } = await sb.auth.getUser();
+                    if (!user) { router.push("/connexion"); return; }
+                    if (bookmarked) {
+                      await sb.from("saves")
+                        .delete()
+                        .eq("user_id", user.id)
+                        .eq("content_type", "article")
+                        .eq("content_slug", slug);
+                      setBookmarked(false);
+                    } else {
+                      await sb.from("saves").insert({
+                        user_id:       user.id,
+                        content_type:  "article",
+                        content_slug:  slug,
+                        content_title: article.title,
+                      } as any);
+                      setBookmarked(true);
+                    }
+                  }} className="sl-btn"
                     style={bookmarked ? { background: cs.bg, color: cs.color, borderColor: cs.color } : {}}>
                     <IcoBookmark on={bookmarked}/>
                     {bookmarked ? "Sauvegardé" : "Sauvegarder"}
@@ -892,24 +947,39 @@ const viewsIncrementedRef = useRef(false);
                     </div>
                   )}
                   <div className="sl-author" style={{ borderLeftColor: cs.color }}>
-                    <div style={{ width: 58, height: 58, borderRadius: "50%",
-                      flexShrink: 0,
-                      background: `linear-gradient(135deg,${cs.color},${cs.dark})`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: "1.05rem", fontWeight: 900, color: "#fff" }}>
-                      {article.author_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
-                    </div>
+                    <Link href={article.author_id ? `/profil/${article.author_id}` : "#"}
+                      style={{ textDecoration: "none", flexShrink: 0 }}>
+                      <div style={{ width: 58, height: 58, borderRadius: "50%",
+                        background: `linear-gradient(135deg,${cs.color},${cs.dark})`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: "1.05rem", fontWeight: 900, color: "#fff",
+                        overflow: "hidden", transition: "opacity .18s" }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = "0.8")}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = "1")}>
+                        {author?.avatar_url
+                          ? <img src={author.avatar_url} alt={article.author_name}
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                          : article.author_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
+                        }
+                      </div>
+                    </Link>
                     <div>
                       <div style={{ fontSize: "0.58rem", fontWeight: 800,
                         letterSpacing: "0.12em", textTransform: "uppercase",
                         color: cs.color, marginBottom: "0.25rem" }}>Journaliste</div>
-                      <div style={{ fontFamily: "'Fraunces', Georgia, serif",
-                        fontSize: "1.1rem", fontWeight: 700, color: "#141410" }}>
-                        {article.author_name}
-                      </div>
+                      <Link href={article.author_id ? `/profil/${article.author_id}` : "#"}
+                        style={{ textDecoration: "none" }}>
+                        <div style={{ fontFamily: "'Fraunces', Georgia, serif",
+                          fontSize: "1.1rem", fontWeight: 700, color: "#141410",
+                          transition: "color .15s" }}
+                          onMouseEnter={e => (e.currentTarget.style.color = cs.color)}
+                          onMouseLeave={e => (e.currentTarget.style.color = "#141410")}>
+                          {article.author_name}
+                        </div>
+                      </Link>
                       <div style={{ fontSize: "0.65rem", color: "#928E80", marginTop: "0.18rem" }}>
                         Correspondant AfriPulse · Publié le{" "}
-                        {new Date(article.created_at).toLocaleDateString("fr-FR", {
+                        {new Date(article.published_at ?? article.created_at).toLocaleDateString("fr-FR", {
                           day: "numeric", month: "long", year: "numeric"
                         })}
                       </div>
