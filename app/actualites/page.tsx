@@ -28,19 +28,19 @@ interface ArticleRow {
 /* ─── Config catégories ─── */
 const CATEGORIES: Category[] = ["Politique","Économie","Tech","Sport","Culture","Santé","Environnement"];
 
-const CAT_STYLE: Record<string, { color: string; bg: string }> = {
-  "Politique":     { color: "#1E4DA8", bg: "#EBF0FB" },
-  "Économie":      { color: "#9B6B1A", bg: "#FBF4E8" },
-  "Tech":          { color: "#1A5C40", bg: "#EAF4EF" },
-  "Sport":         { color: "#B8341E", bg: "#FAEBE8" },
-  "Culture":       { color: "#7A4A1E", bg: "#FDF3E8" },
-  "Santé":         { color: "#1A5C5C", bg: "#E6F4F4" },
-  "Environnement": { color: "#2D6B3B", bg: "#E6F4EA" },
+const CAT_STYLE: Record<Category, { color: string; bg: string }> = {
+  Politique:     { color: "#1E4DA8", bg: "#EBF0FB" },
+  Économie:      { color: "#9B6B1A", bg: "#FBF4E8" },
+  Tech:          { color: "#1A5C40", bg: "#EAF4EF" },
+  Sport:         { color: "#B8341E", bg: "#FAEBE8" },
+  Culture:       { color: "#7A4A1E", bg: "#FDF3E8" },
+  Santé:         { color: "#1A5C5C", bg: "#E6F4F4" },
+  Environnement: { color: "#2D6B3B", bg: "#E6F4EA" },
 };
 
 /* ─── Micro-composants ─── */
 function CategoryPill({ cat, inverted = false }: { cat: string; inverted?: boolean }) {
-  const s = CAT_STYLE[cat] ?? { color: "#928E80", bg: "#F0EDE4" };
+  const s = CAT_STYLE[cat as Category] ?? { color: "#928E80", bg: "#F0EDE4" };
   if (inverted) {
     return (
       <span style={{ display:"inline-flex", alignItems:"center", gap:"0.3rem",
@@ -99,41 +99,28 @@ export default function ActualitesPage() {
       });
   }, []);
   
-  /* ── Découpage éditorial ── */
+  /* ── Découpage éditorial (corrigé avec sécurité) ── */
   const sortedArticles = [...articles].sort((a, b) => {
-  if (a.featured !== b.featured) {
-    return a.featured ? -1 : 1;
-  }
-  const sortedArticles = [...articles].sort((a, b) => {
-  if (a.featured !== b.featured) {
-    return a.featured ? -1 : 1;
-  }
+    if (a.featured !== b.featured) {
+      return a.featured ? -1 : 1;
+    }
+    return new Date(b.published_at ?? "").getTime() - new Date(a.published_at ?? "").getTime();
+  });
 
-  return new Date(b.published_at?? "").getTime() - new Date(a.published_at?? "").getTime();
-});
+  const hero      = sortedArticles[0];
+  const col1      = sortedArticles.slice(1, 4);
+  const spotlight = sortedArticles[4];
+  const trio      = sortedArticles.slice(5, 8);
+  const longform  = sortedArticles.slice(8, 10);
+  const remaining = sortedArticles.slice(10);
 
-// Ensuite, vos variables restent identiques :
-const hero      = sortedArticles[0];          // Le 1er (Featured + Récent)
-const col1      = sortedArticles.slice(1, 4); // Du 2ème au 4ème
-const spotlight = sortedArticles[4];          // Le 5ème
-const trio      = sortedArticles.slice(5, 8);
-const longform  = sortedArticles.slice(8, 10);
-const remaining = sortedArticles.slice(10);
-
-});
-
-const hero      = sortedArticles[0];          
-const col1      = sortedArticles.slice(1, 4); 
-const spotlight = sortedArticles[4];          
-const trio      = sortedArticles.slice(5, 8);
-const longform  = sortedArticles.slice(8, 10);
-const remaining = sortedArticles.slice(10);
+  const hasSpotlight = !!spotlight;
+  const hasTrio      = trio.length >= 3;
+  const hasLongform  = longform.length >= 2;
 
   const filtered  = filter === "Tout" ? remaining : remaining.filter(a => a.category === filter);
 
   /* ── Helpers pour mapper les champs Supabase ── */
-  const imgBg = (art: ArticleRow) =>
-    art.cover_url ? `url(${art.cover_url})` : art.image_gradient;
   const imgStyle = (art: ArticleRow): React.CSSProperties =>
     art.cover_url
       ? { background: `url(${art.cover_url}) center/cover no-repeat` }
@@ -170,8 +157,8 @@ const remaining = sortedArticles.slice(10);
     </>
   );
 
-  /* ── Pas encore d'articles ── */
-  if (articles.length === 0) return (
+  /* ── Pas assez d'articles pour le layout complet ── */
+  if (!hero) return (
     <>
       <Navbar />
       <main style={{ background:"#EEEADE", minHeight:"80vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -240,7 +227,6 @@ const remaining = sortedArticles.slice(10);
 
         {/* ══════════════════════════════════════════
             ZONE 1 — MANCHETTE + SIDEBAR 3 ARTICLES
-            Disposition : NYT front page
         ══════════════════════════════════════════ */}
         <div className="nw-wrap" style={{ paddingTop:"2.5rem" }}>
           <div className="nw-zone1">
@@ -248,18 +234,14 @@ const remaining = sortedArticles.slice(10);
             {/* ── MANCHETTE PRINCIPALE ── */}
             <Link href={`/actualites/${hero.slug}`} className="nw-hero-link">
               <article className="nw-hero">
-                {/* Image plein fond */}
                 <div className="nw-hero-img" style={imgStyle(hero)}>
                   <div className="nw-hero-overlay"/>
-                  {/* Numéro fantôme */}
                   <div className="nw-hero-ghost-num">01</div>
-                  {/* Badge */}
                   <div className="nw-hero-badge">
                     <span style={{ width:6, height:6, borderRadius:"50%", background:"#fff", display:"inline-block" }}/>
                     À la une
                   </div>
                 </div>
-                {/* Corps texte */}
                 <div className="nw-hero-body">
                   <CategoryPill cat={hero.category}/>
                   <h2 className="nw-hero-title">{hero.title}</h2>
@@ -295,118 +277,71 @@ const remaining = sortedArticles.slice(10);
         </div>
 
         {/* ══════════════════════════════════════════
-            ZONE 2 — SPOTLIGHT sombre pleine largeur
-            Style : couverture magazine
+            ZONE 2 — SPOTLIGHT sombre pleine largeur (conditionnel)
         ══════════════════════════════════════════ */}
-        <div style={{ margin:"2.5rem 0", background:"#141410", position:"relative", overflow:"hidden" }}>
-          <div className="nw-wrap">
-            <Link href={`/actualites/${spotlight.slug}`} style={{ textDecoration:"none", display:"block" }}>
-              <div className="nw-spotlight">
-                {/* Image côté droit */}
-                <div className="nw-spotlight-img" style={imgStyle(spotlight)}>
-                  <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, #141410 0%, rgba(20,20,16,.4) 60%, transparent 100%)" }}/>
+        {hasSpotlight && (
+          <div style={{ margin:"2.5rem 0", background:"#141410", position:"relative", overflow:"hidden" }}>
+            <div className="nw-wrap">
+              <Link href={`/actualites/${spotlight.slug}`} style={{ textDecoration:"none", display:"block" }}>
+                <div className="nw-spotlight">
+                  <div className="nw-spotlight-img" style={imgStyle(spotlight)}>
+                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(90deg, #141410 0%, rgba(20,20,16,.4) 60%, transparent 100%)" }}/>
+                  </div>
+                  <div className="nw-spotlight-body">
+                    <div style={{ fontSize:"0.58rem", fontWeight:800, letterSpacing:"0.2em",
+                      textTransform:"uppercase", color:"#C08435", marginBottom:"1rem" }}>
+                      Reportage exclusif
+                    </div>
+                    <CategoryPill cat={spotlight.category} inverted/>
+                    <h2 className="nw-spotlight-title">{spotlight.title}</h2>
+                    <p className="nw-spotlight-excerpt">{spotlight.excerpt}</p>
+                    <div style={{ display:"flex", alignItems:"center", gap:"2rem", marginTop:"2rem" }}>
+                      <Byline author={spotlight.author_name} date={spotlight.published_at ?? spotlight.created_at} readTime={spotlight.reading_time} light/>
+                      <span style={{ marginLeft:"auto", fontSize:"0.8rem", fontWeight:700, color:"#C08435",
+                        display:"flex", alignItems:"center", gap:"0.4rem", flexShrink:0,
+                        borderBottom:"1.5px solid rgba(192,132,53,.3)", paddingBottom:"2px" }}>
+                        Lire le reportage
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ position:"absolute", top:0, left:-10, width:4, height:"100%", background:"#C08435" }}/>
                 </div>
-                {/* Texte */}
-                <div className="nw-spotlight-body">
-                  <div style={{ fontSize:"0.58rem", fontWeight:800, letterSpacing:"0.2em",
-                    textTransform:"uppercase", color:"#C08435", marginBottom:"1rem" }}>
-                    Reportage exclusif
-                  </div>
-                  <CategoryPill cat={spotlight.category} inverted/>
-                  <h2 className="nw-spotlight-title">{spotlight.title}</h2>
-                  <p className="nw-spotlight-excerpt">{spotlight.excerpt}</p>
-                  <div style={{ display:"flex", alignItems:"center", gap:"2rem", marginTop:"2rem" }}>
-                    <Byline author={spotlight.author_name} date={spotlight.published_at ?? spotlight.created_at} readTime={spotlight.reading_time} light/>
-                    <span style={{ marginLeft:"auto", fontSize:"0.8rem", fontWeight:700, color:"#C08435",
-                      display:"flex", alignItems:"center", gap:"0.4rem", flexShrink:0,
-                      borderBottom:"1.5px solid rgba(192,132,53,.3)", paddingBottom:"2px" }}>
-                      Lire le reportage
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                    </span>
-                  </div>
-                </div>
-                {/* Accent décoratif */}
-                <div style={{ position:"absolute", top:0, left:-10, width:4, height:"100%", background:"#C08435" }}/>
-              </div>
-            </Link>
-          </div>
-        </div>
-
-        {/* ══════════════════════════════════════════
-            ZONE 3 — TRIO 3 colonnes égales
-            Style : rubrique magazine
-        ══════════════════════════════════════════ */}
-        <div className="nw-wrap">
-          <div className="nw-section-header">
-            <div className="nw-section-rule"/>
-            <span className="nw-section-label">Monde & Société</span>
-            <div className="nw-section-rule"/>
-          </div>
-          <div className="nw-trio">
-            {trio.map((art, i) => (
-              <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration:"none" }}>
-                <article className="nw-trio-card">
-                  <div className="nw-trio-img" style={imgStyle(art)}>
-                    <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65) 100%)" }}/>
-                    <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
-                      <CategoryPill cat={art.category} inverted/>
-                    </div>
-                    <div style={{ position:"absolute", bottom:"0.8rem", right:"0.9rem",
-                      fontFamily:"'Fraunces', Georgia, serif", fontSize:"3rem", fontWeight:900,
-                      color:"rgba(255,255,255,.1)", lineHeight:1, letterSpacing:"-0.04em" }}>
-                      {String(i+5).padStart(2,"0")}
-                    </div>
-                  </div>
-                  <div style={{ padding:"1.25rem 1.35rem" }}>
-                    <h3 className="nw-trio-title">{art.title}</h3>
-                    <p className="nw-trio-excerpt">{art.excerpt}</p>
-                    <div style={{ paddingTop:"0.85rem", borderTop:"1px solid rgba(20,20,16,.07)", marginTop:"0.5rem" }}>
-                      <Byline author={art.author_name} date={art.published_at ?? art.created_at} readTime={art.reading_time}/>
-                    </div>
-                  </div>
-                </article>
               </Link>
-            ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ══════════════════════════════════════════
-            ZONE 4 — LONGFORM 2 grands articles
-            Style : double page magazine
+            ZONE 3 — TRIO 3 colonnes égales (conditionnel)
         ══════════════════════════════════════════ */}
-        <div style={{ background:"#fff", margin:"2.5rem 0", padding:"3rem 0" }}>
+        {hasTrio && (
           <div className="nw-wrap">
             <div className="nw-section-header">
               <div className="nw-section-rule"/>
-              <span className="nw-section-label">Analyses & Enquêtes</span>
+              <span className="nw-section-label">Monde & Société</span>
               <div className="nw-section-rule"/>
             </div>
-            <div className="nw-longform">
-              {longform.map((art, i) => (
+            <div className="nw-trio">
+              {trio.map((art, i) => (
                 <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration:"none" }}>
-                  <article className="nw-longform-card">
-                    <div className="nw-longform-img" style={imgStyle(art)}>
-                      <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.78))" }}/>
-                      <div style={{ position:"absolute", top:"1.25rem", left:"1.25rem" }}>
+                  <article className="nw-trio-card">
+                    <div className="nw-trio-img" style={imgStyle(art)}>
+                      <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65) 100%)" }}/>
+                      <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
                         <CategoryPill cat={art.category} inverted/>
                       </div>
-                      {/* Numéro décoratif */}
-                      <div style={{ position:"absolute", bottom:"-1rem", right:"1rem",
-                        fontFamily:"'Fraunces', Georgia, serif", fontSize:"8rem",
-                        fontWeight:900, color:"rgba(255,255,255,.06)",
-                        lineHeight:1, letterSpacing:"-0.05em", pointerEvents:"none" }}>
-                        {String(i+9).padStart(2,"0")}
+                      <div style={{ position:"absolute", bottom:"0.8rem", right:"0.9rem",
+                        fontFamily:"'Fraunces', Georgia, serif", fontSize:"3rem", fontWeight:900,
+                        color:"rgba(255,255,255,.1)", lineHeight:1, letterSpacing:"-0.04em" }}>
+                        {String(i+5).padStart(2,"0")}
                       </div>
                     </div>
-                    <div style={{ padding:"1.75rem 2rem", background:"#fff" }}>
-                      {/* Trait doré */}
-                      <div style={{ width:"2.5rem", height:2, background:"#C08435", marginBottom:"1rem", borderRadius:100 }}/>
-                      <h3 className="nw-longform-title">{art.title}</h3>
-                      <p className="nw-longform-excerpt">{art.excerpt}</p>
-                      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-                        paddingTop:"1.1rem", borderTop:"1px solid rgba(20,20,16,.07)" }}>
+                    <div style={{ padding:"1.25rem 1.35rem" }}>
+                      <h3 className="nw-trio-title">{art.title}</h3>
+                      <p className="nw-trio-excerpt">{art.excerpt}</p>
+                      <div style={{ paddingTop:"0.85rem", borderTop:"1px solid rgba(20,20,16,.07)", marginTop:"0.5rem" }}>
                         <Byline author={art.author_name} date={art.published_at ?? art.created_at} readTime={art.reading_time}/>
-                        <span className="nw-read-cta">Lire →</span>
                       </div>
                     </div>
                   </article>
@@ -414,15 +349,58 @@ const remaining = sortedArticles.slice(10);
               ))}
             </div>
           </div>
-        </div>
+        )}
+
+        {/* ══════════════════════════════════════════
+            ZONE 4 — LONGFORM 2 grands articles (conditionnel)
+        ══════════════════════════════════════════ */}
+        {hasLongform && (
+          <div style={{ background:"#fff", margin:"2.5rem 0", padding:"3rem 0" }}>
+            <div className="nw-wrap">
+              <div className="nw-section-header">
+                <div className="nw-section-rule"/>
+                <span className="nw-section-label">Analyses & Enquêtes</span>
+                <div className="nw-section-rule"/>
+              </div>
+              <div className="nw-longform">
+                {longform.map((art, i) => (
+                  <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration:"none" }}>
+                    <article className="nw-longform-card">
+                      <div className="nw-longform-img" style={imgStyle(art)}>
+                        <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.78))" }}/>
+                        <div style={{ position:"absolute", top:"1.25rem", left:"1.25rem" }}>
+                          <CategoryPill cat={art.category} inverted/>
+                        </div>
+                        <div style={{ position:"absolute", bottom:"-1rem", right:"1rem",
+                          fontFamily:"'Fraunces', Georgia, serif", fontSize:"8rem",
+                          fontWeight:900, color:"rgba(255,255,255,.06)",
+                          lineHeight:1, letterSpacing:"-0.05em", pointerEvents:"none" }}>
+                          {String(i+9).padStart(2,"0")}
+                        </div>
+                      </div>
+                      <div style={{ padding:"1.75rem 2rem", background:"#fff" }}>
+                        <div style={{ width:"2.5rem", height:2, background:"#C08435", marginBottom:"1rem", borderRadius:100 }}/>
+                        <h3 className="nw-longform-title">{art.title}</h3>
+                        <p className="nw-longform-excerpt">{art.excerpt}</p>
+                        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+                          paddingTop:"1.1rem", borderTop:"1px solid rgba(20,20,16,.07)" }}>
+                          <Byline author={art.author_name} date={art.published_at ?? art.created_at} readTime={art.reading_time}/>
+                          <span className="nw-read-cta">Lire →</span>
+                        </div>
+                      </div>
+                    </article>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ══════════════════════════════════════════
             ZONE 5 — GRILLE PRINCIPALE filtrée
-            Style : rubrique journal
         ══════════════════════════════════════════ */}
         <div id="nw-grid-section" className="nw-wrap" style={{ paddingTop:"1rem", paddingBottom:"5rem" }}>
 
-          {/* Header rubrique + filtres */}
           <div className="nw-grid-header">
             <div>
               <h2 className="nw-grid-title">
@@ -433,7 +411,7 @@ const remaining = sortedArticles.slice(10);
             <div className="nw-filters">
               {(["Tout", ...CATEGORIES] as ("Tout"|Category)[]).map(f => {
                 const active = filter === f;
-                const s = CAT_STYLE[f as string];
+                const s = CAT_STYLE[f as Category];
                 return (
                   <button key={f} onClick={() => setFilter(f)} className={`nw-filter-btn ${active?"nw-filter-btn--active":""}`}
                     style={ active && s ? { background: s.color, color:"#fff" } : {} }>
@@ -447,7 +425,6 @@ const remaining = sortedArticles.slice(10);
             </div>
           </div>
 
-          {/* Grille masonry-like */}
           {filtered.length === 0 ? (
             <div style={{ textAlign:"center", padding:"6rem 0" }}>
               <p style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:"1.5rem", color:"rgba(20,20,16,.15)", fontWeight:900 }}>—</p>
@@ -457,7 +434,7 @@ const remaining = sortedArticles.slice(10);
           ) : (
             <div className="nw-grid">
               {filtered.map((art, i) => {
-                const isWide = i % 7 === 0; // toutes les 7 cartes, une wide
+                const isWide = i % 7 === 0;
                 return (
                   <Link key={art.id} href={`/actualites/${art.slug}`}
                     style={{ textDecoration:"none", gridColumn: isWide ? "span 2" : "span 1" }}>
@@ -496,7 +473,6 @@ const remaining = sortedArticles.slice(10);
             </div>
           )}
 
-          {/* Charger plus */}
           {filtered.length > 0 && (
             <div style={{ textAlign:"center", marginTop:"4rem" }}>
               <button className="nw-load-btn">

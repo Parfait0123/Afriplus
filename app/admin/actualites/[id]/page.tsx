@@ -17,32 +17,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import BlockBuilder from "@/components/admin/BlockBuilder";
 import { ImageUpload } from "@/components/ui/ImageUpload";
-import type { Article, Block, Category, ArticleContent } from "@/types/database";
+import type { Article, Block, ArticleContent } from "@/types/database";
 
-/* ── Config ─────────────────────────────────────────────── */
-const CATEGORIES: Category[] = [
-  "Politique","Économie","Tech","Sport","Culture","Santé","Environnement",
-];
-const CAT_COLOR: Record<string, string> = {
-  Politique:"#5A7FD4", Économie:"#C08435", Tech:"#4A9E6F",
-  Sport:"#C25B3F", Culture:"#9B6B3A", Santé:"#4A9E9E", Environnement:"#5A8F5A",
-};
-const CAT_GRADIENT: Record<string, string> = {
-  Politique:     "linear-gradient(135deg,#050010,#0a0020,#10003a)",
-  Économie:      "linear-gradient(135deg,#0a0800,#1a1400,#2a2000)",
-  Tech:          "linear-gradient(135deg,#001a0f,#002e1a,#004025)",
-  Sport:         "linear-gradient(135deg,#0e0005,#1a000a,#260010)",
-  Culture:       "linear-gradient(135deg,#0a0500,#1a0e00,#2e1800)",
-  Santé:         "linear-gradient(135deg,#001005,#001a0a,#002814)",
-  Environnement: "linear-gradient(135deg,#001018,#001a28,#002535)",
-};
-
-function slugify(t: string) {
-  return t.toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-    .replace(/[^a-z0-9\s-]/g,"").trim()
-    .replace(/\s+/g,"-").replace(/-+/g,"-");
-}
+// Import des constantes catégories
+import { CATEGORIES, CAT_COLOR, CAT_GRADIENT, type Category } from "@/lib/constants/categories";
 
 /* ── Icônes ─────────────────────────────────────────────── */
 const IcoSave  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>;
@@ -55,7 +33,7 @@ interface EditorState {
   category: Category; authorName: string; readingTime: number;
   featured: boolean; published: boolean; coverUrl: string;
   tags: string[]; metaTitle: string; metaDesc: string;
-  slug: string; slugLocked: boolean;authorId: string | null;
+  slug: string; slugLocked: boolean; authorId: string | null;
 }
 
 function defaultState(profileName?: string): EditorState {
@@ -66,6 +44,13 @@ function defaultState(profileName?: string): EditorState {
     coverUrl:"", tags:[], metaTitle:"", metaDesc:"",
     slug:"", slugLocked:false, authorId: null,
   };
+}
+
+function slugify(t: string) {
+  return t.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9\s-]/g,"").trim()
+    .replace(/\s+/g,"-").replace(/-+/g,"-");
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -96,7 +81,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
   const [deleteShowPwd, setDeleteShowPwd] = useState(false);
 
   // Modal mot de passe pour publier / dépublier
-  // null = fermée | true = action "publier" | false = action "brouillon"
   const [pubModal, setPubModal]       = useState<null | boolean>(null);
   const [pubPassword, setPubPassword] = useState("");
   const [pubError, setPubError]       = useState("");
@@ -105,7 +89,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
 
   const titleRef     = useRef<HTMLInputElement>(null);
   const autoSaveRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // ID réel de l'article en base (null = jamais sauvegardé)
   const articleIdRef = useRef<string | null>(isNew ? null : params.id);
 
   /* ── Helpers state ── */
@@ -117,14 +100,11 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
     setTimeout(() => setToast(null), 3500);
   };
 
-  /* ── Autosave localStorage ─────────────────────────────────
-     UNIQUEMENT pour les articles qui ont déjà un ID en base.
-     Pour /nouveau : pas de localStorage, rien à restaurer.
-  ──────────────────────────────────────────────────────────── */
+  /* ── Autosave localStorage ───────────────────────────────── */
   useEffect(() => {
     if (loading) return;
-    if (isNew) return;                              // ← jamais pour /nouveau
-    if (!articleIdRef.current) return;              // ← jamais sans ID en base
+    if (isNew) return;
+    if (!articleIdRef.current) return;
 
     if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
     autoSaveRef.current = setTimeout(() => {
@@ -146,30 +126,18 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
     }
   }, [profile, isNew]);
 
-  /* ── Chargement ─────────────────────────────────────────────
-     /nouveau  → state vide, focus sur le titre, PAS de localStorage
-     /[uuid]   → Supabase en priorité, propose le brouillon local si plus récent
-  ──────────────────────────────────────────────────────────── */
+  /* ── Chargement ───────────────────────────────────────────── */
   useEffect(() => {
     if (isNew) {
-      // Nouvel article : état vide, aucune restauration
-      // On nettoie par sécurité l'ancienne clé "nouveau" si elle traîne
       try { localStorage.removeItem("afripulse_draft_article_nouveau"); } catch { /* ignore */ }
       setTimeout(() => titleRef.current?.focus(), 120);
       return;
     }
 
-    // Article existant → charger depuis Supabase
     (sb.from("articles") as any).select("*").eq("id", params.id).single()
       .then(({ data, error }: any) => {
-        console.log("=== CHARGEMENT SUPABASE ===");
-        console.log("error:", error);
-        console.log("data.title:", data?.title);
-        console.log("data.content:", JSON.stringify(data?.content));
-        console.log("data.excerpt:", data?.excerpt);
         if (data) {
           const a = data as Article;
-          // content peut arriver comme string JSON depuis Supabase — parser si nécessaire
           const rawContent = (a as any).content;
           const parsedContent = typeof rawContent === "string"
             ? (() => { try { return JSON.parse(rawContent); } catch { return {}; } })()
@@ -179,7 +147,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             excerpt:     a.excerpt ?? "",
             intro:       parsedContent.intro ?? "",
             blocks:      parsedContent.blocks ?? [],
-            category:    a.category,
+            category:    a.category as Category,
             authorName:  a.author_name,
             authorId:    a.author_id,
             readingTime: (a as any).reading_time ?? (a as any).read_time ?? 5,
@@ -192,7 +160,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             slug:        a.slug,
             slugLocked:  true,
           });
-          // Proposer le brouillon local uniquement pour les articles existants
           try {
             const draftKey = `afripulse_draft_${params.id}`;
             const raw = localStorage.getItem(draftKey);
@@ -230,9 +197,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
 
   /* ── Effacer brouillon local ── */
   const clearDraft = () => {
-    // Annuler le timer autosave en cours
     if (autoSaveRef.current) { clearTimeout(autoSaveRef.current); autoSaveRef.current = null; }
-    // Mettre hasDraft à false IMMÉDIATEMENT (avant tout re-render)
     setHasDraft(false);
     try {
       const id = articleIdRef.current;
@@ -249,10 +214,9 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
     const content: ArticleContent = { intro: state.intro, blocks: state.blocks };
     const pubNow = pub !== undefined ? pub : state.published;
 
-    // Ne pas écraser published_at si on passe en brouillon (garder la date d'origine)
     const publishedAtPayload = pubNow
-      ? (state.published ? undefined : new Date().toISOString())  // déjà publié → garder, sinon mettre maintenant
-      : null;                                                      // brouillon → null
+      ? (state.published ? undefined : new Date().toISOString())
+      : null;
 
     const payload: Record<string, unknown> = {
       title:          state.title.trim(),
@@ -261,7 +225,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       content,
       category:       state.category,
       author_name:    state.authorName,
-      author_id:     state.authorId,
+      author_id:      state.authorId,
       reading_time:   state.readingTime,
       read_time:      state.readingTime,
       featured:       state.featured,
@@ -273,29 +237,15 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       meta_desc:      state.metaDesc || null,
     };
 
-    // N'inclure published_at que si on veut le changer
     if (publishedAtPayload !== undefined) {
       payload.published_at = publishedAtPayload;
     }
 
     const existingId = articleIdRef.current;
 
-    // DEBUG — à supprimer après
-    console.log("=== SAVE DEBUG ===");
-    console.log("params.id:", params.id);
-    console.log("existingId (articleIdRef.current):", existingId);
-    console.log("isNew:", isNew);
-    console.log("payload.slug:", payload.slug);
-
-    console.log("=== PAYLOAD ENVOYÉ ===", JSON.stringify(payload, null, 2));
-
     const { data, error } = existingId === null
       ? await (sb.from("articles") as any).insert(payload).select("id,slug").single()
       : await (sb.from("articles") as any).update(payload).eq("id", existingId).select("id,slug").single();
-
-    console.log("=== RÉPONSE SUPABASE ===");
-    console.log("data:", data);
-    console.log("error:", error);
 
     setSaving(false);
 
@@ -371,12 +321,10 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
       return;
     }
 
-    // Capturer la valeur AVANT de fermer la modal
     const targetPub = pubModal as boolean;
     setPubModal(null);
     setPubPassword("");
     setPubLoading(false);
-    // Lancer la sauvegarde avec le bon statut
     await save(targetPub);
   };
 
@@ -472,7 +420,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
                     transition: "border-color .15s",
                   }}
                 />
-                {/* Afficher/masquer */}
                 <button
                   type="button"
                   onClick={() => setDeleteShowPwd(v => !v)}
@@ -490,7 +437,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
                 </button>
               </div>
 
-              {/* Message d'erreur */}
               {deleteError && (
                 <div style={{
                   marginTop: ".45rem", display: "flex", alignItems: "center",
@@ -540,8 +486,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
         </div>
       )}
 
-       
-
       {/* ── Modal confirmation publication / dépublication ── */}
       {pubModal !== null && (
         <div style={{
@@ -586,7 +530,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
               }{" "}Confirmez votre identité.
             </p>
 
-            {/* Mot de passe */}
             <div style={{ marginBottom: "1.1rem" }}>
               <label style={{
                 fontSize: ".6rem", fontWeight: 700, letterSpacing: ".1em",
@@ -628,7 +571,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
               )}
             </div>
 
-            {/* Boutons */}
             <div style={{ display: "flex", gap: ".65rem" }}>
               <button
                 onClick={() => { setPubModal(null); setPubPassword(""); setPubError(""); }}
@@ -686,7 +628,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
         </div>
 
         <div className="aa-editor-actions">
-          {/* Aperçu — ouvre le slug dans un nouvel onglet */}
           <Link
             href={`/actualites/${previewSlug}${!state.published ? "?preview=1" : ""}`}
             target="_blank"
@@ -695,7 +636,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             <IcoEye /> Aperçu
           </Link>
 
-          {/* Enregistrer comme brouillon */}
           <button
             className="aa-editor-draft-btn"
             onClick={() => { setPubModal(false); setPubPassword(""); setPubError(""); }}
@@ -704,7 +644,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             {saving ? "…" : "Brouillon"}
           </button>
 
-          {/* Publier */}
           <button
             className="aa-editor-publish-btn"
             onClick={() => { setPubModal(true); setPubPassword(""); setPubError(""); }}
@@ -730,7 +669,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
         {/* ── ZONE PRINCIPALE ── */}
         <div className="aa-editor-main">
 
-          {/* Titre */}
           <input
             ref={titleRef}
             value={state.title}
@@ -739,7 +677,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             className="aa-title-input"
           />
 
-          {/* Chapô */}
           <textarea
             value={state.excerpt}
             onChange={e => set("excerpt", e.target.value)}
@@ -749,7 +686,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             style={{ borderLeftColor: catColor }}
           />
 
-          {/* Onglets */}
           <div className="aa-tabs">
             {(["content","seo","settings"] as const).map(t => (
               <button key={t} onClick={() => setActiveTab(t)}
@@ -759,7 +695,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             ))}
           </div>
 
-          {/* ─── CONTENU ─── */}
           {activeTab === "content" && (
             <>
               <div className="aa-editor-field-group">
@@ -781,7 +716,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             </>
           )}
 
-          {/* ─── SEO ─── */}
           {activeTab === "seo" && (
             <div className="aa-seo-panel">
               <div className="aa-editor-field-group">
@@ -851,7 +785,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             </div>
           )}
 
-          {/* ─── PARAMÈTRES ─── */}
           {activeTab === "settings" && (
             <div className="aa-settings-panel">
               <div className="aa-editor-field-group">
@@ -894,7 +827,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
         {/* ── SIDEBAR ── */}
         <aside className="aa-editor-sidebar">
 
-          {/* Publication */}
           <div className="aa-sidebar-card">
             <div className="aa-sidebar-title">Publication</div>
 
@@ -932,7 +864,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             </div>
           </div>
 
-          {/* Catégorie */}
           <div className="aa-sidebar-card">
             <div className="aa-sidebar-title">Catégorie</div>
             <div className="aa-cat-pills">
@@ -954,7 +885,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             </div>
           </div>
 
-          {/* Auteur */}
           <div className="aa-sidebar-card">
             <div className="aa-sidebar-title">Auteur</div>
             {profile?.full_name && state.authorName === profile.full_name && (
@@ -984,7 +914,6 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
             )}
           </div>
 
-          {/* Actions */}
           <button className="aa-save-btn" onClick={() => save()} disabled={saving}>
             <IcoSave />
             {saving ? "Enregistrement…" : saved ? "✓ Sauvegardé" : "Enregistrer"}

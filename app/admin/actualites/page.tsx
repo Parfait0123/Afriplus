@@ -42,7 +42,7 @@ type FilterStatus = "all" | "published" | "draft" | "featured";
 interface Stats   { total: number; published: number; draft: number; featured: number; views: number; }
 
 /* ── Grille colonnes ─────────────────────────────────────── */
-const GRID = "40px 3fr 110px 140px 80px 80px 110px 110px 148px";
+const GRID = "20px 290px 110px 140px 80px 70px 80px 80px 148px";
 
 /* ═══════════════════════════════════════════════════════════
    PAGE
@@ -388,163 +388,160 @@ export default function AdminActualitesPage() {
         </div>
       )}
 
-      {/* ══ TABLE ══ */}
-      <div style={{ background: "#fff", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "var(--s2)", overflow: "hidden" }}>
-
-        {/* En-tête colonnes */}
-        <div style={{ display: "grid", gridTemplateColumns: GRID, gap: "0 .75rem", padding: ".75rem 1.4rem", background: "#F8F6F1", borderBottom: "1px solid var(--border)" }}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <input type="checkbox"
-              checked={selected.size > 0 && selected.size === articles.length}
-              ref={el => { if (el) el.indeterminate = selected.size > 0 && selected.size < articles.length; }}
-              onChange={toggleAll}
-              style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#C08435" }} />
-          </div>
-          {([
-            { label: "Article",   field: "title"        as SortField },
-            { label: "Catégorie", field: null },
-            { label: "Auteur",    field: null },
-            { label: "Vues",      field: "views"        as SortField },
-            { label: "Saves",     field: "saves_count"  as SortField },
-            { label: "Statut",    field: null },
-            { label: "Date pub.", field: "published_at" as SortField },
-            { label: "Actions",  field: null },
-          ]).map(col => (
-            <div key={col.label} onClick={() => col.field && toggleSort(col.field)}
-              style={{ display: "flex", alignItems: "center", gap: ".35rem", fontSize: ".6rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#928E80", cursor: col.field ? "pointer" : "default", userSelect: "none" }}>
-              {col.label}
-              {col.field && <SortIcon f={col.field} />}
+           {/* ══ TABLE ══ */}
+      <div style={{ background: "#fff", borderRadius: 20, border: "1px solid var(--border)", boxShadow: "var(--s2)", overflow: "auto" }}>
+        <div style={{ minWidth: "max-content" }}>
+          {/* En-tête colonnes */}
+          <div style={{ display: "grid", gridTemplateColumns: GRID, gap: "0 .75rem", padding: ".75rem 1.4rem", background: "#F8F6F1", borderBottom: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <input type="checkbox"
+                checked={selected.size > 0 && selected.size === articles.length}
+                ref={el => { if (el) el.indeterminate = selected.size > 0 && selected.size < articles.length; }}
+                onChange={toggleAll}
+                style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#C08435" }} />
             </div>
-          ))}
+            {([
+              { label: "Article",   field: "title"        as SortField },
+              { label: "Catégorie", field: null },
+              { label: "Auteur",    field: null },
+              { label: "Vues",      field: "views"        as SortField },
+              { label: "Saves",     field: "saves_count"  as SortField },
+              { label: "Statut",    field: null },
+              { label: "Date pub.", field: "published_at" as SortField },
+              { label: "Actions",  field: null },
+            ]).map(col => (
+              <div key={col.label} onClick={() => col.field && toggleSort(col.field)}
+                style={{ display: "flex", alignItems: "center", gap: ".35rem", fontSize: ".6rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#928E80", cursor: col.field ? "pointer" : "default", userSelect: "none" }}>
+                {col.label}
+                {col.field && <SortIcon f={col.field} />}
+              </div>
+            ))}
+          </div>
+
+          {/* Lignes */}
+          {loading ? (
+            <div className="aa-table-loader"><div className="aa-loader-ring" /></div>
+          ) : articles.length === 0 ? (
+            <div style={{ padding: "5rem", textAlign: "center" }}>
+              <div style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#141410", marginBottom: ".5rem" }}>Aucun article</div>
+              <p style={{ fontSize: ".82rem", color: "#928E80", marginBottom: "1.5rem" }}>
+                {search || category || status !== "all" ? "Aucun résultat pour ces filtres." : "Rédigez votre premier article."}
+              </p>
+              <Link href="/admin/actualites/nouveau" style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".82rem", fontWeight: 700, padding: ".6rem 1.3rem", borderRadius: 100, background: "#141410", color: "#fff", textDecoration: "none" }}>
+                <IcoPlus /> Rédiger un article
+              </Link>
+            </div>
+          ) : articles.map((art, i) => {
+            const isSel = selected.has(art.id);
+            const cc    = CAT_COLOR[art.category] ?? "#928E80";
+            return (
+              <div key={art.id}
+                className="aa-tr"
+                onClick={() => router.push(`/admin/actualites/${art.id}`)}
+                style={{
+                  display: "grid", gridTemplateColumns: GRID, gap: "0 .75rem",
+                  padding: ".9rem 1.4rem", alignItems: "center",
+                  borderBottom: i < articles.length - 1 ? "1px solid rgba(20,20,16,.05)" : "none",
+                  background: isSel ? "rgba(192,132,53,.03)" : "transparent",
+                }}>
+
+                {/* Checkbox */}
+                <div onClick={e => toggleSelect(art.id, e)} style={{ display: "flex", alignItems: "center" }}>
+                  <input type="checkbox" checked={isSel} onChange={() => {}}
+                    style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#C08435" }} />
+                </div>
+
+                {/* Article */}
+                <div style={{ display: "flex", alignItems: "center", gap: ".85rem", minWidth: 0 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0, overflow: "hidden", position: "relative" }}>
+                    {art.cover_url
+                      ? <img src={art.cover_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      : <div style={{ position: "absolute", inset: 0, background: art.image_gradient }} />
+                    }
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: ".84rem", fontWeight: 700, color: "#141410", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-.01em", marginBottom: ".2rem" }}>
+                      {art.title}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+                      {art.featured && (
+                        <span style={{ fontSize: ".52rem", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: "#C08435", background: "rgba(192,132,53,.1)", padding: ".12rem .45rem", borderRadius: 100 }}>Une</span>
+                      )}
+                      <span style={{ fontSize: ".62rem", color: "#928E80" }}>{art.reading_time} min · {art.author_name}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Catégorie */}
+                <span style={{ display: "inline-block", fontSize: ".56rem", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: cc, background: `${cc}14`, padding: ".22rem .65rem", borderRadius: 100 }}>
+                  {art.category}
+                </span>
+
+                {/* Auteur */}
+                <span style={{ fontSize: ".75rem", color: "#38382E", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {art.author_name}
+                </span>
+
+                {/* Vues */}
+                <span style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: ".88rem", fontWeight: 700, color: "#141410", letterSpacing: "-.02em" }}>
+                  {fmtNum(art.views)}
+                </span>
+
+                {/* Saves */}
+                <span style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: ".88rem", fontWeight: 700, color: "#5A7FD4", letterSpacing: "-.02em" }}>
+                  {fmtNum(art.saves_count)}
+                </span>
+
+                {/* Statut */}
+                <div style={{ fontSize: ".62rem", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: art.published ? "#1A5C40" : "#928E80" }}>
+                  {art.published ? "Publié" : "Brouillon"}
+                </div>
+
+                {/* Date publication */}
+                <span style={{ fontSize: ".72rem", color: "#928E80", whiteSpace: "nowrap" }}>
+                  {fmt(art.published_at)}
+                </span>
+
+                {/* Actions */}
+                <div onClick={e => e.stopPropagation()}
+                  style={{ display: "flex", alignItems: "center", gap: ".3rem", justifyContent: "flex-end" }}>
+
+                  <button title={art.featured ? "Retirer de la une" : "Mettre à la une"}
+                    onClick={e => toggleFeatured(art.id, art.featured, e)}
+                    className="aa-act"
+                    style={{ width: 28, height: 28, borderRadius: 8, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: art.featured ? "rgba(192,132,53,.12)" : "rgba(20,20,16,.06)", color: art.featured ? "#C08435" : "#928E80" }}>
+                    <IcoStar filled={art.featured} />
+                  </button>
+
+                  <Link href={`/actualites/${art.slug}${!art.published ? "?preview=1" : ""}`}
+                    target="_blank" title="Voir sur le site"
+                    onClick={e => e.stopPropagation()}
+                    className="aa-act"
+                    style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,16,.06)", color: "#928E80", textDecoration: "none" }}>
+                    <IcoEye />
+                  </Link>
+
+                  <Link href={`/admin/actualites/${art.id}`}
+                    title="Éditer"
+                    onClick={e => e.stopPropagation()}
+                    className="aa-act"
+                    style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(30,77,168,.08)", color: "#1E4DA8", textDecoration: "none" }}>
+                    <IcoEdit />
+                  </Link>
+
+                  <button title="Supprimer"
+                    onClick={e => { e.stopPropagation(); setDelModal([art.id]); setDelPassword(""); setDelError(""); }}
+                    className="aa-act"
+                    style={{ width: 28, height: 28, borderRadius: 8, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "rgba(184,52,30,.08)", color: "#B8341E" }}>
+                    <IcoTrash />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
-
-        {/* Lignes */}
-        {loading ? (
-          <div className="aa-table-loader"><div className="aa-loader-ring" /></div>
-        ) : articles.length === 0 ? (
-          <div style={{ padding: "5rem", textAlign: "center" }}>
-            <div style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#141410", marginBottom: ".5rem" }}>Aucun article</div>
-            <p style={{ fontSize: ".82rem", color: "#928E80", marginBottom: "1.5rem" }}>
-              {search || category || status !== "all" ? "Aucun résultat pour ces filtres." : "Rédigez votre premier article."}
-            </p>
-            <Link href="/admin/actualites/nouveau" style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".82rem", fontWeight: 700, padding: ".6rem 1.3rem", borderRadius: 100, background: "#141410", color: "#fff", textDecoration: "none" }}>
-              <IcoPlus /> Rédiger un article
-            </Link>
-          </div>
-        ) : articles.map((art, i) => {
-          const isSel = selected.has(art.id);
-          const cc    = CAT_COLOR[art.category] ?? "#928E80";
-          return (
-            <div key={art.id}
-              className="aa-tr"
-              onClick={() => router.push(`/admin/actualites/${art.id}`)}
-              style={{
-                display: "grid", gridTemplateColumns: GRID, gap: "0 .75rem",
-                padding: ".9rem 1.4rem", alignItems: "center",
-                borderBottom: i < articles.length - 1 ? "1px solid rgba(20,20,16,.05)" : "none",
-                background: isSel ? "rgba(192,132,53,.03)" : "transparent",
-              }}>
-
-              {/* Checkbox */}
-              <div onClick={e => toggleSelect(art.id, e)} style={{ display: "flex", alignItems: "center" }}>
-                <input type="checkbox" checked={isSel} onChange={() => {}}
-                  style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#C08435" }} />
-              </div>
-
-              {/* Article */}
-              <div style={{ display: "flex", alignItems: "center", gap: ".85rem", minWidth: 0 }}>
-                <div style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0, overflow: "hidden", position: "relative" }}>
-                  {art.cover_url
-                    ? <img src={art.cover_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                    : <div style={{ position: "absolute", inset: 0, background: art.image_gradient }} />
-                  }
-                </div>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: ".84rem", fontWeight: 700, color: "#141410", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-.01em", marginBottom: ".2rem" }}>
-                    {art.title}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
-                    {art.featured && (
-                      <span style={{ fontSize: ".52rem", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: "#C08435", background: "rgba(192,132,53,.1)", padding: ".12rem .45rem", borderRadius: 100 }}>Une</span>
-                    )}
-                    <span style={{ fontSize: ".62rem", color: "#928E80" }}>{art.reading_time} min · {art.author_name}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Catégorie */}
-              <span style={{ display: "inline-block", fontSize: ".56rem", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: cc, background: `${cc}14`, padding: ".22rem .65rem", borderRadius: 100 }}>
-                {art.category}
-              </span>
-
-              {/* Auteur */}
-              <span style={{ fontSize: ".75rem", color: "#38382E", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {art.author_name}
-              </span>
-
-              {/* Vues */}
-              <span style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: ".88rem", fontWeight: 700, color: "#141410", letterSpacing: "-.02em" }}>
-                {fmtNum(art.views)}
-              </span>
-
-              {/* Saves */}
-              <span style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: ".88rem", fontWeight: 700, color: "#5A7FD4", letterSpacing: "-.02em" }}>
-                {fmtNum(art.saves_count)}
-              </span>
-
-              {/* Statut — texte simple, non cliquable */}
-              <div style={{ fontSize: ".62rem", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", color: art.published ? "#1A5C40" : "#928E80" }}>
-                {art.published ? "Publié" : "Brouillon"}
-                </div>
-
-
-              {/* ── Date publication ── */}
-              <span style={{ fontSize: ".72rem", color: "#928E80", whiteSpace: "nowrap" }}>
-                {fmt(art.published_at)}
-              </span>
-
-              {/* ── Actions (toujours visibles) ── */}
-              <div onClick={e => e.stopPropagation()}
-                style={{ display: "flex", alignItems: "center", gap: ".3rem", justifyContent: "flex-end" }}>
-
-                {/* Vedette */}
-                <button title={art.featured ? "Retirer de la une" : "Mettre à la une"}
-                  onClick={e => toggleFeatured(art.id, art.featured, e)}
-                  className="aa-act"
-                  style={{ width: 28, height: 28, borderRadius: 8, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: art.featured ? "rgba(192,132,53,.12)" : "rgba(20,20,16,.06)", color: art.featured ? "#C08435" : "#928E80" }}>
-                  <IcoStar filled={art.featured} />
-                </button>
-
-                {/* Voir */}
-                <Link href={`/actualites/${art.slug}${!art.published ? "?preview=1" : ""}`}
-                  target="_blank" title="Voir sur le site"
-                  onClick={e => e.stopPropagation()}
-                  className="aa-act"
-                  style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,16,.06)", color: "#928E80", textDecoration: "none" }}>
-                  <IcoEye />
-                </Link>
-
-                {/* Éditer */}
-                <Link href={`/admin/actualites/${art.id}`}
-                  title="Éditer"
-                  onClick={e => e.stopPropagation()}
-                  className="aa-act"
-                  style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(30,77,168,.08)", color: "#1E4DA8", textDecoration: "none" }}>
-                  <IcoEdit />
-                </Link>
-
-                {/* Supprimer */}
-                <button title="Supprimer"
-                  onClick={e => { e.stopPropagation(); setDelModal([art.id]); setDelPassword(""); setDelError(""); }}
-                  className="aa-act"
-                  style={{ width: 28, height: 28, borderRadius: 8, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "rgba(184,52,30,.08)", color: "#B8341E" }}>
-                  <IcoTrash />
-                </button>
-              </div>
-            </div>
-          );
-        })}
       </div>
+
 
       {/* ── Modal mot de passe suppression ── */}
       {delModal !== null && (
