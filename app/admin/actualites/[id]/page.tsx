@@ -122,6 +122,7 @@ export default function ArticleEditorPage({ params }: { params: { id: string } }
   /* ── Auteur depuis profil ── */
   useEffect(() => {
     if (isNew && profile?.full_name && !state.authorName) {
+      set("authorId", profile.id);
       set("authorName", profile.full_name);
     }
   }, [profile, isNew]);

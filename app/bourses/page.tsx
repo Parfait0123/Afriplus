@@ -1,14 +1,35 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import NewsletterBand from "@/components/sections/NewsletterBand";
-import { scholarships, type ScholarshipLevel } from "@/lib/data";
+
+/* ─── Types ─── */
+type Level = "Licence" | "Master" | "Doctorat" | "Postdoc" | "Toutes formations";
+
+interface Scholarship {
+  id: string;
+  slug: string;
+  title: string;
+  organization: string;
+  country: string;
+  flag: string;
+  level: Level;
+  domain: string;
+  deadline: string;
+  urgent: boolean;
+  amount: string | null;
+  cover_url: string | null;
+  image_gradient: string;
+  published: boolean;
+  created_at: string;
+}
 
 /* ─── Config niveaux ─── */
-const LEVELS: ScholarshipLevel[] = ["Licence", "Master", "Doctorat", "Postdoc", "Toutes formations"];
+const LEVELS: Level[] = ["Licence", "Master", "Doctorat", "Postdoc", "Toutes formations"];
 
 const LEVEL_STYLE: Record<string, { color: string; bg: string }> = {
   "Licence":           { color: "#1E4DA8", bg: "#EBF0FB" },
@@ -17,6 +38,8 @@ const LEVEL_STYLE: Record<string, { color: string; bg: string }> = {
   "Postdoc":           { color: "#9B6B1A", bg: "#FBF4E8" },
   "Toutes formations": { color: "#141410", bg: "#F0EDE4" },
 };
+
+const PAGE_SIZE = 12;
 
 /* ─── Pill niveau ─── */
 function LevelPill({ level, inverted = false }: { level: string; inverted?: boolean }) {
@@ -40,17 +63,20 @@ function LevelPill({ level, inverted = false }: { level: string; inverted?: bool
   );
 }
 
-/* ─── Méta bourse (équivalent Byline) ─── */
-function BurseMeta({ sc, light = false }: { sc: typeof scholarships[0]; light?: boolean }) {
+/* ─── Méta bourse ─── */
+function BourseMeta({ sc, light = false }: { sc: Scholarship; light?: boolean }) {
   const col  = light ? "rgba(248,246,241,.45)" : "#928E80";
   const bold = light ? "rgba(248,246,241,.8)"  : "#38382E";
   const red  = light ? "#E8B86D"               : "#B8341E";
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  };
   return (
     <div style={{ display:"flex", alignItems:"center", gap:"0.9rem", fontSize:"0.6rem", color:col }}>
       <span style={{ fontWeight:700, color:bold }}>{sc.flag} {sc.country}</span>
       <span style={{ width:3, height:3, borderRadius:"50%", background:col, flexShrink:0 }}/>
       <span style={{ color: sc.urgent ? red : col, fontWeight: sc.urgent ? 700 : 400 }}>
-        📅 {sc.deadline}
+        📅 {formatDate(sc.deadline)}
       </span>
       {sc.amount && <>
         <span style={{ width:3, height:3, borderRadius:"50%", background:col, flexShrink:0 }}/>
@@ -66,20 +92,98 @@ function BurseMeta({ sc, light = false }: { sc: typeof scholarships[0]; light?: 
    PAGE
 ══════════════════════════════════════════════════ */
 export default function BoursesPage() {
-  const [filter, setFilter] = useState<"Tout" | ScholarshipLevel>("Tout");
+  const sb = createClient();
+  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState<"Tout" | Level>("Tout");
 
-  /* ── Découpage éditorial propre aux bourses ── */
-  const urgentes   = scholarships.filter(s => s.urgent);          // Clôture imminente
-  const vedette    = urgentes[0];                                  // Bourse en vedette
-  const sideUrgent = urgentes.slice(1, 4);                        // Sidebar urgentes
-  const spotlight  = scholarships.find(s => !s.urgent)!;          // Mise en avant sombre
-  const parNiveau  = scholarships.filter(s =>
-    !s.urgent && s.id !== spotlight.id).slice(0, 6);              // 2×3 par niveau
-  const remaining  = scholarships.filter(s =>
-    !urgentes.includes(s) && s.id !== spotlight.id && !parNiveau.includes(s));
-  const filtered   = filter === "Tout"
+  // Charger les bourses initiales
+  const loadInitial = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await sb
+      .from("scholarships")
+      .select("*")
+      .eq("published", true)
+      .order("urgent", { ascending: false })
+      .order("created_at", { ascending: false });
+
+    if (!error && data) {
+      setScholarships(data as Scholarship[]);
+      setHasMore(data.length > PAGE_SIZE);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadInitial();
+  }, []);
+
+  // Charger plus de bourses
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+
+    const nextPage = page + 1;
+    const from = (nextPage - 1) * PAGE_SIZE;
+    const to = nextPage * PAGE_SIZE - 1;
+
+    const { data, error } = await sb
+      .from("scholarships")
+      .select("*")
+      .eq("published", true)
+      .order("urgent", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(from, to);
+
+    if (!error && data && data.length > 0) {
+      setScholarships(prev => [...prev, ...(data as Scholarship[])]);
+      setPage(nextPage);
+      setHasMore(data.length === PAGE_SIZE);
+    } else {
+      setHasMore(false);
+    }
+    setLoadingMore(false);
+  }, [page, hasMore, loadingMore]);
+
+  /* ── Découpage éditorial (inchangé) ── */
+  var sortedByDate = [...scholarships].sort((a, b) => 
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  const urgentes = sortedByDate.filter(s => s.urgent);
+  const nonUrgentes = sortedByDate.filter(s => !s.urgent && !urgentes.includes(s) );
+  const allSorted = [...urgentes, ...nonUrgentes];
+  //sortedByDate = sortedByDate.filter(s => !urgentes.includes(s) && !nonUrgentes.includes(s));
+
+  const vedette    = allSorted[0];
+  const sideUrgent = urgentes.slice(1, 4);
+  const spotlight = nonUrgentes[0]
+  const parNiveau  = nonUrgentes.slice(1, 7);
+  const remaining  = allSorted.slice(7);
+  
+  const filtered = filter === "Tout"
     ? remaining
     : remaining.filter(s => s.level === filter);
+
+  // État de chargement initial
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ background:"#EEEADE", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ textAlign:"center" }}>
+            <div style={{ width:48, height:48, borderRadius:"50%", border:"3px solid rgba(20,20,16,.08)", borderTopColor:"#C08435", animation:"spin 0.8s linear infinite", margin:"0 auto 1rem" }}/>
+            <p style={{ color:"#928E80" }}>Chargement des bourses...</p>
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </main>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
@@ -152,7 +256,6 @@ export default function BoursesPage() {
 
         {/* ══════════════════════════════════════════
             ZONE 1 — VEDETTE URGENTE + SIDEBAR
-            La manchette = bourse la plus urgente
         ══════════════════════════════════════════ */}
         {vedette && (
           <div className="nw-wrap" style={{ paddingTop:"2.5rem" }}>
@@ -161,16 +264,18 @@ export default function BoursesPage() {
               {/* Bourse vedette */}
               <Link href={`/bourses/${vedette.slug}`} className="nw-hero-link">
                 <article className="nw-hero">
-                  <div className="nw-hero-img" style={{ background: vedette.imageGradient }}>
+                  <div className="nw-hero-img" style={{
+                    background: vedette.cover_url
+                      ? `url(${vedette.cover_url}) center/cover no-repeat`
+                      : vedette.image_gradient
+                  }}>
                     <div className="nw-hero-overlay"/>
                     <div className="nw-hero-ghost-num">{vedette.flag}</div>
-                    {/* Badge urgent */}
                     <div className="nw-hero-badge">
                       <span style={{ width:6, height:6, borderRadius:"50%",
                         background:"#fff", display:"inline-block" }}/>
                       Clôture imminente
                     </div>
-                    {/* Montant en surimpression */}
                     {vedette.amount && (
                       <div style={{ position:"absolute", bottom:"1.25rem", right:"1.25rem",
                         fontSize:"0.72rem", fontWeight:800, letterSpacing:"0.04em",
@@ -200,7 +305,7 @@ export default function BoursesPage() {
                     <div style={{ display:"flex", alignItems:"center",
                       justifyContent:"space-between",
                       paddingTop:"1.25rem", borderTop:"1px solid rgba(20,20,16,.08)" }}>
-                      <BurseMeta sc={vedette}/>
+                      <BourseMeta sc={vedette}/>
                       <span className="nw-read-cta">Postuler →</span>
                     </div>
                   </div>
@@ -215,7 +320,11 @@ export default function BoursesPage() {
                     <article className="nw-sidebar-art"
                       style={{ borderBottom: i < sideUrgent.length - 1
                         ? "1px solid rgba(20,20,16,.09)" : "none" }}>
-                      <div className="nw-sidebar-thumb" style={{ background: sc.imageGradient }}>
+                      <div className="nw-sidebar-thumb" style={{
+                        background: sc.cover_url
+                          ? `url(${sc.cover_url}) center/cover no-repeat`
+                          : sc.image_gradient
+                      }}>
                         <div style={{ position:"absolute", inset:0,
                           background:"linear-gradient(135deg,transparent,rgba(0,0,0,.28))" }}/>
                         <div style={{ position:"absolute", bottom:"0.3rem", right:"0.4rem",
@@ -224,7 +333,7 @@ export default function BoursesPage() {
                       <div style={{ flex:1, minWidth:0 }}>
                         <LevelPill level={sc.level}/>
                         <h3 className="nw-sidebar-title">{sc.title}</h3>
-                        <BurseMeta sc={sc}/>
+                        <BourseMeta sc={sc}/>
                       </div>
                     </article>
                   </Link>
@@ -236,112 +345,118 @@ export default function BoursesPage() {
 
         {/* ══════════════════════════════════════════
             ZONE 2 — SPOTLIGHT SOMBRE
-            La bourse la plus dotée / emblématique
         ══════════════════════════════════════════ */}
-        <div style={{ margin:"2.5rem 0", background:"#141410",
-          position:"relative", overflow:"hidden" }}>
-          <div className="nw-wrap">
-            <Link href={`/bourses/${spotlight.slug}`}
-              style={{ textDecoration:"none", display:"block" }}>
-              <div className="nw-spotlight">
-                <div className="nw-spotlight-img" style={{ background: spotlight.imageGradient }}>
-                  <div style={{ position:"absolute", inset:0,
-                    background:"linear-gradient(90deg, #141410 0%, rgba(20,20,16,.4) 60%, transparent 100%)" }}/>
-                  {/* Flag décoratif */}
-                  <div style={{ position:"absolute", bottom:"1.5rem", right:"2rem",
-                    fontSize:"5rem", lineHeight:1,
-                    filter:"drop-shadow(0 4px 24px rgba(0,0,0,.5))" }}>
-                    {spotlight.flag}
+        {spotlight && (
+          <div style={{ margin:"2.5rem 0", background:"#141410",
+            position:"relative", overflow:"hidden" }}>
+            <div className="nw-wrap">
+              <Link href={`/bourses/${spotlight.slug}`}
+                style={{ textDecoration:"none", display:"block" }}>
+                <div className="nw-spotlight">
+                  <div className="nw-spotlight-img" style={{
+                    background: spotlight.cover_url
+                      ? `url(${spotlight.cover_url}) center/cover no-repeat`
+                      : spotlight.image_gradient
+                  }}>
+                    <div style={{ position:"absolute", inset:0,
+                      background:"linear-gradient(90deg, #141410 0%, rgba(20,20,16,.4) 60%, transparent 100%)" }}/>
+                    <div style={{ position:"absolute", bottom:"1.5rem", right:"2rem",
+                      fontSize:"5rem", lineHeight:1,
+                      filter:"drop-shadow(0 4px 24px rgba(0,0,0,.5))" }}>
+                      {spotlight.flag}
+                    </div>
                   </div>
+                  <div className="nw-spotlight-body">
+                    <div style={{ fontSize:"0.58rem", fontWeight:800, letterSpacing:"0.2em",
+                      textTransform:"uppercase", color:"#C08435", marginBottom:"1rem" }}>
+                      Bourse d&apos;excellence
+                    </div>
+                    <LevelPill level={spotlight.level} inverted/>
+                    <h2 className="nw-spotlight-title">{spotlight.title}</h2>
+                    <p className="nw-spotlight-excerpt">
+                      {spotlight.organization} · {spotlight.country}<br/>
+                      {spotlight.domain}
+                    </p>
+                    <div style={{ display:"flex", alignItems:"center", gap:"2rem", marginTop:"2rem" }}>
+                      <BourseMeta sc={spotlight} light/>
+                      <span style={{ marginLeft:"auto", fontSize:"0.8rem", fontWeight:700,
+                        color:"#C08435", display:"flex", alignItems:"center", gap:"0.4rem",
+                        flexShrink:0, borderBottom:"1.5px solid rgba(192,132,53,.3)",
+                        paddingBottom:"2px" }}>
+                        Voir la bourse
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" strokeWidth="2.5">
+                          <path d="M5 12h14M12 5l7 7-7 7"/>
+                        </svg>
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ position:"absolute", top:0, left:-10, width:4,
+                    height:"100%", background:"#C08435" }}/>
                 </div>
-                <div className="nw-spotlight-body">
-                  <div style={{ fontSize:"0.58rem", fontWeight:800, letterSpacing:"0.2em",
-                    textTransform:"uppercase", color:"#C08435", marginBottom:"1rem" }}>
-                    Bourse d&apos;excellence
-                  </div>
-                  <LevelPill level={spotlight.level} inverted/>
-                  <h2 className="nw-spotlight-title">{spotlight.title}</h2>
-                  <p className="nw-spotlight-excerpt">
-                    {spotlight.organization} · {spotlight.country}<br/>
-                    {spotlight.domain}
-                  </p>
-                  <div style={{ display:"flex", alignItems:"center", gap:"2rem", marginTop:"2rem" }}>
-                    <BurseMeta sc={spotlight} light/>
-                    <span style={{ marginLeft:"auto", fontSize:"0.8rem", fontWeight:700,
-                      color:"#C08435", display:"flex", alignItems:"center", gap:"0.4rem",
-                      flexShrink:0, borderBottom:"1.5px solid rgba(192,132,53,.3)",
-                      paddingBottom:"2px" }}>
-                      Voir la bourse
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" strokeWidth="2.5">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                      </svg>
-                    </span>
-                  </div>
-                </div>
-                <div style={{ position:"absolute", top:0, left:-10, width:4,
-                  height:"100%", background:"#C08435" }}/>
-              </div>
-            </Link>
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ══════════════════════════════════════════
             ZONE 3 — SÉLECTION PAR NIVEAU
-            6 bourses en 2 rangées de 3
         ══════════════════════════════════════════ */}
-        <div className="nw-wrap">
-          <div className="nw-section-header">
-            <div className="nw-section-rule"/>
-            <span className="nw-section-label">Sélection · Tous niveaux</span>
-            <div className="nw-section-rule"/>
-          </div>
-          <div className="nw-trio">
-            {parNiveau.map((sc, i) => (
-              <Link key={sc.id} href={`/bourses/${sc.slug}`} style={{ textDecoration:"none" }}>
-                <article className="nw-trio-card">
-                  <div className="nw-trio-img" style={{ background: sc.imageGradient }}>
-                    <div style={{ position:"absolute", inset:0,
-                      background:"linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65) 100%)" }}/>
-                    <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
-                      <LevelPill level={sc.level} inverted/>
-                    </div>
-                    {/* Numéro décoratif */}
-                    <div style={{ position:"absolute", bottom:"-1rem", right:"0.75rem",
-                      fontFamily:"'Fraunces', Georgia, serif", fontSize:"3rem", fontWeight:900,
-                      color:"rgba(255,255,255,.09)", lineHeight:1, letterSpacing:"-0.04em",
-                      pointerEvents:"none" }}>
-                      {String(i + 1).padStart(2, "0")}
-                    </div>
-                    {/* Flag */}
-                    <div style={{ position:"absolute", bottom:"0.85rem", left:"0.9rem",
-                      fontSize:"1.4rem", lineHeight:1 }}>{sc.flag}</div>
-                    {/* Montant */}
-                    {sc.amount && (
-                      <div style={{ position:"absolute", bottom:"0.85rem", right:"0.9rem",
-                        fontSize:"0.58rem", fontWeight:800, padding:"0.2rem 0.6rem",
-                        borderRadius:100, background:"#1A5C40", color:"#fff" }}>
-                        {sc.amount}
+        {parNiveau.length > 0 && (
+          <div className="nw-wrap">
+            <div className="nw-section-header">
+              <div className="nw-section-rule"/>
+              <span className="nw-section-label">Sélection · Tous niveaux</span>
+              <div className="nw-section-rule"/>
+            </div>
+            <div className="nw-trio">
+              {parNiveau.map((sc, i) => (
+                <Link key={sc.id} href={`/bourses/${sc.slug}`} style={{ textDecoration:"none" }}>
+                  <article className="nw-trio-card">
+                    <div className="nw-trio-img" style={{
+                      background: sc.cover_url
+                        ? `url(${sc.cover_url}) center/cover no-repeat`
+                        : sc.image_gradient
+                    }}>
+                      <div style={{ position:"absolute", inset:0,
+                        background:"linear-gradient(180deg,transparent 45%,rgba(0,0,0,.65) 100%)" }}/>
+                      <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
+                        <LevelPill level={sc.level} inverted/>
                       </div>
-                    )}
-                  </div>
-                  <div style={{ padding:"1.25rem 1.35rem" }}>
-                    <div style={{ fontSize:"0.6rem", fontWeight:800, letterSpacing:"0.1em",
-                      textTransform:"uppercase", color:"#C08435", marginBottom:"0.35rem" }}>
-                      {sc.organization}
+                      <div style={{ position:"absolute", bottom:"-1rem", right:"0.75rem",
+                        fontFamily:"'Fraunces', Georgia, serif", fontSize:"3rem", fontWeight:900,
+                        color:"rgba(255,255,255,.09)", lineHeight:1, letterSpacing:"-0.04em",
+                        pointerEvents:"none" }}>
+                        {String(i + 1).padStart(2, "0")}
+                      </div>
+                      <div style={{ position:"absolute", bottom:"0.85rem", left:"0.9rem",
+                        fontSize:"1.4rem", lineHeight:1 }}>{sc.flag}</div>
+                      {sc.amount && (
+                        <div style={{ position:"absolute", bottom:"0.85rem", right:"0.9rem",
+                          fontSize:"0.58rem", fontWeight:800, padding:"0.2rem 0.6rem",
+                          borderRadius:100, background:"#1A5C40", color:"#fff" }}>
+                          {sc.amount}
+                        </div>
+                      )}
                     </div>
-                    <h3 className="nw-trio-title">{sc.title}</h3>
-                    <p className="nw-trio-excerpt">{sc.domain}</p>
-                    <div style={{ paddingTop:"0.85rem", borderTop:"1px solid rgba(20,20,16,.07)",
-                      marginTop:"0.5rem" }}>
-                      <BurseMeta sc={sc}/>
+                    <div style={{ padding:"1.25rem 1.35rem" }}>
+                      <div style={{ fontSize:"0.6rem", fontWeight:800, letterSpacing:"0.1em",
+                        textTransform:"uppercase", color:"#C08435", marginBottom:"0.35rem" }}>
+                        {sc.organization}
+                      </div>
+                      <h3 className="nw-trio-title">{sc.title}</h3>
+                      <p className="nw-trio-excerpt">{sc.domain}</p>
+                      <div style={{ paddingTop:"0.85rem", borderTop:"1px solid rgba(20,20,16,.07)",
+                        marginTop:"0.5rem" }}>
+                        <BourseMeta sc={sc}/>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              </Link>
-            ))}
+                  </article>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ══════════════════════════════════════════
             ZONE 4 — GRILLE FILTRÉE PAR NIVEAU
@@ -359,7 +474,7 @@ export default function BoursesPage() {
               </span>
             </div>
             <div className="nw-filters">
-              {(["Tout", ...LEVELS.filter(l => l !== "Toutes formations")] as ("Tout"|ScholarshipLevel)[])
+              {(["Tout", ...LEVELS.filter(l => l !== "Toutes formations")] as ("Tout"|Level)[])
                 .map(f => {
                   const active = filter === f;
                   const s = LEVEL_STYLE[f as string];
@@ -392,87 +507,113 @@ export default function BoursesPage() {
               </button>
             </div>
           ) : (
-            <div className="nw-grid">
-              {filtered.map((sc, i) => {
-                const isWide = i % 7 === 0;
-                return (
-                  <Link key={sc.id} href={`/bourses/${sc.slug}`}
-                    style={{ textDecoration:"none", gridColumn: isWide ? "span 2" : "span 1" }}>
-                    <article className={`nw-card ${isWide ? "nw-card--wide" : ""}`}>
-                      <div className={`nw-card-img ${isWide ? "nw-card-img--wide" : ""}`}
-                        style={{ background: sc.imageGradient }}>
-                        <div style={{ position:"absolute", inset:0,
-                          background: isWide
-                            ? "linear-gradient(180deg,rgba(0,0,0,.06) 0%,rgba(0,0,0,.72) 100%)"
-                            : "linear-gradient(180deg,transparent 40%,rgba(0,0,0,.55) 100%)" }}/>
-                        <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
-                          <LevelPill level={sc.level} inverted={!isWide}/>
-                        </div>
-                        {/* Flag */}
-                        <div style={{ position:"absolute", bottom:"0.75rem", left:"0.85rem",
-                          fontSize: isWide ? "1.8rem" : "1.2rem", lineHeight:1 }}>
-                          {sc.flag}
-                        </div>
-                        {sc.urgent && (
-                          <div style={{ position:"absolute", top:"0.85rem", right:"0.85rem",
-                            fontSize:"0.55rem", fontWeight:800, letterSpacing:"0.1em",
-                            textTransform:"uppercase", padding:"0.2rem 0.62rem",
-                            borderRadius:100, background:"#B8341E", color:"#fff" }}>
-                            Urgent
+            <>
+              <div className="nw-grid">
+                {filtered.map((sc, i) => {
+                  const isWide = i % 7 === 0;
+                  return (
+                    <Link key={sc.id} href={`/bourses/${sc.slug}`}
+                      style={{ textDecoration:"none", gridColumn: isWide ? "span 2" : "span 1" }}>
+                      <article className={`nw-card ${isWide ? "nw-card--wide" : ""}`}>
+                        <div className={`nw-card-img ${isWide ? "nw-card-img--wide" : ""}`}
+                          style={{
+                            background: sc.cover_url
+                              ? `url(${sc.cover_url}) center/cover no-repeat`
+                              : sc.image_gradient
+                          }}>
+                          <div style={{ position:"absolute", inset:0,
+                            background: isWide
+                              ? "linear-gradient(180deg,rgba(0,0,0,.06) 0%,rgba(0,0,0,.72) 100%)"
+                              : "linear-gradient(180deg,transparent 40%,rgba(0,0,0,.55) 100%)" }}/>
+                          <div style={{ position:"absolute", top:"0.85rem", left:"0.85rem" }}>
+                            <LevelPill level={sc.level} inverted={!isWide}/>
                           </div>
-                        )}
-                        {isWide && (
-                          <div style={{ position:"absolute", bottom:"0.5rem", right:"1rem",
-                            fontFamily:"'Fraunces', Georgia, serif", fontSize:"4.5rem",
-                            fontWeight:900, color:"rgba(255,255,255,.07)", lineHeight:1 }}>
-                            {String(i + 1).padStart(2, "0")}
+                          <div style={{ position:"absolute", bottom:"0.75rem", left:"0.85rem",
+                            fontSize: isWide ? "1.8rem" : "1.2rem", lineHeight:1 }}>
+                            {sc.flag}
                           </div>
-                        )}
-                      </div>
-                      <div style={{ padding: isWide ? "1.5rem 1.75rem" : "1rem 1.2rem",
-                        display:"flex", flexDirection:"column", flex:1, gap:"0.4rem" }}>
-                        <div style={{ fontSize:"0.58rem", fontWeight:800,
-                          letterSpacing:"0.1em", textTransform:"uppercase", color:"#C08435" }}>
-                          {sc.organization}
+                          {sc.urgent && (
+                            <div style={{ position:"absolute", top:"0.85rem", right:"0.85rem",
+                              fontSize:"0.55rem", fontWeight:800, letterSpacing:"0.1em",
+                              textTransform:"uppercase", padding:"0.2rem 0.62rem",
+                              borderRadius:100, background:"#B8341E", color:"#fff" }}>
+                              Urgent
+                            </div>
+                          )}
+                          {isWide && (
+                            <div style={{ position:"absolute", bottom:"0.5rem", right:"1rem",
+                              fontFamily:"'Fraunces', Georgia, serif", fontSize:"4.5rem",
+                              fontWeight:900, color:"rgba(255,255,255,.07)", lineHeight:1 }}>
+                              {String(i + 1).padStart(2, "0")}
+                            </div>
+                          )}
                         </div>
-                        {!isWide && <div style={{ marginBottom:"0.1rem" }}>
-                          <LevelPill level={sc.level}/>
-                        </div>}
-                        <h3 className={`nw-card-title ${isWide ? "nw-card-title--wide" : ""}`}>
-                          {sc.title}
-                        </h3>
-                        {isWide && (
-                          <p className="nw-card-excerpt">
-                            {sc.domain} · {sc.country}
-                          </p>
-                        )}
-                        <div style={{ marginTop:"auto", paddingTop:"0.75rem",
-                          borderTop:"1px solid rgba(20,20,16,.06)" }}>
-                          <BurseMeta sc={sc}/>
+                        <div style={{ padding: isWide ? "1.5rem 1.75rem" : "1rem 1.2rem",
+                          display:"flex", flexDirection:"column", flex:1, gap:"0.4rem" }}>
+                          <div style={{ fontSize:"0.58rem", fontWeight:800,
+                            letterSpacing:"0.1em", textTransform:"uppercase", color:"#C08435" }}>
+                            {sc.organization}
+                          </div>
+                          {!isWide && <div style={{ marginBottom:"0.1rem" }}>
+                            <LevelPill level={sc.level}/>
+                          </div>}
+                          <h3 className={`nw-card-title ${isWide ? "nw-card-title--wide" : ""}`}>
+                            {sc.title}
+                          </h3>
+                          {isWide && (
+                            <p className="nw-card-excerpt">
+                              {sc.domain} · {sc.country}
+                            </p>
+                          )}
+                          <div style={{ marginTop:"auto", paddingTop:"0.75rem",
+                            borderTop:"1px solid rgba(20,20,16,.06)" }}>
+                            <BourseMeta sc={sc}/>
+                          </div>
                         </div>
-                      </div>
-                    </article>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                      </article>
+                    </Link>
+                  );
+                })}
+              </div>
 
-          {filtered.length > 0 && (
-            <div style={{ textAlign:"center", marginTop:"4rem" }}>
-              <button className="nw-load-btn">
-                Charger plus de bourses
-                <span style={{ marginLeft:"0.75rem", fontSize:"0.6rem", fontWeight:800,
-                  background:"rgba(248,246,241,.15)", padding:"0.15rem 0.6rem",
-                  borderRadius:100 }}>+12</span>
-              </button>
-            </div>
+              {/* Bouton Charger plus — IMPLÉMENTÉ */}
+              {hasMore && (
+                <div style={{ textAlign:"center", marginTop:"4rem" }}>
+                  <button 
+                    onClick={loadMore} 
+                    disabled={loadingMore}
+                    className="nw-load-btn"
+                    style={{ opacity: loadingMore ? 0.6 : 1, cursor: loadingMore ? "wait" : "pointer" }}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <span style={{ display:"inline-block", width:16, height:16, borderRadius:"50%", border:"2px solid rgba(255,255,255,.3)", borderTopColor:"#fff", animation:"spin 0.8s linear infinite", marginRight:"0.5rem" }}/>
+                        Chargement...
+                      </>
+                    ) : (
+                      <>
+                        Charger plus de bourses
+                        <span style={{ marginLeft:"0.75rem", fontSize:"0.6rem", fontWeight:800,
+                          background:"rgba(248,246,241,.15)", padding:"0.15rem 0.6rem",
+                          borderRadius:100 }}>+{PAGE_SIZE}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </main>
 
       <NewsletterBand />
       <Footer />
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }

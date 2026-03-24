@@ -174,8 +174,11 @@ CREATE TABLE IF NOT EXISTS public.scholarships (
   deadline         DATE        NOT NULL,
   urgent           BOOLEAN     NOT NULL DEFAULT FALSE,
   amount           TEXT,
-  description      TEXT,
-  mission          TEXT,
+  blocks      TEXT,
+  meta_desc        TEXT,
+  meta_title       TEXT,
+  saves_count      INT         NOT NULL DEFAULT 0,
+  views            INT         NOT NULL DEFAULT 0,
   cover_url        TEXT,       -- bucket scholarships (cohérence avec articles)
   image_gradient   TEXT        NOT NULL DEFAULT 'linear-gradient(135deg,#0a0800,#261e00)',
   tags             TEXT[]      NOT NULL DEFAULT '{}',
@@ -916,4 +919,14 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
   UPDATE articles SET views = views + 1 WHERE id = article_id;
+$$;
+
+CREATE OR REPLACE FUNCTION increment_views(table_name text, row_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  EXECUTE format('UPDATE %I SET views = COALESCE(views, 0) + 1 WHERE id = $1', table_name) USING row_id;
+END;
 $$;

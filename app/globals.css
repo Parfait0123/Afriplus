@@ -6574,3 +6574,143 @@ div:hover .aa-row-actions {
 }
 
 
+/* ==============================================
+   MODALS (aa-modal-*)
+   ============================================= */
+
+.aa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20,20,16,.55);
+  backdrop-filter: blur(4px);
+  z-index: 9900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.aa-modal {
+  background: #fff;
+  border-radius: 24px;
+  padding: 2rem 2.5rem;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 24px 64px rgba(20,20,16,.18);
+  animation: aa-modal-in 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.aa-modal--small {
+  max-width: 420px;
+}
+
+.aa-modal-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.aa-modal-icon--warning {
+  background: rgba(192,132,53,.08);
+  border: 1px solid rgba(192,132,53,.2);
+  color: #C08435;
+}
+
+.aa-modal-icon--danger {
+  background: rgba(184,52,30,.08);
+  border: 1px solid rgba(184,52,30,.15);
+  color: #B8341E;
+}
+
+.aa-modal-title {
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: #141410;
+  margin-bottom: 0.5rem;
+  letter-spacing: -0.025em;
+}
+
+.aa-modal-desc {
+  font-size: 0.82rem;
+  color: #928E80;
+  line-height: 1.65;
+  margin-bottom: 1.6rem;
+}
+
+.aa-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+}
+
+/* ==============================================
+   BOUTONS (aa-btn-*)
+   ============================================= */
+
+.aa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.6rem 1.2rem;
+  border-radius: 100px;
+  cursor: pointer;
+  transition: all 0.18s;
+  text-decoration: none;
+  border: none;
+}
+
+.aa-btn--primary {
+  background: #141410;
+  color: #fff;
+}
+
+.aa-btn--primary:hover {
+  opacity: 0.85;
+}
+
+.aa-btn--secondary {
+  background: transparent;
+  color: #38382E;
+  border: 1.5px solid rgba(20,20,16,.15);
+}
+
+.aa-btn--secondary:hover {
+  background: #F8F6F1;
+}
+
+.aa-btn--danger {
+  background: #B8341E;
+  color: #fff;
+}
+
+.aa-btn--danger:hover {
+  background: #9E2C19;
+}
+
+.aa-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ==============================================
+   ANIMATIONS
+   ============================================= */
+
+@keyframes aa-modal-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
