@@ -82,6 +82,7 @@ interface BourseState {
   blocks: Block[];
   coverUrl: string; tags: string[];
   published: boolean; metaTitle: string; metaDesc: string;
+  apply_url: string;
 }
 
 function defaultState(): BourseState {
@@ -91,7 +92,7 @@ function defaultState(): BourseState {
     level:"Master", domain:"", deadline:"",
     urgent:false, amount:"",
     blocks: [],
-    coverUrl:"", tags:[], published:false, metaTitle:"", metaDesc:"",
+    coverUrl:"", tags:[], published:false, apply_url:"", metaTitle:"", metaDesc:"",
   };
 }
 
@@ -178,6 +179,7 @@ export default function BourseEditorPage({ params }: { params: { id: string } })
             published:   data.published ?? false,
             metaTitle:   data.meta_title ?? "",
             metaDesc:    data.meta_desc ?? "",
+            apply_url:    data.apply_url ?? "",
           });
         }
         setLoading(false);
@@ -277,6 +279,7 @@ export default function BourseEditorPage({ params }: { params: { id: string } })
       deadline:       state.deadline,
       urgent:         state.urgent,
       amount:         state.amount.trim() || null,
+      apply_url:      state.apply_url.trim() || null, 
       content:        state.blocks,
       cover_url:      state.coverUrl || null,
       image_gradient: `linear-gradient(135deg,${LEVEL_COLOR[state.level]||"#C08435"}22,#0a0800)`,
@@ -654,6 +657,21 @@ const { data, error } = existingId === null
                   />
                 </div>
               </div>
+
+
+                  <div className="bs-field-group">
+  <label className="bs-label">URL de candidature</label>
+  <input
+    type="url"
+    className="bs-input"
+    value={state.apply_url}
+    onChange={e => set("apply_url", e.target.value)}
+    placeholder="https://exemple.com/candidature"
+  />
+  <div style={{ fontSize: ".65rem", color: "#928E80", marginTop: ".3rem" }}>
+    Lien officiel pour postuler à cette bourse
+  </div>
+</div>
 
               {/* Tags */}
               <div className="bs-field-group">

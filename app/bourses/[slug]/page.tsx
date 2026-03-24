@@ -54,6 +54,7 @@ interface Scholarship {
   saves_count: number;
   meta_title: string | null;
   meta_desc: string | null;
+  apply_url: string | null;  // ← AJOUTÉ
   created_at: string;
   updated_at: string;
 }
@@ -80,6 +81,7 @@ interface SupabaseScholarship {
   saves_count: number | null;
   meta_title: string | null;
   meta_desc: string | null;
+  apply_url: string | null;  // ← AJOUTÉ
   created_at: string;
   updated_at: string;
 }
@@ -195,6 +197,7 @@ function BourseClient({ slug }: { slug: string }) {
         saves_count: bourse.saves_count || 0,
         meta_title: bourse.meta_title,
         meta_desc: bourse.meta_desc,
+        apply_url: bourse.apply_url,  // ← AJOUTÉ
         created_at: bourse.created_at,
         updated_at: bourse.updated_at,
       };
@@ -212,9 +215,10 @@ function BourseClient({ slug }: { slug: string }) {
           );
           if (rpcError) {
             // Fallback: mise à jour directe
-            await (sb as any).from("scholarships")
-  .update({ views: ((bourse as any).views ?? 0) + 1 })
-  .eq("id", bourse.id);
+            await (sb as any)
+              .from("scholarships")
+              .update({ views: ((bourse as any).views ?? 0) + 1 })
+              .eq("id", bourse.id);
           }
         } catch (err) {
           console.error("Erreur incrémentation vues:", err);
@@ -808,9 +812,9 @@ function BourseClient({ slug }: { slug: string }) {
                     />
                   ))}
 
-                  {/* Bouton postuler */}
+                  {/* Bouton postuler — URL réelle depuis la base */}
                   <SidebarCTAButton
-                    href={`/candidature?bourse=${sc.slug}`}
+                    href={sc.apply_url || `/candidature?bourse=${sc.slug}`}
                     color={lc.color}
                     dark={lc.dark}
                     note="Candidature en ligne · Dossier à constituer"
@@ -842,7 +846,7 @@ function BourseClient({ slug }: { slug: string }) {
             </div>
           </div>
         </div>
-<div style={{ height: 24 }} /> {/* Espace avant related */}
+        <div style={{ height: 24 }} /> {/* Espace avant related */}
         {/* ════ BOURSES SIMILAIRES ════ */}
         {related.length > 0 && (
           <RelatedSection
