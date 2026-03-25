@@ -1,10 +1,8 @@
 "use client";
 
-export const dynamic = "force-dynamic"; 
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter} from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -109,8 +107,7 @@ function OppMeta({ opp, light = false }: { opp: Opportunity; light?: boolean }) 
 export default function OpportunitesPage() {
   const sb = createClient();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const isPreview = searchParams.get("preview") === "1";
+  const isPreview = false;
 
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(true);
