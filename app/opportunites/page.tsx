@@ -1,5 +1,4 @@
 "use client";
-export const dynamic = "force-dynamic";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
@@ -9,7 +8,6 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import NewsletterBand from "@/components/sections/NewsletterBand";
 import type { Block } from "@/types/blocks";
-
 
 /* ─── Types ─── */
 type OpportunityType = "Emploi CDI" | "Emploi" | "Stage" | "Graduate" | "Freelance" | "Volontariat";
