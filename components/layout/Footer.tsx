@@ -38,9 +38,9 @@ const footerCols = [
     title: "Infos",
     links: [
       { href: "/about", label: "À propos" },
-      { href: "#", label: "Confidentialité" },
-      { href: "#", label: "CGU" },
-      { href: "#", label: "Contact" },
+      { href: "/confidentialite", label: "Confidentialité" },
+      { href: "/cgu", label: "CGU" },
+      { href: "/contact", label: "Contact" },
     ],
   },
 ];
@@ -98,8 +98,6 @@ export default function Footer() {
           <span className="footer-copy">© 2026 AfriPulse. Tous droits réservés.</span>
           <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
             <span className="footer-meta">Construit pour l&apos;Afrique</span>
-            <span className="footer-dot" />
-            <span className="footer-meta">Next.js · Supabase</span>
           </div>
         </div>
       </div>

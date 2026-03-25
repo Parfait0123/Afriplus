@@ -34,7 +34,7 @@ const NAV = [
     items: [
       { href: "/admin/utilisateurs",label: "Utilisateurs",     icon: IcoUsers,     exact: false },
       { href: "/admin/newsletter",  label: "Newsletter",       icon: IcoMail,      exact: false },
-      { href: "/admin/abonnes",     label: "Abonnés",          icon: IcoPeople,    exact: false },
+      //{ href: "/admin/abonnes",     label: "Abonnés",          icon: IcoPeople,    exact: false },
     ],
   },
 ];
@@ -74,9 +74,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         background: "#F0EDE4",
         fontFamily: "'DM Sans', system-ui, sans-serif",
       }}>
- <Suspense fallback={null}>
-        <NavigationProgress />
-      </Suspense>
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
 
         {/* ── OVERLAY MOBILE ── */}
         {mobileOpen && (
@@ -345,16 +345,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 border: "1px solid rgba(255,255,255,.06)",
                 borderRadius: 12,
               }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
-                  background: "linear-gradient(135deg, #C08435 0%, #7a5220 100%)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontFamily: "'Fraunces', Georgia, serif",
-                  fontSize: "0.8rem", fontWeight: 900, color: "#fff",
-                  border: "1.5px solid rgba(192,132,53,.4)",
-                }}>
-                  {initials}
-                </div>
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="avatar"
+                    style={{
+                      width: 32, height: 32, borderRadius: "50%", objectFit: "cover",
+                      border: "1.5px solid rgba(192,132,53,.4)",
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                    background: "linear-gradient(135deg, #C08435 0%, #7a5220 100%)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "'Fraunces', Georgia, serif",
+                    fontSize: "0.8rem", fontWeight: 900, color: "#fff",
+                    border: "1.5px solid rgba(192,132,53,.4)",
+                  }}>
+                    {initials}
+                  </div>
+                )}
                 {!collapsed && (
                   <div style={{ minWidth: 0 }}>
                     <div style={{

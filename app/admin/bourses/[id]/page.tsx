@@ -129,6 +129,7 @@ export default function BourseEditorPage({ params }: { params: { id: string } })
   const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const itemIdRef = useRef<string|null>(isNew ? null : params.id);
   const titleRef  = useRef<HTMLInputElement>(null);
+  const isMounted = useRef(true); // ← AJOUTÉ
 
   const set = useCallback(<K extends keyof BourseState>(k:K, v:BourseState[K]) =>
     setState(prev=>({...prev,[k]:v})), []);
@@ -136,6 +137,13 @@ export default function BourseEditorPage({ params }: { params: { id: string } })
   const showToast = (msg:string, ok=true) => {
     setToast({msg,ok}); setTimeout(()=>setToast(null),3500);
   };
+
+  /* ── Cleanup du montage ── */
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   /* ── Chargement des domaines existants ── */
   useEffect(() => {
@@ -253,13 +261,14 @@ export default function BourseEditorPage({ params }: { params: { id: string } })
     }
   };
 
-  /* ── Sauvegarde ── */
+  /* ── Sauvegarde corrigée ── */
   const save = async (pub?: boolean) => {
     if (!state.title.trim()) { showToast("Le titre est requis", false); return; }
     if (!state.organization.trim()) { showToast("L'organisme est requis", false); return; }
     if (!state.deadline) { showToast("La date limite est requise", false); return; }
     if (state.tags.length === 0) { showToast("Ajoutez au moins un tag", false); return; }
     if (!state.domain.trim()) { showToast("Le domaine est requis", false); return; }
+    
     setSaving(true);
 
     const pubNow = pub !== undefined ? pub : state.published;
@@ -289,26 +298,39 @@ export default function BourseEditorPage({ params }: { params: { id: string } })
       meta_desc:      finalMetaDesc,
     };
     
-const existingId = itemIdRef.current;
-const { data, error } = existingId === null
-  ? await (sb.from("scholarships") as any).insert(payload).select("id,slug").single()
-  : await (sb.from("scholarships") as any).update(payload).eq("id", existingId).select("id,slug").single();
+    try {
+      const existingId = itemIdRef.current;
+      const { data, error } = existingId === null
+        ? await (sb.from("scholarships") as any).insert(payload).select("id,slug").single()
+        : await (sb.from("scholarships") as any).update(payload).eq("id", existingId).select("id,slug").single();
 
-    if (error) {
-      showToast("Erreur : " + error.message, false);
-      return;
-    }
+      if (error) {
+        showToast("Erreur : " + error.message, false);
+        return;
+      }
 
-    const newId = (data as any)?.id as string|undefined;
-    if (existingId === null && newId) {
-      itemIdRef.current = newId;
-      showToast(pubNow ? "Bourse publiée !" : "Brouillon créé !");
-      router.push(`/admin/bourses/${newId}`);
-    } else {
+      const newId = (data as any)?.id as string|undefined;
+      
+      if (existingId === null && newId) {
+        itemIdRef.current = newId;
+        showToast(pubNow ? "Bourse publiée !" : "Brouillon créé !");
+        router.push(`/admin/bourses/${newId}`);
+        return; // Important: on quitte ici pour éviter d'exécuter la suite
+      }
+      
+      // Cas mise à jour
       if (pub !== undefined) setState(prev=>({...prev, published:pub}));
       setSaved(true);
       setTimeout(()=>setSaved(false), 3000);
       showToast(pub===true ? "Bourse publiée !" : pub===false ? "Brouillon sauvegardé" : "Sauvegardé");
+    } catch (err) {
+      console.error(err);
+      showToast("Erreur inattendue", false);
+    } finally {
+      // On remet saving à false seulement si le composant est toujours monté
+      if (isMounted.current) {
+        setSaving(false);
+      }
     }
   };
 
@@ -525,10 +547,9 @@ const { data, error } = existingId === null
             ))}
           </div>
 
-          {/* ONGLET GÉNÉRAL (inchangé) */}
+          {/* ONGLET GÉNÉRAL */}
           {tab === "general" && (
             <div style={{ paddingTop: "1.5rem" }}>
-              {/* ... contenu inchangé ... */}
               <div className="bs-field-group">
                 <label className="bs-label">Organisme *</label>
                 <input
@@ -658,20 +679,19 @@ const { data, error } = existingId === null
                 </div>
               </div>
 
-
-                  <div className="bs-field-group">
-  <label className="bs-label">URL de candidature</label>
-  <input
-    type="url"
-    className="bs-input"
-    value={state.apply_url}
-    onChange={e => set("apply_url", e.target.value)}
-    placeholder="https://exemple.com/candidature"
-  />
-  <div style={{ fontSize: ".65rem", color: "#928E80", marginTop: ".3rem" }}>
-    Lien officiel pour postuler à cette bourse
-  </div>
-</div>
+              <div className="bs-field-group">
+                <label className="bs-label">URL de candidature</label>
+                <input
+                  type="url"
+                  className="bs-input"
+                  value={state.apply_url}
+                  onChange={e => set("apply_url", e.target.value)}
+                  placeholder="https://exemple.com/candidature"
+                />
+                <div style={{ fontSize: ".65rem", color: "#928E80", marginTop: ".3rem" }}>
+                  Lien officiel pour postuler à cette bourse
+                </div>
+              </div>
 
               {/* Tags */}
               <div className="bs-field-group">
@@ -717,7 +737,7 @@ const { data, error } = existingId === null
             </div>
           )}
 
-          {/* ONGLET CONTENU (inchangé) */}
+          {/* ONGLET CONTENU */}
           {tab === "content" && (
             <div style={{ paddingTop: "1.5rem" }}>
               <div className="bs-field-group">
@@ -910,7 +930,7 @@ const { data, error } = existingId === null
           )}
         </div>
 
-        {/* SIDEBAR (inchangé) */}
+        {/* SIDEBAR */}
         <aside className="aa-editor-sidebar">
           <div className="aa-sidebar-card">
             <div className="aa-sidebar-title">Publication</div>

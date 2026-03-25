@@ -102,7 +102,15 @@ export default function Navbar() {
                     <Link href="/admin" className="nb-btn-admin">Admin</Link>
                   )}
                   <Link href="/dashboard" className="nb-avatar" title={profile?.full_name || user.email}>
-                    {initials}
+                    {profile?.avatar_url ? (
+                      <img 
+                        src={profile.avatar_url} 
+                        alt={profile?.full_name || user.email} 
+                        style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                      />
+                    ) : (
+                      initials
+                    )}
                   </Link>
                 </>
               ) : (
@@ -125,7 +133,15 @@ export default function Navbar() {
           {/* Avatar / dashboard (si connecté) */}
           {!loading && user && (
             <Link href="/dashboard" className="nb-avatar nb-avatar--sm" title="Mon dashboard">
-              {initials}
+              {profile?.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt={profile?.full_name || user.email} 
+                  style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                />
+              ) : (
+                initials
+              )}
             </Link>
           )}
 
@@ -158,7 +174,17 @@ export default function Navbar() {
           {/* Si connecté : encart profil */}
           {!loading && user && (
             <div className="nb-drawer-profile">
-              <div className="nb-drawer-avatar">{initials}</div>
+              <div className="nb-drawer-avatar">
+                {profile?.avatar_url ? (
+                  <img 
+                    src={profile.avatar_url} 
+                    alt={profile?.full_name || user.email} 
+                    style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+                  />
+                ) : (
+                  initials
+                )}
+              </div>
               <div className="nb-drawer-profile-info">
                 <div className="nb-drawer-profile-name">
                   {profile?.full_name || "Mon compte"}

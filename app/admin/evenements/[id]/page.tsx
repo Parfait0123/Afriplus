@@ -5,23 +5,17 @@
  * Éditeur événement — données réelles Supabase
  * Route /admin/evenements/nouveau pour créer
  * Route /admin/evenements/:id pour éditer
- * Miroir fidèle de admin/bourses/[id]/page.tsx
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import BlockBuilder from "@/components/admin/BlockBuilder";
 import type { Block } from "@/types/blocks";
 
 /* ── Types ── */
-type EventType =
-  | "Conférence"
-  | "Forum"
-  | "Hackathon"
-  | "Salon"
-  | "Atelier"
-  | "Sommet";
+type EventType = "Conférence" | "Forum" | "Hackathon" | "Salon" | "Atelier" | "Sommet";
 
 interface EventForm {
   slug: string;
@@ -37,69 +31,124 @@ interface EventForm {
   register_url: string;
   cover_url: string;
   image_gradient: string;
+  grad_color1: string;
+  grad_color2: string;
+  grad_angle: number;
+  meta_title: string;
+  meta_desc: string;
   tags: string[];
   featured: boolean;
   published: boolean;
-  content: Block[]; // JSONB — blocs de contenu éditoriaux
+  content: Block[];
 }
 
 /* ── Config ── */
-const EVENT_TYPES: EventType[] = [
-  "Conférence",
-  "Forum",
-  "Hackathon",
-  "Salon",
-  "Atelier",
-  "Sommet",
-];
+const EVENT_TYPES: EventType[] = ["Conférence", "Forum", "Hackathon", "Salon", "Atelier", "Sommet"];
 
-const TYPE_GRADIENT: Record<EventType, string> = {
-  Conférence:
-    "linear-gradient(135deg,#001420 0%,#002840 40%,#003a58 70%,#001e30 100%)",
-  Forum:
-    "linear-gradient(135deg,#0f1a00 0%,#1e3400 40%,#2c4c00 70%,#182800 100%)",
-  Hackathon:
-    "linear-gradient(135deg,#001a10 0%,#003020 40%,#004830 70%,#002418 100%)",
-  Salon:
-    "linear-gradient(135deg,#1a0a00 0%,#301500 40%,#481e00 70%,#281000 100%)",
-  Atelier:
-    "linear-gradient(135deg,#0a0a1a 0%,#141428 40%,#1e1e3c 70%,#0e0e22 100%)",
-  Sommet:
-    "linear-gradient(135deg,#1a0818 0%,#301030 40%,#481848 70%,#280c28 100%)",
+const TYPE_GRADIENT: Record<EventType, { g: string; c1: string; c2: string; angle: number }> = {
+  Conférence: { g: "linear-gradient(135deg,#001420 0%,#003a58 100%)", c1: "#001420", c2: "#003a58", angle: 135 },
+  Forum:      { g: "linear-gradient(135deg,#0f1a00 0%,#2c4c00 100%)", c1: "#0f1a00", c2: "#2c4c00", angle: 135 },
+  Hackathon:  { g: "linear-gradient(135deg,#001a10 0%,#004830 100%)", c1: "#001a10", c2: "#004830", angle: 135 },
+  Salon:      { g: "linear-gradient(135deg,#1a0a00 0%,#481e00 100%)", c1: "#1a0a00", c2: "#481e00", angle: 135 },
+  Atelier:    { g: "linear-gradient(135deg,#0a0a1a 0%,#1e1e3c 100%)", c1: "#0a0a1a", c2: "#1e1e3c", angle: 135 },
+  Sommet:     { g: "linear-gradient(135deg,#1a0818 0%,#481848 100%)", c1: "#1a0818", c2: "#481848", angle: 135 },
 };
 
 const TYPE_COLOR: Record<string, string> = {
-  Conférence: "#1E4DA8",
-  Forum: "#1A5C40",
-  Hackathon: "#7A1E4A",
-  Salon: "#9B6B1A",
-  Atelier: "#2D6B6B",
-  Sommet: "#141410",
+  Conférence: "#1E4DA8", Forum: "#1A5C40", Hackathon: "#7A1E4A",
+  Salon: "#9B6B1A", Atelier: "#2D6B6B", Sommet: "#141410",
 };
 
-const BLOCK_TYPES = [
-  { value: "paragraph", label: "Paragraphe" },
-  { value: "heading", label: "Titre H2/H3" },
-  { value: "pullquote", label: "Citation" },
-  { value: "factbox", label: "Encadré Faits" },
-  { value: "checklist", label: "Checklist" },
-  { value: "steps", label: "Étapes" },
-  { value: "benefits", label: "Avantages" },
-  { value: "agenda", label: "Programme / Agenda" },
-  { value: "speakers", label: "Intervenants" },
-  { value: "alert", label: "Alerte / Info" },
-  { value: "location", label: "Localisation" },
-  { value: "apply", label: "Bouton CTA (Inscription)" },
-  { value: "external", label: "Lien externe" },
-  { value: "image", label: "Image" },
-  { value: "divider", label: "Séparateur" },
-] as const;
-
-const FLAGS = [
-  "🌍","🇸🇳","🇨🇮","🇬🇭","🇳🇬","🇰🇪","🇷🇼","🇲🇦","🇩🇿","🇪🇬",
-  "🇿🇦","🇹🇳","🇪🇹","🇨🇲","🇹🇿","🇺🇬","🇲🇱","🇧🇫","🇳🇪","🇹🇬",
-  "🇧🇯","🇲🇿","🇦🇴","🇿🇼","🇧🇼","🇳🇦","🇫🇷","🇩🇪","🇬🇧","🇺🇸",
-  "🇨🇦","🇨🇭","🇧🇪","🇵🇹","🇪🇸","🇮🇹","🇨🇳","🇯🇵","🇦🇪","🇶🇦",
+/* ══════════════════════════════════════════════════════════
+   LISTE COMPLÈTE DES PAYS DU MONDE + DRAPEAUX AUTO
+══════════════════════════════════════════════════════════ */
+const COUNTRIES: { name: string; flag: string }[] = [
+  { name: "Afghanistan", flag: "🇦🇫" }, { name: "Afrique du Sud", flag: "🇿🇦" },
+  { name: "Albanie", flag: "🇦🇱" }, { name: "Algérie", flag: "🇩🇿" },
+  { name: "Allemagne", flag: "🇩🇪" }, { name: "Andorre", flag: "🇦🇩" },
+  { name: "Angola", flag: "🇦🇴" }, { name: "Arabie saoudite", flag: "🇸🇦" },
+  { name: "Argentine", flag: "🇦🇷" }, { name: "Arménie", flag: "🇦🇲" },
+  { name: "Australie", flag: "🇦🇺" }, { name: "Autriche", flag: "🇦🇹" },
+  { name: "Azerbaïdjan", flag: "🇦🇿" }, { name: "Bahamas", flag: "🇧🇸" },
+  { name: "Bahreïn", flag: "🇧🇭" }, { name: "Bangladesh", flag: "🇧🇩" },
+  { name: "Belgique", flag: "🇧🇪" }, { name: "Belize", flag: "🇧🇿" },
+  { name: "Bénin", flag: "🇧🇯" }, { name: "Bhoutan", flag: "🇧🇹" },
+  { name: "Biélorussie", flag: "🇧🇾" }, { name: "Bolivie", flag: "🇧🇴" },
+  { name: "Bosnie-Herzégovine", flag: "🇧🇦" }, { name: "Botswana", flag: "🇧🇼" },
+  { name: "Brésil", flag: "🇧🇷" }, { name: "Bulgarie", flag: "🇧🇬" },
+  { name: "Burkina Faso", flag: "🇧🇫" }, { name: "Burundi", flag: "🇧🇮" },
+  { name: "Cabo Verde", flag: "🇨🇻" }, { name: "Cambodge", flag: "🇰🇭" },
+  { name: "Cameroun", flag: "🇨🇲" }, { name: "Canada", flag: "🇨🇦" },
+  { name: "Centrafrique", flag: "🇨🇫" }, { name: "Chili", flag: "🇨🇱" },
+  { name: "Chine", flag: "🇨🇳" }, { name: "Chypre", flag: "🇨🇾" },
+  { name: "Colombie", flag: "🇨🇴" }, { name: "Comores", flag: "🇰🇲" },
+  { name: "Congo (Brazzaville)", flag: "🇨🇬" }, { name: "Congo (Kinshasa)", flag: "🇨🇩" },
+  { name: "Corée du Nord", flag: "🇰🇵" }, { name: "Corée du Sud", flag: "🇰🇷" },
+  { name: "Costa Rica", flag: "🇨🇷" }, { name: "Côte d'Ivoire", flag: "🇨🇮" },
+  { name: "Croatie", flag: "🇭🇷" }, { name: "Cuba", flag: "🇨🇺" },
+  { name: "Danemark", flag: "🇩🇰" }, { name: "Djibouti", flag: "🇩🇯" },
+  { name: "Égypte", flag: "🇪🇬" }, { name: "Émirats arabes unis", flag: "🇦🇪" },
+  { name: "Équateur", flag: "🇪🇨" }, { name: "Érythrée", flag: "🇪🇷" },
+  { name: "Espagne", flag: "🇪🇸" }, { name: "Eswatini", flag: "🇸🇿" },
+  { name: "Estonie", flag: "🇪🇪" }, { name: "Éthiopie", flag: "🇪🇹" },
+  { name: "Fidji", flag: "🇫🇯" }, { name: "Finlande", flag: "🇫🇮" },
+  { name: "France", flag: "🇫🇷" }, { name: "Gabon", flag: "🇬🇦" },
+  { name: "Gambie", flag: "🇬🇲" }, { name: "Géorgie", flag: "🇬🇪" },
+  { name: "Ghana", flag: "🇬🇭" }, { name: "Grèce", flag: "🇬🇷" },
+  { name: "Guatemala", flag: "🇬🇹" }, { name: "Guinée", flag: "🇬🇳" },
+  { name: "Guinée-Bissau", flag: "🇬🇼" }, { name: "Guinée équatoriale", flag: "🇬🇶" },
+  { name: "Guyana", flag: "🇬🇾" }, { name: "Haïti", flag: "🇭🇹" },
+  { name: "Honduras", flag: "🇭🇳" }, { name: "Hongrie", flag: "🇭🇺" },
+  { name: "Inde", flag: "🇮🇳" }, { name: "Indonésie", flag: "🇮🇩" },
+  { name: "Irak", flag: "🇮🇶" }, { name: "Iran", flag: "🇮🇷" },
+  { name: "Irlande", flag: "🇮🇪" }, { name: "Islande", flag: "🇮🇸" },
+  { name: "Israël", flag: "🇮🇱" }, { name: "Italie", flag: "🇮🇹" },
+  { name: "Jamaïque", flag: "🇯🇲" }, { name: "Japon", flag: "🇯🇵" },
+  { name: "Jordanie", flag: "🇯🇴" }, { name: "Kazakhstan", flag: "🇰🇿" },
+  { name: "Kenya", flag: "🇰🇪" }, { name: "Kirghizistan", flag: "🇰🇬" },
+  { name: "Kosovo", flag: "🇽🇰" }, { name: "Koweït", flag: "🇰🇼" },
+  { name: "Laos", flag: "🇱🇦" }, { name: "Lesotho", flag: "🇱🇸" },
+  { name: "Lettonie", flag: "🇱🇻" }, { name: "Liban", flag: "🇱🇧" },
+  { name: "Liberia", flag: "🇱🇷" }, { name: "Libye", flag: "🇱🇾" },
+  { name: "Liechtenstein", flag: "🇱🇮" }, { name: "Lituanie", flag: "🇱🇹" },
+  { name: "Luxembourg", flag: "🇱🇺" }, { name: "Madagascar", flag: "🇲🇬" },
+  { name: "Malaisie", flag: "🇲🇾" }, { name: "Malawi", flag: "🇲🇼" },
+  { name: "Maldives", flag: "🇲🇻" }, { name: "Mali", flag: "🇲🇱" },
+  { name: "Malte", flag: "🇲🇹" }, { name: "Maroc", flag: "🇲🇦" },
+  { name: "Maurice", flag: "🇲🇺" }, { name: "Mauritanie", flag: "🇲🇷" },
+  { name: "Mexique", flag: "🇲🇽" }, { name: "Moldavie", flag: "🇲🇩" },
+  { name: "Monaco", flag: "🇲🇨" }, { name: "Mongolie", flag: "🇲🇳" },
+  { name: "Monténégro", flag: "🇲🇪" }, { name: "Mozambique", flag: "🇲🇿" },
+  { name: "Myanmar", flag: "🇲🇲" }, { name: "Namibie", flag: "🇳🇦" },
+  { name: "Népal", flag: "🇳🇵" }, { name: "Nicaragua", flag: "🇳🇮" },
+  { name: "Niger", flag: "🇳🇪" }, { name: "Nigeria", flag: "🇳🇬" },
+  { name: "Norvège", flag: "🇳🇴" }, { name: "Nouvelle-Zélande", flag: "🇳🇿" },
+  { name: "Oman", flag: "🇴🇲" }, { name: "Ouganda", flag: "🇺🇬" },
+  { name: "Ouzbékistan", flag: "🇺🇿" }, { name: "Pakistan", flag: "🇵🇰" },
+  { name: "Panama", flag: "🇵🇦" }, { name: "Paraguay", flag: "🇵🇾" },
+  { name: "Pays-Bas", flag: "🇳🇱" }, { name: "Pérou", flag: "🇵🇪" },
+  { name: "Philippines", flag: "🇵🇭" }, { name: "Pologne", flag: "🇵🇱" },
+  { name: "Portugal", flag: "🇵🇹" }, { name: "Qatar", flag: "🇶🇦" },
+  { name: "République dominicaine", flag: "🇩🇴" }, { name: "Roumanie", flag: "🇷🇴" },
+  { name: "Royaume-Uni", flag: "🇬🇧" }, { name: "Russie", flag: "🇷🇺" },
+  { name: "Rwanda", flag: "🇷🇼" }, { name: "Salvador", flag: "🇸🇻" },
+  { name: "Sénégal", flag: "🇸🇳" }, { name: "Serbie", flag: "🇷🇸" },
+  { name: "Seychelles", flag: "🇸🇨" }, { name: "Sierra Leone", flag: "🇸🇱" },
+  { name: "Singapour", flag: "🇸🇬" }, { name: "Slovaquie", flag: "🇸🇰" },
+  { name: "Slovénie", flag: "🇸🇮" }, { name: "Somalie", flag: "🇸🇴" },
+  { name: "Soudan", flag: "🇸🇩" }, { name: "Soudan du Sud", flag: "🇸🇸" },
+  { name: "Sri Lanka", flag: "🇱🇰" }, { name: "Suède", flag: "🇸🇪" },
+  { name: "Suisse", flag: "🇨🇭" }, { name: "Suriname", flag: "🇸🇷" },
+  { name: "Syrie", flag: "🇸🇾" }, { name: "Tadjikistan", flag: "🇹🇯" },
+  { name: "Tanzanie", flag: "🇹🇿" }, { name: "Tchad", flag: "🇹🇩" },
+  { name: "Tchéquie", flag: "🇨🇿" }, { name: "Thaïlande", flag: "🇹🇭" },
+  { name: "Togo", flag: "🇹🇬" }, { name: "Tunisie", flag: "🇹🇳" },
+  { name: "Turkménistan", flag: "🇹🇲" }, { name: "Turquie", flag: "🇹🇷" },
+  { name: "Ukraine", flag: "🇺🇦" }, { name: "Uruguay", flag: "🇺🇾" },
+  { name: "États-Unis", flag: "🇺🇸" }, { name: "Venezuela", flag: "🇻🇪" },
+  { name: "Viêt Nam", flag: "🇻🇳" }, { name: "Yémen", flag: "🇾🇪" },
+  { name: "Zambie", flag: "🇿🇲" }, { name: "Zimbabwe", flag: "🇿🇼" },
+  { name: "International / En ligne", flag: "🌍" },
 ];
 
 /* ── Icônes ── */
@@ -132,18 +181,8 @@ const IcoTrash = () => (
     <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
   </svg>
 );
-const IcoUp = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <polyline points="18 15 12 9 6 15"/>
-  </svg>
-);
-const IcoDown = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <polyline points="6 9 12 15 18 9"/>
-  </svg>
-);
 const IcoUpload = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="16 16 12 12 8 16"/>
     <line x1="12" y1="12" x2="12" y2="21"/>
     <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
@@ -152,581 +191,16 @@ const IcoUpload = () => (
 
 /* ── Helpers ── */
 function slugify(str: string) {
-  return str
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 }
-
-function emptyBlock(type: string): Block {
-  switch (type) {
-    case "heading":
-      return { type: "heading", text: "", level: 2 };
-    case "pullquote":
-      return { type: "pullquote", text: "", author: "", role: "" };
-    case "factbox":
-      return { type: "factbox", title: "", facts: [""] };
-    case "checklist":
-      return { type: "checklist", title: "", items: [{ label: "", detail: "" }] };
-    case "steps":
-      return { type: "steps", title: "", items: [{ label: "", desc: "" }] };
-    case "benefits":
-      return { type: "benefits", title: "", items: [{ icon: "✅", label: "", value: "", highlight: false }] };
-    case "agenda":
-      return { type: "agenda", title: "", sessions: [{ time: "", title: "", speaker: "", tag: "", highlight: false }] };
-    case "speakers":
-      return { type: "speakers", title: "", people: [{ name: "", role: "", org: "" }] };
-    case "alert":
-      return { type: "alert", message: "", variant: "info" };
-    case "location":
-      return { type: "location", label: "", address: "", mapUrl: "" };
-    case "apply":
-      return { type: "apply", label: "", url: "", note: "", deadline: "" };
-    case "external":
-      return { type: "external", url: "", label: "", description: "", favicon: "🔗" };
-    case "image":
-      return { type: "image", url: "", alt: "", caption: "", credit: "" };
-    case "divider":
-      return { type: "divider" };
-    default:
-      return { type: "paragraph", text: "" };
-  }
-}
-
-/* ══════════════════════════════════════════════════════════
-   COMPOSANTS ÉDITEURS DE BLOCS
-══════════════════════════════════════════════════════════ */
-
-function BlockEditor({
-  block,
-  index,
-  total,
-  onChange,
-  onDelete,
-  onMove,
-}: {
-  block: Block;
-  index: number;
-  total: number;
-  onChange: (b: Block) => void;
-  onDelete: () => void;
-  onMove: (dir: "up" | "down") => void;
-}) {
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: ".55rem .8rem",
-    borderRadius: 8,
-    border: "1px solid rgba(20,20,16,.12)",
-    background: "#FAFAF8",
-    fontSize: ".78rem",
-    color: "#141410",
-    outline: "none",
-    fontFamily: "inherit",
-    resize: "vertical" as const,
-    transition: "border .18s",
-  };
-  const taStyle: React.CSSProperties = { ...inputStyle, minHeight: 80, resize: "vertical" };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: ".58rem",
-    fontWeight: 700,
-    letterSpacing: ".1em",
-    textTransform: "uppercase",
-    color: "#928E80",
-    marginBottom: ".3rem",
-  };
-
-  const rowStyle: React.CSSProperties = {
-    display: "flex",
-    gap: ".6rem",
-    marginBottom: ".5rem",
-    alignItems: "flex-start",
-  };
-
-  const typeColors: Record<string, string> = {
-    paragraph: "#38382E", heading: "#1E4DA8", pullquote: "#7A4A1E",
-    factbox: "#2D6B6B", checklist: "#1A5C40", steps: "#C08435",
-    benefits: "#7A1E4A", agenda: "#1E4DA8", speakers: "#9B6B1A",
-    alert: "#B8341E", location: "#38382E", apply: "#1A5C40",
-    external: "#2D6B6B", image: "#928E80", divider: "#C4C0B6",
-  };
-
-  const typeLabel: Record<string, string> = {
-    paragraph: "Paragraphe", heading: "Titre", pullquote: "Citation",
-    factbox: "Encadré Faits", checklist: "Checklist", steps: "Étapes",
-    benefits: "Avantages", agenda: "Programme", speakers: "Intervenants",
-    alert: "Alerte", location: "Localisation", apply: "Inscription CTA",
-    external: "Lien externe", image: "Image", divider: "Séparateur",
-  };
-
-  const renderEditor = () => {
-    switch (block.type) {
-      case "paragraph":
-        return (
-          <textarea
-            style={taStyle}
-            value={block.text}
-            placeholder="Texte du paragraphe…"
-            onChange={(e) => onChange({ ...block, text: e.target.value })}
-          />
-        );
-
-      case "heading":
-        return (
-          <div style={{ display: "flex", gap: ".6rem" }}>
-            <select
-              value={block.level ?? 2}
-              onChange={(e) => onChange({ ...block, level: Number(e.target.value) as 2 | 3 })}
-              style={{ ...inputStyle, width: 80, resize: "none" }}
-            >
-              <option value={2}>H2</option>
-              <option value={3}>H3</option>
-            </select>
-            <input
-              style={{ ...inputStyle, flex: 1 }}
-              value={block.text}
-              placeholder="Titre de la section…"
-              onChange={(e) => onChange({ ...block, text: e.target.value })}
-            />
-          </div>
-        );
-
-      case "pullquote":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <textarea
-              style={taStyle}
-              value={block.text}
-              placeholder="Texte de la citation…"
-              onChange={(e) => onChange({ ...block, text: e.target.value })}
-            />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: ".5rem" }}>
-              <input style={inputStyle} value={block.author ?? ""} placeholder="Auteur"
-                onChange={(e) => onChange({ ...block, author: e.target.value })} />
-              <input style={inputStyle} value={block.role ?? ""} placeholder="Titre / Rôle"
-                onChange={(e) => onChange({ ...block, role: e.target.value })} />
-            </div>
-          </div>
-        );
-
-      case "alert":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <select
-              value={block.variant ?? "info"}
-              onChange={(e) => onChange({ ...block, variant: e.target.value as "info" | "warning" | "tip" })}
-              style={{ ...inputStyle, resize: "none" }}
-            >
-              <option value="info">ℹ️ Info</option>
-              <option value="warning">⚠️ Attention</option>
-              <option value="tip">💡 Conseil</option>
-            </select>
-            <textarea
-              style={taStyle}
-              value={block.message}
-              placeholder="Message de l'alerte…"
-              onChange={(e) => onChange({ ...block, message: e.target.value })}
-            />
-          </div>
-        );
-
-      case "factbox":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.title} placeholder="Titre de l'encadré"
-              onChange={(e) => onChange({ ...block, title: e.target.value })} />
-            {(block.facts ?? []).map((fact, fi) => (
-              <div key={fi} style={rowStyle}>
-                <input style={{ ...inputStyle, flex: 1 }} value={fact} placeholder={`Fait ${fi + 1}`}
-                  onChange={(e) => {
-                    const facts = [...block.facts];
-                    facts[fi] = e.target.value;
-                    onChange({ ...block, facts });
-                  }} />
-                <button onClick={() => {
-                  const facts = block.facts.filter((_, i) => i !== fi);
-                  onChange({ ...block, facts });
-                }} style={{ ...inputStyle, width: 32, textAlign: "center", cursor: "pointer", color: "#B8341E", flexShrink: 0 }}>×</button>
-              </div>
-            ))}
-            <button
-              onClick={() => onChange({ ...block, facts: [...block.facts, ""] })}
-              style={{ fontSize: ".7rem", fontWeight: 700, color: "#C08435", background: "none", border: "1px dashed rgba(192,132,53,.4)", borderRadius: 8, padding: ".4rem", cursor: "pointer" }}
-            >
-              + Ajouter un fait
-            </button>
-          </div>
-        );
-
-      case "checklist":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.title ?? ""} placeholder="Titre (optionnel)"
-              onChange={(e) => onChange({ ...block, title: e.target.value })} />
-            {(block.items ?? []).map((item, ii) => (
-              <div key={ii} style={{ display: "flex", flexDirection: "column", gap: ".3rem", padding: ".6rem", background: "rgba(20,20,16,.03)", borderRadius: 8, border: "1px solid rgba(20,20,16,.07)" }}>
-                <div style={rowStyle}>
-                  <input style={{ ...inputStyle, flex: 1 }} value={item.label} placeholder="Élément"
-                    onChange={(e) => {
-                      const items = [...block.items];
-                      items[ii] = { ...items[ii], label: e.target.value };
-                      onChange({ ...block, items });
-                    }} />
-                  <button onClick={() => {
-                    const items = block.items.filter((_, i) => i !== ii);
-                    onChange({ ...block, items });
-                  }} style={{ ...inputStyle, width: 32, cursor: "pointer", color: "#B8341E", flexShrink: 0 }}>×</button>
-                </div>
-                <input style={inputStyle} value={item.detail ?? ""} placeholder="Détail (optionnel)"
-                  onChange={(e) => {
-                    const items = [...block.items];
-                    items[ii] = { ...items[ii], detail: e.target.value };
-                    onChange({ ...block, items });
-                  }} />
-              </div>
-            ))}
-            <button onClick={() => onChange({ ...block, items: [...block.items, { label: "", detail: "" }] })}
-              style={{ fontSize: ".7rem", fontWeight: 700, color: "#C08435", background: "none", border: "1px dashed rgba(192,132,53,.4)", borderRadius: 8, padding: ".4rem", cursor: "pointer" }}>
-              + Ajouter un élément
-            </button>
-          </div>
-        );
-
-      case "steps":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.title ?? ""} placeholder="Titre (optionnel)"
-              onChange={(e) => onChange({ ...block, title: e.target.value })} />
-            {(block.items ?? []).map((item, ii) => (
-              <div key={ii} style={{ display: "flex", flexDirection: "column", gap: ".3rem", padding: ".6rem", background: "rgba(20,20,16,.03)", borderRadius: 8, border: "1px solid rgba(20,20,16,.07)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: ".5rem", marginBottom: ".2rem" }}>
-                  <span style={{ width: 22, height: 22, borderRadius: "50%", background: "#C08435", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".62rem", fontWeight: 900, flexShrink: 0 }}>{ii + 1}</span>
-                  <input style={{ ...inputStyle, flex: 1 }} value={item.label} placeholder="Intitulé de l'étape"
-                    onChange={(e) => {
-                      const items = [...block.items];
-                      items[ii] = { ...items[ii], label: e.target.value };
-                      onChange({ ...block, items });
-                    }} />
-                  <button onClick={() => { const items = block.items.filter((_, i) => i !== ii); onChange({ ...block, items }); }}
-                    style={{ ...inputStyle, width: 32, cursor: "pointer", color: "#B8341E", flexShrink: 0 }}>×</button>
-                </div>
-                <textarea style={{ ...taStyle, minHeight: 60 }} value={item.desc} placeholder="Description de l'étape"
-                  onChange={(e) => {
-                    const items = [...block.items];
-                    items[ii] = { ...items[ii], desc: e.target.value };
-                    onChange({ ...block, items });
-                  }} />
-              </div>
-            ))}
-            <button onClick={() => onChange({ ...block, items: [...block.items, { label: "", desc: "" }] })}
-              style={{ fontSize: ".7rem", fontWeight: 700, color: "#C08435", background: "none", border: "1px dashed rgba(192,132,53,.4)", borderRadius: 8, padding: ".4rem", cursor: "pointer" }}>
-              + Ajouter une étape
-            </button>
-          </div>
-        );
-
-      case "benefits":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.title ?? ""} placeholder="Titre (optionnel)"
-              onChange={(e) => onChange({ ...block, title: e.target.value })} />
-            {(block.items ?? []).map((item, ii) => (
-              <div key={ii} style={{ display: "grid", gridTemplateColumns: "48px 1fr 1fr auto auto", gap: ".4rem", alignItems: "center" }}>
-                <input style={{ ...inputStyle, textAlign: "center", fontSize: "1.1rem", padding: ".3rem" }} value={item.icon} placeholder="🔹"
-                  onChange={(e) => {
-                    const items = [...block.items];
-                    items[ii] = { ...items[ii], icon: e.target.value };
-                    onChange({ ...block, items });
-                  }} />
-                <input style={inputStyle} value={item.label} placeholder="Label"
-                  onChange={(e) => {
-                    const items = [...block.items];
-                    items[ii] = { ...items[ii], label: e.target.value };
-                    onChange({ ...block, items });
-                  }} />
-                <input style={inputStyle} value={item.value} placeholder="Valeur"
-                  onChange={(e) => {
-                    const items = [...block.items];
-                    items[ii] = { ...items[ii], value: e.target.value };
-                    onChange({ ...block, items });
-                  }} />
-                <label style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".62rem", color: "#928E80", cursor: "pointer", whiteSpace: "nowrap" }}>
-                  <input type="checkbox" checked={item.highlight ?? false}
-                    onChange={(e) => {
-                      const items = [...block.items];
-                      items[ii] = { ...items[ii], highlight: e.target.checked };
-                      onChange({ ...block, items });
-                    }} />
-                  ★
-                </label>
-                <button onClick={() => { const items = block.items.filter((_, i) => i !== ii); onChange({ ...block, items }); }}
-                  style={{ ...inputStyle, width: 28, cursor: "pointer", color: "#B8341E", padding: ".2rem" }}>×</button>
-              </div>
-            ))}
-            <button onClick={() => onChange({ ...block, items: [...block.items, { icon: "✅", label: "", value: "", highlight: false }] })}
-              style={{ fontSize: ".7rem", fontWeight: 700, color: "#C08435", background: "none", border: "1px dashed rgba(192,132,53,.4)", borderRadius: 8, padding: ".4rem", cursor: "pointer" }}>
-              + Ajouter un avantage
-            </button>
-          </div>
-        );
-
-      case "agenda":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.title ?? ""} placeholder="Titre du programme (optionnel)"
-              onChange={(e) => onChange({ ...block, title: e.target.value })} />
-            {(block.sessions ?? []).map((session, si) => (
-              <div key={si} style={{ padding: ".65rem", background: "rgba(20,20,16,.03)", borderRadius: 8, border: "1px solid rgba(20,20,16,.07)", display: "flex", flexDirection: "column", gap: ".35rem" }}>
-                <div style={{ display: "grid", gridTemplateColumns: "90px 1fr auto", gap: ".4rem", alignItems: "center" }}>
-                  <input style={{ ...inputStyle, fontSize: ".7rem" }} value={session.time} placeholder="Horaire"
-                    onChange={(e) => {
-                      const sessions = [...block.sessions];
-                      sessions[si] = { ...sessions[si], time: e.target.value };
-                      onChange({ ...block, sessions });
-                    }} />
-                  <input style={inputStyle} value={session.title} placeholder="Titre de la session"
-                    onChange={(e) => {
-                      const sessions = [...block.sessions];
-                      sessions[si] = { ...sessions[si], title: e.target.value };
-                      onChange({ ...block, sessions });
-                    }} />
-                  <button onClick={() => { const sessions = block.sessions.filter((_, i) => i !== si); onChange({ ...block, sessions }); }}
-                    style={{ ...inputStyle, width: 30, cursor: "pointer", color: "#B8341E", padding: ".2rem" }}>×</button>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 80px auto", gap: ".4rem", alignItems: "center" }}>
-                  <input style={inputStyle} value={session.speaker ?? ""} placeholder="Intervenant(s)"
-                    onChange={(e) => {
-                      const sessions = [...block.sessions];
-                      sessions[si] = { ...sessions[si], speaker: e.target.value };
-                      onChange({ ...block, sessions });
-                    }} />
-                  <input style={inputStyle} value={session.tag ?? ""} placeholder="Tag"
-                    onChange={(e) => {
-                      const sessions = [...block.sessions];
-                      sessions[si] = { ...sessions[si], tag: e.target.value };
-                      onChange({ ...block, sessions });
-                    }} />
-                  <label style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".62rem", color: "#928E80", cursor: "pointer" }}>
-                    <input type="checkbox" checked={session.highlight ?? false}
-                      onChange={(e) => {
-                        const sessions = [...block.sessions];
-                        sessions[si] = { ...sessions[si], highlight: e.target.checked };
-                        onChange({ ...block, sessions });
-                      }} />
-                    ⭐
-                  </label>
-                </div>
-              </div>
-            ))}
-            <button onClick={() => onChange({ ...block, sessions: [...block.sessions, { time: "", title: "", speaker: "", tag: "", highlight: false }] })}
-              style={{ fontSize: ".7rem", fontWeight: 700, color: "#C08435", background: "none", border: "1px dashed rgba(192,132,53,.4)", borderRadius: 8, padding: ".4rem", cursor: "pointer" }}>
-              + Ajouter une session
-            </button>
-          </div>
-        );
-
-      case "speakers":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.title ?? ""} placeholder="Titre (ex : Intervenants confirmés)"
-              onChange={(e) => onChange({ ...block, title: e.target.value })} />
-            {(block.people ?? []).map((person, pi) => (
-              <div key={pi} style={{ display: "grid", gridTemplateColumns: "44px 1fr 1fr 1fr auto", gap: ".4rem", alignItems: "center" }}>
-                <input style={{ ...inputStyle, textAlign: "center", fontSize: "1.1rem", padding: ".3rem" }} value={person.emoji ?? "👤"} placeholder="🧑"
-                  onChange={(e) => {
-                    const people = [...block.people];
-                    people[pi] = { ...people[pi], emoji: e.target.value };
-                    onChange({ ...block, people });
-                  }} />
-                <input style={inputStyle} value={person.name} placeholder="Nom"
-                  onChange={(e) => {
-                    const people = [...block.people];
-                    people[pi] = { ...people[pi], name: e.target.value };
-                    onChange({ ...block, people });
-                  }} />
-                <input style={inputStyle} value={person.role} placeholder="Rôle"
-                  onChange={(e) => {
-                    const people = [...block.people];
-                    people[pi] = { ...people[pi], role: e.target.value };
-                    onChange({ ...block, people });
-                  }} />
-                <input style={inputStyle} value={person.org ?? ""} placeholder="Organisation"
-                  onChange={(e) => {
-                    const people = [...block.people];
-                    people[pi] = { ...people[pi], org: e.target.value };
-                    onChange({ ...block, people });
-                  }} />
-                <button onClick={() => { const people = block.people.filter((_, i) => i !== pi); onChange({ ...block, people }); }}
-                  style={{ ...inputStyle, width: 30, cursor: "pointer", color: "#B8341E", padding: ".2rem" }}>×</button>
-              </div>
-            ))}
-            <button onClick={() => onChange({ ...block, people: [...block.people, { name: "", role: "", org: "", emoji: "👤" }] })}
-              style={{ fontSize: ".7rem", fontWeight: 700, color: "#C08435", background: "none", border: "1px dashed rgba(192,132,53,.4)", borderRadius: 8, padding: ".4rem", cursor: "pointer" }}>
-              + Ajouter un intervenant
-            </button>
-          </div>
-        );
-
-      case "location":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.label} placeholder="Nom du lieu (ex : Nairobi, Kenya)"
-              onChange={(e) => onChange({ ...block, label: e.target.value })} />
-            <input style={inputStyle} value={block.address ?? ""} placeholder="Adresse complète"
-              onChange={(e) => onChange({ ...block, address: e.target.value })} />
-            <input style={inputStyle} value={block.mapUrl ?? ""} placeholder="URL Google Maps embed (optionnel)"
-              onChange={(e) => onChange({ ...block, mapUrl: e.target.value })} />
-          </div>
-        );
-
-      case "apply":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.label} placeholder="Texte du bouton (ex : Inscrivez-vous)"
-              onChange={(e) => onChange({ ...block, label: e.target.value })} />
-            <input style={inputStyle} value={block.url} placeholder="URL d'inscription"
-              onChange={(e) => onChange({ ...block, url: e.target.value })} />
-            <input style={inputStyle} value={block.note ?? ""} placeholder="Note sous le bouton (optionnel)"
-              onChange={(e) => onChange({ ...block, note: e.target.value })} />
-            <input style={inputStyle} value={block.deadline ?? ""} placeholder="Date limite (ex : 20 Avr 2026)"
-              onChange={(e) => onChange({ ...block, deadline: e.target.value })} />
-          </div>
-        );
-
-      case "external":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "48px 1fr", gap: ".4rem" }}>
-              <input style={{ ...inputStyle, textAlign: "center" }} value={block.favicon ?? "🔗"} placeholder="🔗"
-                onChange={(e) => onChange({ ...block, favicon: e.target.value })} />
-              <input style={inputStyle} value={block.url} placeholder="URL (https://…)"
-                onChange={(e) => onChange({ ...block, url: e.target.value })} />
-            </div>
-            <input style={inputStyle} value={block.label} placeholder="Texte du lien"
-              onChange={(e) => onChange({ ...block, label: e.target.value })} />
-            <input style={inputStyle} value={block.description ?? ""} placeholder="Description courte (optionnel)"
-              onChange={(e) => onChange({ ...block, description: e.target.value })} />
-          </div>
-        );
-
-      case "image":
-        return (
-          <div style={{ display: "flex", flexDirection: "column", gap: ".45rem" }}>
-            <input style={inputStyle} value={block.url} placeholder="URL de l'image"
-              onChange={(e) => onChange({ ...block, url: e.target.value })} />
-            <input style={inputStyle} value={block.alt} placeholder="Texte alternatif (alt)"
-              onChange={(e) => onChange({ ...block, alt: e.target.value })} />
-            <input style={inputStyle} value={block.caption ?? ""} placeholder="Légende (optionnel)"
-              onChange={(e) => onChange({ ...block, caption: e.target.value })} />
-            <input style={inputStyle} value={block.credit ?? ""} placeholder="Crédit photo (optionnel)"
-              onChange={(e) => onChange({ ...block, credit: e.target.value })} />
-          </div>
-        );
-
-      case "divider":
-        return (
-          <div style={{ padding: ".5rem 0", textAlign: "center", color: "#C4C0B6", fontSize: ".7rem" }}>
-            — Séparateur visuel —
-          </div>
-        );
-
-      default:
-        return (
-          <p style={{ color: "#928E80", fontSize: ".75rem" }}>
-            Type de bloc non géré : {(block as any).type}
-          </p>
-        );
-    }
-  };
-
-  const color = typeColors[(block as any).type] ?? "#928E80";
-  const label = typeLabel[(block as any).type] ?? (block as any).type;
-
-  return (
-    <div style={{
-      background: "#fff",
-      border: "1px solid rgba(20,20,16,.08)",
-      borderRadius: 12,
-      overflow: "hidden",
-      marginBottom: ".75rem",
-      boxShadow: "0 1px 6px rgba(20,20,16,.04)",
-    }}>
-      {/* Header du bloc */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        padding: ".6rem .85rem",
-        background: "#FAFAF8",
-        borderBottom: "1px solid rgba(20,20,16,.07)",
-        gap: ".6rem",
-      }}>
-        <span style={{
-          fontSize: ".55rem", fontWeight: 800, letterSpacing: ".12em",
-          textTransform: "uppercase", padding: ".2rem .65rem", borderRadius: 100,
-          background: `${color}18`, color, flexShrink: 0,
-        }}>
-          {label}
-        </span>
-        <span style={{ color: "#C4C0B6", fontSize: ".6rem" }}>
-          #{index + 1}
-        </span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: ".3rem" }}>
-          <button
-            disabled={index === 0}
-            onClick={() => onMove("up")}
-            style={{
-              width: 26, height: 26, borderRadius: 7, border: "1px solid rgba(20,20,16,.12)",
-              background: "transparent", cursor: index === 0 ? "not-allowed" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: index === 0 ? "#C4C0B6" : "#928E80", transition: "all .15s",
-            }}
-          >
-            <IcoUp />
-          </button>
-          <button
-            disabled={index === total - 1}
-            onClick={() => onMove("down")}
-            style={{
-              width: 26, height: 26, borderRadius: 7, border: "1px solid rgba(20,20,16,.12)",
-              background: "transparent", cursor: index === total - 1 ? "not-allowed" : "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: index === total - 1 ? "#C4C0B6" : "#928E80", transition: "all .15s",
-            }}
-          >
-            <IcoDown />
-          </button>
-          <button
-            onClick={onDelete}
-            style={{
-              width: 26, height: 26, borderRadius: 7, border: "1px solid rgba(184,52,30,.15)",
-              background: "rgba(184,52,30,.05)", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#B8341E", transition: "all .15s",
-            }}
-          >
-            <IcoTrash />
-          </button>
-        </div>
-      </div>
-      {/* Corps du bloc */}
-      <div style={{ padding: ".85rem" }}>
-        {renderEditor()}
-      </div>
-    </div>
-  );
+function buildGradient(c1: string, c2: string, angle: number) {
+  return `linear-gradient(${angle}deg,${c1} 0%,${c2} 100%)`;
 }
 
 /* ══════════════════════════════════════════════════════════
    PAGE PRINCIPALE — ÉDITEUR
 ══════════════════════════════════════════════════════════ */
-export default function AdminEventEditorPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default function AdminEventEditorPage({ params }: { params: { id: string } }) {
   const isNew = params.id === "nouveau";
   const sb = createClient();
   const router = useRouter();
@@ -735,107 +209,82 @@ export default function AdminEventEditorPage({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
-  const [saveMsg, setSaveMsg] = useState<{
-    type: "success" | "error";
-    text: string;
-  } | null>(null);
-  const [activeTab, setActiveTab] = useState<"content" | "seo" | "settings">(
-    "content"
-  );
-  const [addingBlock, setAddingBlock] = useState(false);
-  const [newBlockType, setNewBlockType] = useState<string>("paragraph");
+  const [saveMsg, setSaveMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"content" | "seo" | "settings">("content");
+  const [countrySearch, setCountrySearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [tagInput, setTagInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const countryRef = useRef<HTMLDivElement>(null);
 
   const [form, setForm] = useState<EventForm>({
-    slug: "",
-    title: "",
-    type: "Conférence",
-    location: "",
-    country: "",
-    flag: "🌍",
-    event_date: "",
-    description: "",
-    organizer: "",
-    attendees: "",
-    register_url: "",
-    cover_url: "",
-    image_gradient: TYPE_GRADIENT["Conférence"],
-    tags: [],
-    featured: false,
-    published: false,
-    content: [],
+    slug: "", title: "", type: "Conférence", location: "", country: "", flag: "🌍",
+    event_date: "", description: "", organizer: "", attendees: "", register_url: "",
+    cover_url: "", image_gradient: TYPE_GRADIENT["Conférence"].g,
+    grad_color1: TYPE_GRADIENT["Conférence"].c1, grad_color2: TYPE_GRADIENT["Conférence"].c2,
+    grad_angle: 135, meta_title: "", meta_desc: "", tags: [], featured: false, published: false, content: [],
   });
 
-  const [tagInput, setTagInput] = useState("");
+  /* ── Fermer suggestions pays au clic extérieur ── */
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (countryRef.current && !countryRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
-  /* ── Chargement données existantes ── */
+  /* ── Chargement ── */
   useEffect(() => {
     if (isNew) return;
     (async () => {
       setLoading(true);
-      const { data, error } = await sb
-        .from("events")
-        .select("*")
-        .eq("id", params.id)
-        .single();
+      const { data, error } = await sb.from("events").select("*").eq("id", params.id).single() as { data: any; error: any };
       if (!error && data) {
         let parsedContent: Block[] = [];
         if (data.content) {
-          try {
-            parsedContent =
-              typeof data.content === "string"
-                ? JSON.parse(data.content)
-                : data.content;
-          } catch {
-            parsedContent = [];
-          }
+          try { parsedContent = typeof data.content === "string" ? JSON.parse(data.content) : data.content; }
+          catch { parsedContent = []; }
         }
+        const tg = TYPE_GRADIENT[(data.type as EventType)] ?? TYPE_GRADIENT["Conférence"];
         setForm({
-          slug: data.slug ?? "",
-          title: data.title ?? "",
+          slug: data.slug ?? "", title: data.title ?? "",
           type: (data.type as EventType) ?? "Conférence",
-          location: data.location ?? "",
-          country: data.country ?? "",
-          flag: data.flag ?? "🌍",
-          event_date: data.event_date ?? "",
-          description: data.description ?? "",
-          organizer: data.organizer ?? "",
-          attendees: data.attendees ?? "",
-          register_url: data.register_url ?? "",
-          cover_url: data.cover_url ?? "",
-          image_gradient:
-            data.image_gradient ?? TYPE_GRADIENT["Conférence"],
-          tags: data.tags ?? [],
-          featured: data.featured ?? false,
-          published: data.published ?? false,
-          content: parsedContent,
+          location: data.location ?? "", country: data.country ?? "", flag: data.flag ?? "🌍",
+          event_date: data.event_date ?? "", description: data.description ?? "",
+          organizer: data.organizer ?? "", attendees: data.attendees ?? "",
+          register_url: data.register_url ?? "", cover_url: data.cover_url ?? "",
+          image_gradient: data.image_gradient ?? tg.g,
+          grad_color1: tg.c1, grad_color2: tg.c2, grad_angle: tg.angle,
+          meta_title: data.meta_title ?? "", meta_desc: data.meta_desc ?? "",
+          tags: data.tags ?? [], featured: data.featured ?? false,
+          published: data.published ?? false, content: parsedContent,
         });
+        setCountrySearch(data.country ?? "");
       }
       setLoading(false);
     })();
   }, [params.id, isNew, sb]);
 
-  /* ── Auto-slug ── */
-  const titleRef = useRef(form.title);
-  titleRef.current = form.title;
-  const handleTitleChange = (val: string) => {
-    setForm((f) => ({
-      ...f,
-      title: val,
-      slug: isNew ? slugify(val) : f.slug,
-    }));
-  };
+  const handleTitleChange = (val: string) =>
+    setForm((f) => ({ ...f, title: val, slug: isNew ? slugify(val) : f.slug }));
 
-  /* ── Auto-gradient selon type ── */
   const handleTypeChange = (type: EventType) => {
-    setForm((f) => ({
-      ...f,
-      type,
-      image_gradient: TYPE_GRADIENT[type],
-    }));
+    const tg = TYPE_GRADIENT[type];
+    setForm((f) => ({ ...f, type, image_gradient: tg.g, grad_color1: tg.c1, grad_color2: tg.c2, grad_angle: tg.angle }));
   };
 
-  /* ── Upload image de couverture ── */
+  const handleCountrySelect = (c: { name: string; flag: string }) => {
+    setForm((f) => ({ ...f, country: c.name, flag: c.flag }));
+    setCountrySearch(c.name);
+    setShowSuggestions(false);
+  };
+
+  const handleGradientChange = (c1: string, c2: string, angle: number) =>
+    setForm((f) => ({ ...f, grad_color1: c1, grad_color2: c2, grad_angle: angle, image_gradient: buildGradient(c1, c2, angle) }));
+
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -843,253 +292,221 @@ export default function AdminEventEditorPage({
     try {
       const ext = file.name.split(".").pop();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await sb.storage
-        .from("events")
-        .upload(path, file, { upsert: true });
+      const { error: upErr } = await sb.storage.from("events").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
       const { data: urlData } = sb.storage.from("events").getPublicUrl(path);
       setForm((f) => ({ ...f, cover_url: urlData.publicUrl }));
-    } catch (err) {
-      setSaveMsg({ type: "error", text: "Erreur upload image." });
-    } finally {
-      setUploadingCover(false);
-    }
+    } catch { setSaveMsg({ type: "error", text: "Erreur upload image." }); }
+    finally { setUploadingCover(false); }
   };
 
-  /* ── Tags ── */
   const addTag = () => {
     const t = tagInput.trim();
-    if (t && !form.tags.includes(t)) {
-      setForm((f) => ({ ...f, tags: [...f.tags, t] }));
-    }
+    if (t && !form.tags.includes(t)) setForm((f) => ({ ...f, tags: [...f.tags, t] }));
     setTagInput("");
   };
-  const removeTag = (tag: string) =>
-    setForm((f) => ({ ...f, tags: f.tags.filter((t) => t !== tag) }));
-
-  /* ── Gestion blocs ── */
-  const addBlock = () => {
-    setForm((f) => ({
-      ...f,
-      content: [...f.content, emptyBlock(newBlockType)],
-    }));
-    setAddingBlock(false);
-  };
-  const updateBlock = (i: number, b: Block) =>
-    setForm((f) => {
-      const content = [...f.content];
-      content[i] = b;
-      return { ...f, content };
-    });
-  const deleteBlock = (i: number) =>
-    setForm((f) => ({
-      ...f,
-      content: f.content.filter((_, idx) => idx !== i),
-    }));
-  const moveBlock = (i: number, dir: "up" | "down") => {
-    setForm((f) => {
-      const content = [...f.content];
-      const j = dir === "up" ? i - 1 : i + 1;
-      if (j < 0 || j >= content.length) return f;
-      [content[i], content[j]] = [content[j], content[i]];
-      return { ...f, content };
-    });
-  };
+  const removeTag = (tag: string) => setForm((f) => ({ ...f, tags: f.tags.filter((t) => t !== tag) }));
 
   /* ── Sauvegarde ── */
   const save = async (publishOverride?: boolean) => {
-    const isPublishing = publishOverride !== undefined;
-    if (isPublishing) setPublishing(true);
-    else setSaving(true);
+    if (publishOverride !== undefined) setPublishing(true); else setSaving(true);
     setSaveMsg(null);
 
-    const payload: Record<string, any> = {
-      slug: form.slug || slugify(form.title),
-      title: form.title,
-      type: form.type,
-      location: form.location,
-      country: form.country,
-      flag: form.flag,
-      event_date: form.event_date || null,
-      description: form.description || null,
-      organizer: form.organizer || null,
-      attendees: form.attendees || null,
-      register_url: form.register_url || null,
-      cover_url: form.cover_url || null,
-      image_gradient: form.image_gradient,
-      tags: form.tags,
-      featured: form.featured,
-      published: publishOverride !== undefined ? publishOverride : form.published,
-      content: form.content,
-      updated_at: new Date().toISOString(),
-    };
+    let day = "", month = "", year = "";
+  if (form.event_date) {
+    const d = new Date(form.event_date);
+    day = String(d.getDate()).padStart(2, "0");
+    month = d.toLocaleDateString("fr-FR", { month: "short" });
+    year = String(d.getFullYear());
+  }
+
+  const payload: Record<string, any> = {
+    slug: form.slug || slugify(form.title),
+    title: form.title,
+    type: form.type,
+    location: form.location,
+    country: form.country,
+    flag: form.flag,
+    event_date: form.event_date || null,
+    day,
+    month,
+    year,
+    description: form.description || null,
+    organizer: form.organizer || null,
+    attendees: form.attendees || null,
+    register_url: form.register_url || null,
+    cover_url: form.cover_url || null,
+    image_gradient: form.image_gradient,
+    tags: form.tags,
+    featured: form.featured,
+    published: publishOverride !== undefined ? publishOverride : form.published,
+    meta_title: form.meta_title || null,
+    meta_desc: form.meta_desc || null,
+    content: form.content,
+    updated_at: new Date().toISOString(),
+  };
+
 
     try {
       if (isNew) {
         payload.created_at = new Date().toISOString();
-        const { data, error } = await sb
-          .from("events")
-          .insert(payload)
-          .select("id")
-          .single();
+        const { data , error } = await (sb.from("events") as any ).insert(payload as any).select("id").single();
         if (error) throw error;
-        setSaveMsg({ type: "success", text: publishOverride ? "Événement publié !" : "Événement créé !" });
+        setSaveMsg({ type: "success", text: "Événement créé !" });
         setTimeout(() => router.push(`/admin/evenements/${data.id}`), 900);
       } else {
-        if (publishOverride !== undefined) {
-          payload.published = publishOverride;
-          setForm((f) => ({ ...f, published: publishOverride }));
-        }
-        const { error } = await sb
-          .from("events")
-          .update(payload)
-          .eq("id", params.id);
+        if (publishOverride !== undefined) setForm((f) => ({ ...f, published: publishOverride }));
+        const { error } = await (sb.from("events") as any).update(payload).eq("id", params.id);
         if (error) throw error;
-        setSaveMsg({ type: "success", text: publishOverride ? (publishOverride ? "Publié !" : "Dépublié !") : "Sauvegardé !" });
+        setSaveMsg({ type: "success", text: publishOverride !== undefined ? (publishOverride ? "Publié !" : "Dépublié !") : "Sauvegardé !" });
       }
     } catch (err: any) {
-      setSaveMsg({
-        type: "error",
-        text: err.message ?? "Erreur lors de la sauvegarde.",
-      });
+      setSaveMsg({ type: "error", text: err.message ?? "Erreur lors de la sauvegarde." });
     } finally {
-      setSaving(false);
-      setPublishing(false);
+      setSaving(false); setPublishing(false);
       setTimeout(() => setSaveMsg(null), 3500);
     }
   };
 
   /* ── Styles partagés ── */
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: ".65rem .9rem",
-    borderRadius: 10,
-    border: "1px solid rgba(20,20,16,.12)",
-    background: "#fff",
-    fontSize: ".8rem",
-    color: "#141410",
-    outline: "none",
-    fontFamily: "inherit",
-    transition: "border .18s",
-    boxSizing: "border-box",
+  const inp: React.CSSProperties = {
+    width: "100%", padding: ".7rem .95rem", borderRadius: 10,
+    border: "1.5px solid rgba(20,20,16,.12)", background: "#F8F6F1",
+    fontSize: ".85rem", color: "#141410", outline: "none",
+    fontFamily: "inherit", transition: "border .18s", boxSizing: "border-box",
   };
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    fontSize: ".58rem",
-    fontWeight: 800,
-    letterSpacing: ".12em",
-    textTransform: "uppercase",
-    color: "#928E80",
-    marginBottom: ".35rem",
+  const lbl: React.CSSProperties = {
+    display: "block", fontSize: ".63rem", fontWeight: 700,
+    letterSpacing: ".1em", textTransform: "uppercase", color: "#928E80", marginBottom: ".38rem",
   };
-  const sectionStyle: React.CSSProperties = {
-    background: "#fff",
-    borderRadius: 14,
-    border: "1px solid rgba(20,20,16,.08)",
-    padding: "1.5rem",
-    marginBottom: "1.25rem",
-    boxShadow: "0 1px 8px rgba(20,20,16,.04)",
+  const section: React.CSSProperties = {
+    background: "#fff", borderRadius: 14, border: "1px solid rgba(20,20,16,.08)",
+    padding: "1.6rem", marginBottom: "1.25rem", boxShadow: "0 1px 8px rgba(20,20,16,.04)",
   };
-  const sectionTitleStyle: React.CSSProperties = {
-    fontSize: ".62rem",
-    fontWeight: 800,
-    letterSpacing: ".14em",
-    textTransform: "uppercase",
-    color: "#928E80",
-    marginBottom: "1.1rem",
-    paddingBottom: ".6rem",
+  const sectionTitle: React.CSSProperties = {
+    fontSize: ".63rem", fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase",
+    color: "#928E80", marginBottom: "1.1rem", paddingBottom: ".6rem",
     borderBottom: "1px solid rgba(20,20,16,.07)",
   };
+
+  const filteredCountries = COUNTRIES.filter((c) =>
+    c.name.toLowerCase().includes(countrySearch.toLowerCase())
+  ).slice(0, 7);
+
+  const typeColor = TYPE_COLOR[form.type] ?? "#141410";
 
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: "#F5F3EE", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ width: 40, height: 40, borderRadius: "50%", border: "3px solid rgba(20,20,16,.08)", borderTopColor: "#C08435", animation: "spin .8s linear infinite", margin: "0 auto 1rem" }} />
-          <p style={{ color: "#928E80", fontSize: ".8rem" }}>Chargement de l'événement…</p>
+          <p style={{ color: "#928E80", fontSize: ".85rem" }}>Chargement de l'événement…</p>
           <style>{`@keyframes spin { to { transform:rotate(360deg); } }`}</style>
         </div>
       </div>
     );
   }
 
-  const typeColor = TYPE_COLOR[form.type] ?? "#141410";
-
   return (
     <>
       <style>{`
         .aee-input:focus { border-color:#C08435 !important; }
-        .aee-tab { padding:.5rem 1rem; border:none; background:none; cursor:pointer; font-size:.72rem; font-weight:700; letter-spacing:.04em; border-bottom:2px solid transparent; transition:all .18s; color:#928E80; }
-        .aee-tab.active { color:#141410; border-bottom-color:#C08435; }
-        .aee-tab:hover { color:#38382E; }
-        .aee-btn { display:inline-flex; align-items:center; gap:.4rem; padding:.6rem 1.2rem; border-radius:10px; border:none; cursor:pointer; font-size:.75rem; font-weight:700; letter-spacing:.04em; transition:all .18s; }
+        .aee-tab {
+          padding:.55rem 1.1rem; border:none; background:none; cursor:pointer;
+          font-size:.8rem; font-weight:700; letter-spacing:.04em;
+          border-bottom:2px solid transparent; transition:all .18s; color:rgba(248,246,241,.4);
+        }
+        .aee-tab.active { color:#F8F6F1; border-bottom-color:#C08435; }
+        .aee-tab:hover:not(.active) { color:rgba(248,246,241,.7); }
+        .aee-btn {
+          display:inline-flex; align-items:center; gap:.45rem;
+          padding:.65rem 1.25rem; border-radius:10px; border:none; cursor:pointer;
+          font-size:.82rem; font-weight:700; letter-spacing:.04em; transition:all .18s;
+        }
         .aee-btn:disabled { opacity:.55; cursor:not-allowed; }
         @keyframes aee-spin { to { transform:rotate(360deg); } }
-        .aee-spinner { width:14px; height:14px; border-radius:50%; border:2px solid rgba(255,255,255,.3); border-top-color:#fff; animation:aee-spin .7s linear infinite; display:inline-block; }
-        .aee-save-toast {
+        .aee-spinner {
+          width:14px; height:14px; border-radius:50%;
+          border:2px solid rgba(255,255,255,.3); border-top-color:#fff;
+          animation:aee-spin .7s linear infinite; display:inline-block;
+        }
+        .aee-toast {
           position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999;
-          padding:.75rem 1.25rem; border-radius:12px; font-size:.78rem; font-weight:700;
+          padding:.8rem 1.35rem; border-radius:12px; font-size:.85rem; font-weight:700;
           box-shadow:0 8px 32px rgba(0,0,0,.18); animation:aee-toast-in .25s ease;
         }
-        @keyframes aee-toast-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+        @keyframes aee-toast-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
         .aee-cover-zone {
           border:2px dashed rgba(20,20,16,.15); border-radius:12px;
-          cursor:pointer; transition:border-color .2s, background .2s;
-          text-align:center;
+          cursor:pointer; transition:border-color .2s,background .2s; text-align:center;
         }
         .aee-cover-zone:hover { border-color:#C08435; background:rgba(192,132,53,.03); }
+        .aee-country-opt {
+          display:flex; align-items:center; gap:.65rem;
+          padding:.58rem .9rem; cursor:pointer; border-radius:8px;
+          transition:background .12s; font-size:.85rem; color:#141410;
+        }
+        .aee-country-opt:hover { background:#F0EDE4; }
+        .aee-swatch {
+          width:30px; height:30px; border-radius:8px; cursor:pointer; flex-shrink:0;
+          border:2.5px solid transparent; transition:border-color .15s,box-shadow .15s;
+        }
+        .aee-swatch:hover { border-color:#C08435; }
+        .aee-swatch.active { border-color:#C08435; box-shadow:0 0 0 2px rgba(192,132,53,.3); }
+        .aee-header-title {
+          width:100%; padding:.55rem 0; background:transparent; border:none;
+          border-bottom:1.5px solid rgba(248,246,241,.12); border-radius:0;
+          color:#F8F6F1; font-weight:900; letter-spacing:-.03em;
+          font-family:"Fraunces",Georgia,serif; outline:none;
+          transition:border-color .2s; box-sizing:border-box;
+          font-size:clamp(1.4rem,2.5vw,1.85rem);
+        }
+        .aee-header-title:focus { border-bottom-color:#C08435; }
+        .aee-header-title::placeholder { color:rgba(248,246,241,.3); }
+        .aee-header-desc {
+          width:100%; padding:.5rem 0; background:transparent; border:none;
+          border-bottom:1.5px solid rgba(248,246,241,.08); border-radius:0;
+          color:rgba(248,246,241,.55); font-size:.95rem; font-family:inherit;
+          outline:none; resize:none; transition:border-color .2s; box-sizing:border-box;
+        }
+        .aee-header-desc:focus { border-bottom-color:#C08435; }
+        .aee-header-desc::placeholder { color:rgba(248,246,241,.25); }
       `}</style>
 
-      {/* Toast notification */}
+      {/* Toast */}
       {saveMsg && (
-        <div
-          className="aee-save-toast"
-          style={{
-            background: saveMsg.type === "success" ? "#1A5C40" : "#B8341E",
-            color: "#fff",
-          }}
-        >
+        <div className="aee-toast" style={{ background: saveMsg.type === "success" ? "#1A5C40" : "#B8341E", color: "#fff" }}>
           {saveMsg.type === "success" ? "✓" : "✕"} {saveMsg.text}
         </div>
       )}
 
       <div style={{ background: "#F5F3EE", minHeight: "100vh" }}>
-        {/* ── Barre du haut ── */}
-        <div style={{
-          background: "#141410",
-          borderBottom: "3px solid #C08435",
-          padding: "0",
-          position: "sticky",
-          top: 0,
-          zIndex: 100,
-        }}>
+
+        {/* ══ BARRE SUPÉRIEURE STICKY ══ */}
+        <div style={{ background: "#141410", borderBottom: "3px solid #C08435", position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ maxWidth: 1380, margin: "0 auto", padding: "0 clamp(1rem,3vw,2.5rem)" }}>
-            {/* Ligne 1 : navigation + actions */}
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 0 .75rem", flexWrap: "wrap" }}>
+
+            {/* Ligne 1 : fil d'Ariane + actions */}
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 0 .6rem", flexWrap: "wrap" }}>
               <Link href="/admin/evenements"
-                style={{ display: "flex", alignItems: "center", gap: ".4rem", fontSize: ".7rem", fontWeight: 700, color: "rgba(248,246,241,.45)", textDecoration: "none", transition: "color .2s" }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(248,246,241,.8)")}
-                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(248,246,241,.45)")}
+                style={{ display: "flex", alignItems: "center", gap: ".4rem", fontSize: ".78rem", fontWeight: 700, color: "rgba(248,246,241,.4)", textDecoration: "none", transition: "color .2s" }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = "rgba(248,246,241,.75)")}
+                onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(248,246,241,.4)")}
               >
                 <IcoArrow /> Événements
               </Link>
-              <span style={{ color: "rgba(248,246,241,.18)" }}>›</span>
-              <span style={{ fontSize: ".7rem", fontWeight: 800, color: "#C08435", letterSpacing: ".06em" }}>
-                {isNew ? "Nouvel événement" : form.title || "Éditer"}
+              <span style={{ color: "rgba(248,246,241,.2)" }}>›</span>
+              <span style={{ fontSize: ".75rem", fontWeight: 800, color: "#C08435", letterSpacing: ".06em" }}>
+                {isNew ? "Nouvel événement" : (form.title.slice(0, 40) || "Éditer")}
               </span>
-
-              {/* Statut pill */}
               <span style={{
-                marginLeft: ".25rem",
-                fontSize: ".55rem", fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase",
-                padding: ".18rem .65rem", borderRadius: 100,
+                fontSize: ".6rem", fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase",
+                padding: ".2rem .7rem", borderRadius: 100,
                 background: form.published ? "rgba(26,92,64,.4)" : "rgba(248,246,241,.1)",
                 color: form.published ? "#6FCF97" : "rgba(248,246,241,.45)",
               }}>
                 {form.published ? "● Publié" : "○ Brouillon"}
               </span>
-
-              {/* Actions */}
               <div style={{ marginLeft: "auto", display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
                 {!isNew && (
                   <Link href={`/evenements/${form.slug}?preview=1`} target="_blank" rel="noopener noreferrer">
@@ -1098,41 +515,42 @@ export default function AdminEventEditorPage({
                     </button>
                   </Link>
                 )}
-                <button
-                  className="aee-btn"
-                  disabled={saving || publishing}
-                  onClick={() => save()}
-                  style={{ background: "rgba(248,246,241,.12)", color: "#F8F6F1", border: "1px solid rgba(248,246,241,.18)" }}
-                >
+                <button className="aee-btn" disabled={saving || publishing} onClick={() => save()}
+                  style={{ background: "rgba(248,246,241,.12)", color: "#F8F6F1", border: "1px solid rgba(248,246,241,.18)" }}>
                   {saving ? <span className="aee-spinner" /> : <IcoSave />}
                   {saving ? "Sauvegarde…" : "Sauvegarder"}
                 </button>
-                <button
-                  className="aee-btn"
-                  disabled={saving || publishing}
-                  onClick={() => save(!form.published)}
-                  style={{ background: form.published ? "#B8341E" : "#C08435", color: "#fff" }}
-                >
+                <button className="aee-btn" disabled={saving || publishing} onClick={() => save(!form.published)}
+                  style={{ background: form.published ? "#B8341E" : "#C08435", color: "#fff" }}>
                   {publishing ? <span className="aee-spinner" /> : null}
-                  {publishing
-                    ? "En cours…"
-                    : form.published
-                    ? "Dépublier"
-                    : "Publier"}
+                  {publishing ? "En cours…" : form.published ? "Dépublier" : "Publier"}
                 </button>
               </div>
             </div>
 
-            {/* Ligne 2 : onglets */}
-            <div style={{ display: "flex", gap: "0", borderTop: "1px solid rgba(248,246,241,.08)" }}>
+            {/* ── Titre & description — toujours visibles quelque soit l'onglet ── */}
+            <div style={{ padding: ".6rem 0 .85rem", borderTop: "1px solid rgba(248,246,241,.07)" }}>
+              <input
+                className="aee-header-title"
+                value={form.title}
+                placeholder="Titre de l'événement…"
+                onChange={(e) => handleTitleChange(e.target.value)}
+              />
+              <textarea
+                className="aee-header-desc"
+                value={form.description}
+                placeholder="Description courte affiché dans les listes et cartes…"
+                rows={2}
+                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                style={{ marginTop: ".45rem" }}
+              />
+            </div>
+
+            {/* Onglets */}
+            <div style={{ display: "flex" }}>
               {(["content", "seo", "settings"] as const).map((tab) => (
-                <button
-                  key={tab}
-                  className={`aee-tab${activeTab === tab ? " active" : ""}`}
-                  onClick={() => setActiveTab(tab)}
-                  style={{ color: activeTab === tab ? "#F8F6F1" : "rgba(248,246,241,.4)", borderBottomColor: activeTab === tab ? "#C08435" : "transparent" }}
-                >
-                  {tab === "content" ? "Contenu éditorial" : tab === "seo" ? "SEO & Meta" : "Paramètres"}
+                <button key={tab} className={`aee-tab${activeTab === tab ? " active" : ""}`} onClick={() => setActiveTab(tab)}>
+                  {tab === "content" ? "Contenu" : tab === "seo" ? "SEO & Meta" : "Paramètres"}
                 </button>
               ))}
             </div>
@@ -1145,374 +563,172 @@ export default function AdminEventEditorPage({
 
             {/* ── Colonne principale ── */}
             <div>
-              {/* ════ ONGLET CONTENU ════ */}
+
+              {/* ════ CONTENU ════ */}
               {activeTab === "content" && (
                 <>
-                  {/* Infos principales */}
-                  <div style={sectionStyle}>
-                    <p style={sectionTitleStyle}>Informations générales</p>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div style={section}>
+                    <p style={sectionTitle}>Informations générales</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
 
-                      {/* Titre */}
-                      <div>
-                        <label style={labelStyle}>Titre *</label>
-                        <input
-                          className="aee-input"
-                          style={{ ...inputStyle, fontSize: "1rem", fontWeight: 700, fontFamily: "'Fraunces', Georgia, serif" }}
-                          value={form.title}
-                          placeholder="Titre de l'événement…"
-                          onChange={(e) => handleTitleChange(e.target.value)}
-                        />
-                      </div>
-
-                      {/* Slug */}
-                      <div>
-                        <label style={labelStyle}>Slug URL</label>
-                        <div style={{ position: "relative" }}>
-                          <span style={{ position: "absolute", left: ".9rem", top: "50%", transform: "translateY(-50%)", color: "#928E80", fontSize: ".72rem" }}>
-                            /evenements/
-                          </span>
-                          <input
-                            className="aee-input"
-                            style={{ ...inputStyle, paddingLeft: "7.5rem" }}
-                            value={form.slug}
-                            placeholder="slug-url"
-                            onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Description courte */}
-                      <div>
-                        <label style={labelStyle}>Description / Extrait</label>
-                        <textarea
-                          className="aee-input"
-                          style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                          value={form.description}
-                          placeholder="Résumé court de l'événement affiché dans les listes…"
-                          onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                        />
-                      </div>
-
-                      {/* Type + Flag */}
+                      {/* Type + Date */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                         <div>
-                          <label style={labelStyle}>Type d'événement *</label>
-                          <select
-                            className="aee-input"
-                            style={{ ...inputStyle, appearance: "auto" }}
-                            value={form.type}
-                            onChange={(e) => handleTypeChange(e.target.value as EventType)}
-                          >
-                            {EVENT_TYPES.map((t) => (
-                              <option key={t} value={t}>{t}</option>
-                            ))}
+                          <label style={lbl}>Type d'événement *</label>
+                          <select className="aee-input" style={{ ...inp, appearance: "auto" }}
+                            value={form.type} onChange={(e) => handleTypeChange(e.target.value as EventType)}>
+                            {EVENT_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                           </select>
                         </div>
                         <div>
-                          <label style={labelStyle}>Drapeau</label>
-                          <div style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
-                            <select
-                              className="aee-input"
-                              style={{ ...inputStyle, width: 90, fontSize: "1.2rem" }}
-                              value={form.flag}
-                              onChange={(e) => setForm((f) => ({ ...f, flag: e.target.value }))}
-                            >
-                              {FLAGS.map((fl) => (
-                                <option key={fl} value={fl}>{fl}</option>
-                              ))}
-                            </select>
-                            <span style={{ fontSize: "1.6rem" }}>{form.flag}</span>
+                          <label style={lbl}>Date de l'événement *</label>
+                          <input type="date" className="aee-input" style={inp}
+                            value={form.event_date} onChange={(e) => setForm((f) => ({ ...f, event_date: e.target.value }))} />
+                        </div>
+                      </div>
+
+                      {/* Pays — sélecteur avec drapeau automatique */}
+                      <div ref={countryRef} style={{ position: "relative" }}>
+                        <label style={lbl}>Pays — le drapeau est généré automatiquement</label>
+                        <div style={{ display: "flex", gap: ".65rem", alignItems: "center" }}>
+                          <div style={{
+                            width: 44, height: 44, borderRadius: 10, background: "#F0EDE4",
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: "1.6rem", flexShrink: 0, border: "1.5px solid rgba(20,20,16,.1)",
+                          }}>
+                            {form.flag}
                           </div>
+                          <input
+                            className="aee-input"
+                            style={{ ...inp, flex: 1 }}
+                            value={countrySearch}
+                            placeholder="Tapez le nom d'un pays…"
+                            autoComplete="off"
+                            onChange={(e) => {
+                              setCountrySearch(e.target.value);
+                              setForm((f) => ({ ...f, country: e.target.value }));
+                              setShowSuggestions(true);
+                            }}
+                            onFocus={() => setShowSuggestions(true)}
+                          />
                         </div>
+                        {showSuggestions && countrySearch.length > 0 && filteredCountries.length > 0 && (
+                          <div style={{
+                            position: "absolute", top: "calc(100% + .3rem)", left: 52, right: 0, zIndex: 50,
+                            background: "#fff", borderRadius: 12, border: "1px solid rgba(20,20,16,.1)",
+                            boxShadow: "0 8px 28px rgba(20,20,16,.12)", padding: ".4rem",
+                          }}>
+                            {filteredCountries.map((c) => (
+                              <div key={c.name} className="aee-country-opt" onMouseDown={() => handleCountrySelect(c)}>
+                                <span style={{ fontSize: "1.3rem" }}>{c.flag}</span>
+                                <span>{c.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
 
-                      {/* Lieu + Pays */}
+                      {/* Ville + Participants */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                         <div>
-                          <label style={labelStyle}>Lieu / Ville *</label>
-                          <input
-                            className="aee-input"
-                            style={inputStyle}
-                            value={form.location}
-                            placeholder="ex : Nairobi"
-                            onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
-                          />
+                          <label style={lbl}>Ville / Lieu *</label>
+                          <input className="aee-input" style={inp} value={form.location}
+                            placeholder="ex : Nairobi" onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))} />
                         </div>
                         <div>
-                          <label style={labelStyle}>Pays</label>
-                          <input
-                            className="aee-input"
-                            style={inputStyle}
-                            value={form.country}
-                            placeholder="ex : Kenya"
-                            onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Date + Participants */}
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                        <div>
-                          <label style={labelStyle}>Date de l'événement *</label>
-                          <input
-                            type="date"
-                            className="aee-input"
-                            style={inputStyle}
-                            value={form.event_date}
-                            onChange={(e) => setForm((f) => ({ ...f, event_date: e.target.value }))}
-                          />
-                        </div>
-                        <div>
-                          <label style={labelStyle}>Participants attendus</label>
-                          <input
-                            className="aee-input"
-                            style={inputStyle}
-                            value={form.attendees}
-                            placeholder="ex : 5 000+"
-                            onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))}
-                          />
+                          <label style={lbl}>Participants attendus</label>
+                          <input className="aee-input" style={inp} value={form.attendees}
+                            placeholder="ex : 5 000+" onChange={(e) => setForm((f) => ({ ...f, attendees: e.target.value }))} />
                         </div>
                       </div>
 
                       {/* Organisateur + URL inscription */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
                         <div>
-                          <label style={labelStyle}>Organisateur</label>
-                          <input
-                            className="aee-input"
-                            style={inputStyle}
-                            value={form.organizer}
-                            placeholder="ex : AfricaTech Foundation"
-                            onChange={(e) => setForm((f) => ({ ...f, organizer: e.target.value }))}
-                          />
+                          <label style={lbl}>Organisateur</label>
+                          <input className="aee-input" style={inp} value={form.organizer}
+                            placeholder="ex : AfricaTech Foundation" onChange={(e) => setForm((f) => ({ ...f, organizer: e.target.value }))} />
                         </div>
                         <div>
-                          <label style={labelStyle}>URL d'inscription directe</label>
-                          <input
-                            className="aee-input"
-                            style={inputStyle}
-                            value={form.register_url}
-                            placeholder="https://…"
-                            onChange={(e) => setForm((f) => ({ ...f, register_url: e.target.value }))}
-                          />
+                          <label style={lbl}>URL d'inscription directe</label>
+                          <input className="aee-input" style={inp} value={form.register_url}
+                            placeholder="https://…" onChange={(e) => setForm((f) => ({ ...f, register_url: e.target.value }))} />
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Image de couverture */}
-                  <div style={sectionStyle}>
-                    <p style={sectionTitleStyle}>Image de couverture</p>
-                    <div>
-                      {form.cover_url ? (
-                        <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", marginBottom: "1rem" }}>
-                          <img src={form.cover_url} alt="Cover" style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }} />
-                          <button
-                            onClick={() => setForm((f) => ({ ...f, cover_url: "" }))}
-                            style={{ position: "absolute", top: ".5rem", right: ".5rem", background: "rgba(0,0,0,.6)", color: "#fff", border: "none", borderRadius: 8, padding: ".3rem .7rem", fontSize: ".7rem", cursor: "pointer" }}
-                          >
-                            ✕ Supprimer
-                          </button>
-                        </div>
-                      ) : (
-                        <div
-                          className="aee-cover-zone"
-                          style={{ padding: "2.5rem 1rem", marginBottom: "1rem" }}
-                          onClick={() => fileInputRef.current?.click()}
-                        >
-                          {uploadingCover ? (
-                            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: ".5rem" }}>
-                              <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid rgba(192,132,53,.2)", borderTopColor: "#C08435", animation: "aee-spin .8s linear infinite" }} />
-                              <span style={{ fontSize: ".72rem", color: "#928E80" }}>Upload en cours…</span>
-                            </div>
-                          ) : (
-                            <>
-                              <div style={{ color: "#C4C0B6", marginBottom: ".5rem" }}><IcoUpload /></div>
-                              <p style={{ fontSize: ".78rem", fontWeight: 700, color: "#38382E", marginBottom: ".2rem" }}>Cliquez pour uploader une image</p>
-                              <p style={{ fontSize: ".65rem", color: "#928E80" }}>JPG, PNG ou WebP · max 5 Mo · 1200×628 recommandé</p>
-                            </>
-                          )}
-                        </div>
-                      )}
-                      <input
-                        className="aee-input"
-                        style={inputStyle}
-                        value={form.cover_url}
-                        placeholder="Ou collez une URL d'image externe…"
-                        onChange={(e) => setForm((f) => ({ ...f, cover_url: e.target.value }))}
-                      />
-                      <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleCoverUpload} />
-                    </div>
-
-                    {/* Gradient preview */}
-                    <div style={{ marginTop: "1rem" }}>
-                      <label style={labelStyle}>Gradient de fond (CSS)</label>
-                      <div style={{ display: "flex", gap: ".6rem", alignItems: "center" }}>
-                        <div style={{ width: 36, height: 36, borderRadius: 8, background: form.image_gradient, flexShrink: 0, border: "1px solid rgba(20,20,16,.1)" }} />
-                        <input
-                          className="aee-input"
-                          style={{ ...inputStyle, fontFamily: "monospace", fontSize: ".7rem" }}
-                          value={form.image_gradient}
-                          onChange={(e) => setForm((f) => ({ ...f, image_gradient: e.target.value }))}
-                        />
-                      </div>
-                      <div style={{ display: "flex", gap: ".4rem", marginTop: ".6rem", flexWrap: "wrap" }}>
-                        {EVENT_TYPES.map((t) => (
-                          <button
-                            key={t}
-                            title={t}
-                            onClick={() => setForm((f) => ({ ...f, image_gradient: TYPE_GRADIENT[t] }))}
-                            style={{
-                              width: 28, height: 28, borderRadius: 7, border: form.image_gradient === TYPE_GRADIENT[t] ? `2px solid ${TYPE_COLOR[t]}` : "1px solid rgba(20,20,16,.1)",
-                              background: TYPE_GRADIENT[t], cursor: "pointer",
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Blocs de contenu éditoriaux */}
-                  <div style={sectionStyle}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.1rem", paddingBottom: ".6rem", borderBottom: "1px solid rgba(20,20,16,.07)" }}>
-                      <p style={{ ...sectionTitleStyle, margin: 0, border: "none", padding: 0 }}>
-                        Contenu éditorial
-                      </p>
-                      <span style={{ fontSize: ".6rem", color: "#928E80" }}>
-                        {form.content.length} bloc{form.content.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-
-                    {/* Liste des blocs */}
-                    {form.content.length === 0 && (
-                      <div style={{ textAlign: "center", padding: "2rem 0", color: "#C4C0B6" }}>
-                        <div style={{ fontSize: "2rem", marginBottom: ".5rem" }}>✍️</div>
-                        <p style={{ fontSize: ".78rem" }}>Aucun bloc de contenu encore.</p>
-                        <p style={{ fontSize: ".7rem" }}>Ajoutez des blocs pour construire le contenu de la page.</p>
-                      </div>
-                    )}
-                    {form.content.map((block, i) => (
-                      <BlockEditor
-                        key={i}
-                        block={block}
-                        index={i}
-                        total={form.content.length}
-                        onChange={(b) => updateBlock(i, b)}
-                        onDelete={() => deleteBlock(i)}
-                        onMove={(dir) => moveBlock(i, dir)}
-                      />
-                    ))}
-
-                    {/* Ajouter un bloc */}
-                    {addingBlock ? (
-                      <div style={{ background: "#FAFAF8", border: "1px solid rgba(20,20,16,.1)", borderRadius: 12, padding: "1rem", marginTop: ".5rem" }}>
-                        <label style={labelStyle}>Type de bloc</label>
-                        <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-                          {BLOCK_TYPES.map((bt) => (
-                            <button
-                              key={bt.value}
-                              onClick={() => setNewBlockType(bt.value)}
-                              style={{
-                                padding: ".3rem .75rem", borderRadius: 100,
-                                border: newBlockType === bt.value ? "2px solid #C08435" : "1px solid rgba(20,20,16,.12)",
-                                background: newBlockType === bt.value ? "#FDF4E7" : "#fff",
-                                color: newBlockType === bt.value ? "#C08435" : "#928E80",
-                                fontSize: ".62rem", fontWeight: 700, cursor: "pointer",
-                                transition: "all .15s",
-                              }}
-                            >
-                              {bt.label}
-                            </button>
-                          ))}
-                        </div>
-                        <div style={{ display: "flex", gap: ".6rem" }}>
-                          <button
-                            className="aee-btn"
-                            onClick={addBlock}
-                            style={{ background: "#C08435", color: "#fff" }}
-                          >
-                            <IcoPlus /> Insérer
-                          </button>
-                          <button
-                            className="aee-btn"
-                            onClick={() => setAddingBlock(false)}
-                            style={{ background: "transparent", color: "#928E80", border: "1px solid rgba(20,20,16,.12)" }}
-                          >
-                            Annuler
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setAddingBlock(true)}
-                        style={{
-                          width: "100%", padding: ".85rem",
-                          borderRadius: 12, border: "2px dashed rgba(192,132,53,.35)",
-                          background: "rgba(192,132,53,.03)",
-                          color: "#C08435", fontSize: ".75rem", fontWeight: 700,
-                          cursor: "pointer", transition: "all .2s", marginTop: ".25rem",
-                          display: "flex", alignItems: "center", justifyContent: "center", gap: ".5rem",
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "rgba(192,132,53,.07)";
-                          e.currentTarget.style.borderColor = "#C08435";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = "rgba(192,132,53,.03)";
-                          e.currentTarget.style.borderColor = "rgba(192,132,53,.35)";
-                        }}
-                      >
-                        <IcoPlus /> Ajouter un bloc de contenu
-                      </button>
-                    )}
+                  {/* Blocs via BlockBuilder — exactement comme les pages bourses */}
+                  <div style={section}>
+                    <p style={sectionTitle}>Contenu éditorial</p>
+                    <BlockBuilder
+                      blocks={form.content}
+                      onChange={(blocks) => setForm((f) => ({ ...f, content: blocks }))}
+                      preset="event"
+                    />
                   </div>
                 </>
               )}
 
-              {/* ════ ONGLET SEO ════ */}
+              {/* ════ SEO — le slug est ici ════ */}
               {activeTab === "seo" && (
-                <div style={sectionStyle}>
-                  <p style={sectionTitleStyle}>SEO & Métadonnées</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                <div style={section}>
+                  <p style={sectionTitle}>SEO & Métadonnées</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+
+                    {/* Slug */}
                     <div>
-                      <label style={labelStyle}>Meta Title</label>
-                      <input
-                        className="aee-input"
-                        style={inputStyle}
-                        value={(form as any).meta_title ?? ""}
-                        placeholder={`${form.title} | AfriPulse`}
-                        onChange={(e) => setForm((f: any) => ({ ...f, meta_title: e.target.value }))}
-                      />
-                      <p style={{ fontSize: ".6rem", color: "#928E80", marginTop: ".25rem" }}>
-                        {((form as any).meta_title ?? "").length} / 60 caractères recommandés
+                      <label style={lbl}>Slug URL</label>
+                      <div style={{ position: "relative" }}>
+                        <span style={{ position: "absolute", left: ".9rem", top: "50%", transform: "translateY(-50%)", color: "#928E80", fontSize: ".78rem", pointerEvents: "none" }}>
+                          /evenements/
+                        </span>
+                        <input className="aee-input" style={{ ...inp, paddingLeft: "8.2rem" }}
+                          value={form.slug} placeholder="slug-url"
+                          onChange={(e) => setForm((f) => ({ ...f, slug: slugify(e.target.value) }))} />
+                      </div>
+                      <p style={{ fontSize: ".65rem", color: "#928E80", marginTop: ".3rem" }}>
+                        Auto-généré depuis le titre. Un changement de slug après publication casse les liens existants.
                       </p>
                     </div>
+
+                    {/* Meta title */}
                     <div>
-                      <label style={labelStyle}>Meta Description</label>
-                      <textarea
-                        className="aee-input"
-                        style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
-                        value={(form as any).meta_desc ?? ""}
-                        placeholder={form.description.slice(0, 155) + "…"}
-                        onChange={(e) => setForm((f: any) => ({ ...f, meta_desc: e.target.value }))}
-                      />
-                      <p style={{ fontSize: ".6rem", color: "#928E80", marginTop: ".25rem" }}>
-                        {((form as any).meta_desc ?? "").length} / 155 caractères recommandés
+                      <label style={lbl}>Meta Title</label>
+                      <input className="aee-input" style={inp}
+                        value={form.meta_title}
+                        placeholder={`${form.title || "Titre"} | AfriPulse`}
+                        onChange={(e) => setForm((f) => ({ ...f, meta_title: e.target.value }))} />
+                      <p style={{ fontSize: ".65rem", color: form.meta_title.length > 60 ? "#B8341E" : "#928E80", marginTop: ".3rem" }}>
+                        {form.meta_title.length} / 60 caractères recommandés
                       </p>
                     </div>
+
+                    {/* Meta desc */}
+                    <div>
+                      <label style={lbl}>Meta Description</label>
+                      <textarea className="aee-input"
+                        style={{ ...inp, minHeight: 90, resize: "vertical" }}
+                        value={form.meta_desc}
+                        placeholder={form.description ? form.description.slice(0, 155) : "Description pour les moteurs de recherche…"}
+                        onChange={(e) => setForm((f) => ({ ...f, meta_desc: e.target.value }))} />
+                      <p style={{ fontSize: ".65rem", color: form.meta_desc.length > 155 ? "#B8341E" : "#928E80", marginTop: ".3rem" }}>
+                        {form.meta_desc.length} / 155 caractères recommandés
+                      </p>
+                    </div>
+
                     {/* Aperçu SERP */}
                     <div>
-                      <label style={labelStyle}>Aperçu Google (SERP)</label>
+                      <label style={lbl}>Aperçu Google (SERP)</label>
                       <div style={{ background: "#FAFAF8", border: "1px solid rgba(20,20,16,.1)", borderRadius: 10, padding: "1rem 1.25rem" }}>
-                        <div style={{ fontSize: ".7rem", color: "#928E80", marginBottom: ".2rem" }}>
+                        <div style={{ fontSize: ".72rem", color: "#928E80", marginBottom: ".2rem" }}>
                           afripulse.com › evenements › {form.slug || "slug-url"}
                         </div>
-                        <div style={{ fontSize: ".9rem", color: "#1a0dab", fontWeight: 700, marginBottom: ".25rem" }}>
-                          {(form as any).meta_title || form.title || "Titre de l'événement"} | AfriPulse
+                        <div style={{ fontSize: ".95rem", color: "#1a0dab", fontWeight: 700, marginBottom: ".25rem", lineHeight: 1.3 }}>
+                          {form.meta_title || form.title || "Titre de l'événement"} | AfriPulse
                         </div>
-                        <div style={{ fontSize: ".78rem", color: "#545454", lineHeight: 1.5 }}>
-                          {(form as any).meta_desc || form.description || "Description de l'événement qui apparaîtra dans les résultats de recherche Google."}
+                        <div style={{ fontSize: ".82rem", color: "#545454", lineHeight: 1.55 }}>
+                          {form.meta_desc || form.description || "Description de l'événement qui apparaîtra dans les résultats de recherche."}
                         </div>
                       </div>
                     </div>
@@ -1520,141 +736,204 @@ export default function AdminEventEditorPage({
                 </div>
               )}
 
-              {/* ════ ONGLET PARAMÈTRES ════ */}
+              {/* ════ PARAMÈTRES ════ */}
               {activeTab === "settings" && (
-                <div style={sectionStyle}>
-                  <p style={sectionTitleStyle}>Paramètres avancés</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <>
+                  {/* Image + Gradient — réunis */}
+                  <div style={section}>
+                    <p style={sectionTitle}>Image & Fond visuel</p>
 
-                    {/* Publié */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: ".85rem 1rem", background: "#FAFAF8", borderRadius: 10, border: "1px solid rgba(20,20,16,.08)" }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: ".82rem", color: "#141410" }}>Publication</div>
-                        <div style={{ fontSize: ".65rem", color: "#928E80" }}>Rendre cet événement visible sur le site</div>
-                      </div>
-                      <button
-                        onClick={() => setForm((f) => ({ ...f, published: !f.published }))}
-                        style={{
-                          position: "relative", width: 44, height: 26, borderRadius: 100,
-                          border: "none", cursor: "pointer", background: form.published ? "#1A5C40" : "rgba(20,20,16,.2)",
-                          transition: "background .2s", flexShrink: 0,
-                        }}
-                      >
-                        <span style={{
-                          position: "absolute", width: 20, height: 20, borderRadius: "50%",
-                          background: "#fff", top: 3, transition: "transform .2s",
-                          transform: form.published ? "translateX(21px)" : "translateX(3px)",
-                          boxShadow: "0 1px 4px rgba(0,0,0,.2)",
-                        }} />
-                      </button>
-                    </div>
-
-                    {/* Vedette */}
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: ".85rem 1rem", background: "#FAFAF8", borderRadius: 10, border: "1px solid rgba(20,20,16,.08)" }}>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: ".82rem", color: "#141410" }}>Événement vedette ★</div>
-                        <div style={{ fontSize: ".65rem", color: "#928E80" }}>Mis en avant dans la section principale de la liste</div>
-                      </div>
-                      <button
-                        onClick={() => setForm((f) => ({ ...f, featured: !f.featured }))}
-                        style={{
-                          position: "relative", width: 44, height: 26, borderRadius: 100,
-                          border: "none", cursor: "pointer", background: form.featured ? "#C08435" : "rgba(20,20,16,.2)",
-                          transition: "background .2s", flexShrink: 0,
-                        }}
-                      >
-                        <span style={{
-                          position: "absolute", width: 20, height: 20, borderRadius: "50%",
-                          background: "#fff", top: 3, transition: "transform .2s",
-                          transform: form.featured ? "translateX(21px)" : "translateX(3px)",
-                          boxShadow: "0 1px 4px rgba(0,0,0,.2)",
-                        }} />
-                      </button>
-                    </div>
-
-                    {/* Tags */}
-                    <div>
-                      <label style={labelStyle}>Tags</label>
-                      <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: ".6rem" }}>
-                        {form.tags.map((tag) => (
-                          <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: ".3rem", padding: ".22rem .75rem", borderRadius: 100, background: "#F0EDE4", color: "#38382E", fontSize: ".65rem", fontWeight: 700 }}>
-                            {tag}
-                            <button onClick={() => removeTag(tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#928E80", padding: 0, lineHeight: 1, fontSize: ".7rem" }}>×</button>
-                          </span>
-                        ))}
-                      </div>
-                      <div style={{ display: "flex", gap: ".5rem" }}>
-                        <input
-                          className="aee-input"
-                          style={{ ...inputStyle, flex: 1 }}
-                          value={tagInput}
-                          placeholder="Ajouter un tag…"
-                          onChange={(e) => setTagInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); addTag(); }
-                          }}
-                        />
-                        <button
-                          className="aee-btn"
-                          onClick={addTag}
-                          style={{ background: "#F0EDE4", color: "#38382E", border: "1px solid rgba(20,20,16,.12)", flexShrink: 0 }}
-                        >
-                          <IcoPlus /> Ajouter
+                    <label style={{ ...lbl, marginBottom: ".5rem" }}>Image de couverture</label>
+                    {form.cover_url ? (
+                      <div style={{ position: "relative", borderRadius: 10, overflow: "hidden", marginBottom: "1rem" }}>
+                        <img src={form.cover_url} alt="Cover" style={{ width: "100%", height: 200, objectFit: "cover", display: "block" }} />
+                        <button onClick={() => setForm((f) => ({ ...f, cover_url: "" }))}
+                          style={{ position: "absolute", top: ".5rem", right: ".5rem", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", borderRadius: 8, padding: ".3rem .75rem", fontSize: ".75rem", cursor: "pointer", fontWeight: 700 }}>
+                          ✕ Supprimer
                         </button>
                       </div>
-                    </div>
-
-                    {/* Danger zone */}
-                    {!isNew && (
-                      <div style={{ marginTop: ".5rem", padding: "1rem", background: "#FAEBE8", borderRadius: 10, border: "1px solid rgba(184,52,30,.15)" }}>
-                        <div style={{ fontWeight: 700, fontSize: ".78rem", color: "#B8341E", marginBottom: ".4rem" }}>Zone dangereuse</div>
-                        <p style={{ fontSize: ".68rem", color: "#B8341E", marginBottom: ".75rem", opacity: .8 }}>
-                          Cette action est irréversible. L'événement et tout son contenu seront définitivement supprimés.
-                        </p>
-                        <button
-                          className="aee-btn"
-                          style={{ background: "#B8341E", color: "#fff" }}
-                          onClick={async () => {
-                            if (!confirm(`Supprimer définitivement « ${form.title} » ? Cette action est irréversible.`)) return;
-                            const { error } = await sb.from("events").delete().eq("id", params.id);
-                            if (!error) router.push("/admin/evenements");
-                          }}
-                        >
-                          <IcoTrash /> Supprimer définitivement
-                        </button>
+                    ) : (
+                      <div className="aee-cover-zone" style={{ padding: "2rem 1rem", marginBottom: ".75rem" }}
+                        onClick={() => fileInputRef.current?.click()}>
+                        {uploadingCover ? (
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: ".5rem" }}>
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", border: "3px solid rgba(192,132,53,.2)", borderTopColor: "#C08435", animation: "aee-spin .8s linear infinite" }} />
+                            <span style={{ fontSize: ".78rem", color: "#928E80" }}>Upload en cours…</span>
+                          </div>
+                        ) : (
+                          <>
+                            <div style={{ color: "#C4C0B6", marginBottom: ".5rem", display: "flex", justifyContent: "center" }}><IcoUpload /></div>
+                            <p style={{ fontSize: ".85rem", fontWeight: 700, color: "#38382E", marginBottom: ".2rem" }}>Cliquez pour uploader une image</p>
+                            <p style={{ fontSize: ".7rem", color: "#928E80" }}>JPG, PNG ou WebP · max 5 Mo · 1200×628 recommandé</p>
+                          </>
+                        )}
                       </div>
                     )}
+                    <input className="aee-input" style={{ ...inp, marginBottom: "1.5rem" }}
+                      value={form.cover_url} placeholder="Ou collez une URL d'image externe…"
+                      onChange={(e) => setForm((f) => ({ ...f, cover_url: e.target.value }))} />
+                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleCoverUpload} />
+
+                    {/* ── Constructeur de gradient ── */}
+                    <div style={{ borderTop: "1px solid rgba(20,20,16,.07)", paddingTop: "1.25rem" }}>
+                      <label style={{ ...lbl, marginBottom: ".5rem" }}>Couleur de fond (visible sans image)</label>
+                      <p style={{ fontSize: ".72rem", color: "#928E80", marginBottom: "1rem", lineHeight: 1.55 }}>
+                        Choisissez deux couleurs et une direction — le dégradé est calculé automatiquement.
+                      </p>
+
+                      {/* Présets rapides */}
+                      <div style={{ marginBottom: "1.1rem" }}>
+                        <div style={{ ...lbl, marginBottom: ".5rem" }}>Présets par type d'événement</div>
+                        <div style={{ display: "flex", gap: ".45rem", flexWrap: "wrap" }}>
+                          {EVENT_TYPES.map((t) => {
+                            const tg = TYPE_GRADIENT[t];
+                            const isActive = form.grad_color1 === tg.c1 && form.grad_color2 === tg.c2;
+                            return (
+                              <button key={t} title={t}
+                                onClick={() => handleGradientChange(tg.c1, tg.c2, tg.angle)}
+                                className={`aee-swatch${isActive ? " active" : ""}`}
+                                style={{ background: tg.g }}>
+                                <span style={{ display: "none" }}>{t}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Couleurs + angle */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: ".85rem", alignItems: "end" }}>
+                        <div>
+                          <label style={lbl}>Couleur 1</label>
+                          <div style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
+                            <input type="color" value={form.grad_color1}
+                              onChange={(e) => handleGradientChange(e.target.value, form.grad_color2, form.grad_angle)}
+                              style={{ width: 44, height: 44, borderRadius: 8, border: "1.5px solid rgba(20,20,16,.12)", cursor: "pointer", padding: 2 }} />
+                            <input className="aee-input" style={{ ...inp, fontFamily: "monospace", fontSize: ".75rem" }}
+                              value={form.grad_color1}
+                              onChange={(e) => handleGradientChange(e.target.value, form.grad_color2, form.grad_angle)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={lbl}>Couleur 2</label>
+                          <div style={{ display: "flex", gap: ".5rem", alignItems: "center" }}>
+                            <input type="color" value={form.grad_color2}
+                              onChange={(e) => handleGradientChange(form.grad_color1, e.target.value, form.grad_angle)}
+                              style={{ width: 44, height: 44, borderRadius: 8, border: "1.5px solid rgba(20,20,16,.12)", cursor: "pointer", padding: 2 }} />
+                            <input className="aee-input" style={{ ...inp, fontFamily: "monospace", fontSize: ".75rem" }}
+                              value={form.grad_color2}
+                              onChange={(e) => handleGradientChange(form.grad_color1, e.target.value, form.grad_angle)} />
+                          </div>
+                        </div>
+                        <div>
+                          <label style={lbl}>Direction — {form.grad_angle}°</label>
+                          <input type="range" min={0} max={360} step={15}
+                            value={form.grad_angle}
+                            onChange={(e) => handleGradientChange(form.grad_color1, form.grad_color2, Number(e.target.value))}
+                            style={{ width: "100%", accentColor: "#C08435", marginBottom: ".25rem" }} />
+                          <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".62rem", color: "#928E80" }}>
+                            <span>0°</span><span>180°</span><span>360°</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Aperçu gradient live */}
+                      <div style={{ marginTop: "1rem", height: 64, borderRadius: 10, background: form.image_gradient, border: "1px solid rgba(20,20,16,.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <span style={{ fontSize: ".65rem", fontWeight: 700, color: "rgba(255,255,255,.5)", letterSpacing: ".1em", textTransform: "uppercase" }}>Aperçu du fond</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+
+                  {/* Publication & paramètres */}
+                  <div style={section}>
+                    <p style={sectionTitle}>Publication & Paramètres</p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1.1rem" }}>
+
+                      {[
+                        { key: "published", label: "Publication", desc: "Rendre cet événement visible sur le site", activeColor: "#1A5C40" },
+                        { key: "featured", label: "Événement vedette ★", desc: "Mis en avant dans la section principale", activeColor: "#C08435" },
+                      ].map(({ key, label, desc, activeColor }) => (
+                        <div key={key} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: ".9rem 1rem", background: "#FAFAF8", borderRadius: 10, border: "1px solid rgba(20,20,16,.08)" }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: ".88rem", color: "#141410" }}>{label}</div>
+                            <div style={{ fontSize: ".7rem", color: "#928E80" }}>{desc}</div>
+                          </div>
+                          <button onClick={() => setForm((f: any) => ({ ...f, [key]: !f[key] }))}
+                            style={{ position: "relative", width: 44, height: 26, borderRadius: 100, border: "none", cursor: "pointer", background: (form as any)[key] ? activeColor : "rgba(20,20,16,.2)", transition: "background .2s", flexShrink: 0 }}>
+                            <span style={{ position: "absolute", width: 20, height: 20, borderRadius: "50%", background: "#fff", top: 3, transition: "transform .2s", transform: (form as any)[key] ? "translateX(21px)" : "translateX(3px)", boxShadow: "0 1px 4px rgba(0,0,0,.2)" }} />
+                          </button>
+                        </div>
+                      ))}
+
+                      {/* Tags */}
+                      <div>
+                        <label style={lbl}>Tags</label>
+                        <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", marginBottom: ".6rem" }}>
+                          {form.tags.map((tag) => (
+                            <span key={tag} style={{ display: "inline-flex", alignItems: "center", gap: ".3rem", padding: ".25rem .8rem", borderRadius: 100, background: "#F0EDE4", color: "#38382E", fontSize: ".72rem", fontWeight: 700 }}>
+                              {tag}
+                              <button onClick={() => removeTag(tag)} style={{ background: "none", border: "none", cursor: "pointer", color: "#928E80", padding: 0, lineHeight: 1 }}>×</button>
+                            </span>
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", gap: ".5rem" }}>
+                          <input className="aee-input" style={{ ...inp, flex: 1 }}
+                            value={tagInput} placeholder="Ajouter un tag…"
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }} />
+                          <button className="aee-btn" onClick={addTag}
+                            style={{ background: "#F0EDE4", color: "#38382E", border: "1px solid rgba(20,20,16,.12)", flexShrink: 0 }}>
+                            <IcoPlus /> Ajouter
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Danger zone */}
+                      {!isNew && (
+                        <div style={{ padding: "1rem", background: "#FAEBE8", borderRadius: 10, border: "1px solid rgba(184,52,30,.15)" }}>
+                          <div style={{ fontWeight: 700, fontSize: ".85rem", color: "#B8341E", marginBottom: ".4rem" }}>Zone dangereuse</div>
+                          <p style={{ fontSize: ".72rem", color: "#B8341E", marginBottom: ".75rem", opacity: .85 }}>
+                            Cette action est irréversible. L'événement et tout son contenu seront définitivement supprimés.
+                          </p>
+                          <button className="aee-btn" style={{ background: "#B8341E", color: "#fff" }}
+                            onClick={async () => {
+                              if (!confirm(`Supprimer définitivement « ${form.title} » ? Cette action est irréversible.`)) return;
+                              const { error } = await sb.from("events").delete().eq("id", params.id);
+                              if (!error) router.push("/admin/evenements");
+                            }}>
+                            <IcoTrash /> Supprimer définitivement
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
 
-            {/* ── Sidebar droite ── */}
-            <div style={{ position: "sticky", top: 112 }}>
+            {/* ── Sidebar droite (sticky) ── */}
+            <div style={{ position: "sticky", top: 200 }}>
 
-              {/* Aperçu carte */}
-              <div style={{ ...sectionStyle, padding: 0, overflow: "hidden", marginBottom: "1rem" }}>
-                <div style={{ height: 120, background: form.image_gradient, position: "relative", display: "flex", alignItems: "flex-end", padding: ".75rem" }}>
+              {/* Aperçu carte live */}
+              <div style={{ ...section, padding: 0, overflow: "hidden", marginBottom: "1rem" }}>
+                <div style={{ height: 130, background: form.image_gradient, position: "relative" }}>
                   {form.cover_url && (
                     <img src={form.cover_url} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
                   )}
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.7) 0%, transparent 60%)" }} />
-                  <div style={{ position: "relative", zIndex: 1 }}>
-                    <span style={{ fontSize: ".55rem", fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", padding: ".18rem .6rem", borderRadius: 100, background: typeColor, color: "#fff" }}>
-                      {form.type || "Type"}
+                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top, rgba(0,0,0,.78) 0%, transparent 65%)" }} />
+                  <div style={{ position: "absolute", bottom: ".9rem", left: ".9rem" }}>
+                    <span style={{ fontSize: ".58rem", fontWeight: 800, letterSpacing: ".1em", textTransform: "uppercase", padding: ".22rem .68rem", borderRadius: 100, background: typeColor, color: "#fff" }}>
+                      {form.type}
                     </span>
                   </div>
-                  <span style={{ position: "absolute", top: ".75rem", right: ".75rem", fontSize: "1.4rem" }}>{form.flag}</span>
+                  <span style={{ position: "absolute", top: ".75rem", right: ".85rem", fontSize: "1.6rem" }}>{form.flag}</span>
                 </div>
-                <div style={{ padding: "1rem" }}>
-                  <div style={{ fontWeight: 800, fontSize: ".82rem", color: "#141410", marginBottom: ".3rem", lineHeight: 1.35 }}>
-                    {form.title || "Titre de l'événement"}
+                <div style={{ padding: "1rem 1.1rem" }}>
+                  <div style={{ fontWeight: 800, fontSize: ".9rem", color: "#141410", marginBottom: ".35rem", lineHeight: 1.3 }}>
+                    {form.title || <span style={{ color: "#C4C0B6" }}>Titre de l'événement</span>}
                   </div>
-                  <div style={{ fontSize: ".62rem", color: "#928E80", display: "flex", flexDirection: "column", gap: ".15rem" }}>
-                    {form.event_date && (
-                      <span>📅 {new Date(form.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</span>
-                    )}
-                    {form.location && <span>📍 {form.location}{form.country ? `, ${form.country}` : ""}</span>}
+                  <div style={{ fontSize: ".68rem", color: "#928E80", display: "flex", flexDirection: "column", gap: ".2rem" }}>
+                    {form.event_date && <span>📅 {new Date(form.event_date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</span>}
+                    {(form.location || form.country) && <span>📍 {[form.location, form.country].filter(Boolean).join(", ")}</span>}
                     {form.organizer && <span>🏛️ {form.organizer}</span>}
                     {form.attendees && <span>👥 {form.attendees} participants</span>}
                   </div>
@@ -1662,58 +941,42 @@ export default function AdminEventEditorPage({
               </div>
 
               {/* Publication rapide */}
-              <div style={sectionStyle}>
-                <p style={sectionTitleStyle}>Publication</p>
-                <div style={{ display: "flex", flexDirection: "column", gap: ".65rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".72rem" }}>
-                    <span style={{ color: "#928E80" }}>Statut</span>
-                    <span style={{ fontWeight: 700, color: form.published ? "#1A5C40" : "#928E80" }}>
-                      {form.published ? "● Publié" : "○ Brouillon"}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".72rem" }}>
-                    <span style={{ color: "#928E80" }}>Vedette</span>
-                    <span style={{ fontWeight: 700, color: form.featured ? "#C08435" : "#928E80" }}>
-                      {form.featured ? "★ Oui" : "Non"}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".72rem" }}>
-                    <span style={{ color: "#928E80" }}>Blocs</span>
-                    <span style={{ fontWeight: 700, color: "#38382E" }}>
-                      {form.content.length} bloc{form.content.length !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                  <div style={{ height: 1, background: "rgba(20,20,16,.07)", margin: ".2rem 0" }} />
-                  <button
-                    className="aee-btn"
-                    disabled={saving || publishing}
-                    onClick={() => save()}
-                    style={{ background: "#F0EDE4", color: "#38382E", width: "100%", justifyContent: "center", border: "1px solid rgba(20,20,16,.1)" }}
-                  >
+              <div style={section}>
+                <p style={sectionTitle}>Publication</p>
+                <div style={{ display: "flex", flexDirection: "column", gap: ".72rem" }}>
+                  {[
+                    { label: "Statut", val: form.published ? "● Publié" : "○ Brouillon", col: form.published ? "#1A5C40" : "#928E80" },
+                    { label: "Vedette", val: form.featured ? "★ Oui" : "Non", col: form.featured ? "#C08435" : "#928E80" },
+                    { label: "Blocs", val: `${form.content.length} bloc${form.content.length !== 1 ? "s" : ""}`, col: "#38382E" },
+                  ].map((row) => (
+                    <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: ".8rem" }}>
+                      <span style={{ color: "#928E80" }}>{row.label}</span>
+                      <span style={{ fontWeight: 700, color: row.col }}>{row.val}</span>
+                    </div>
+                  ))}
+                  <div style={{ height: 1, background: "rgba(20,20,16,.07)", margin: ".1rem 0" }} />
+                  <button className="aee-btn" disabled={saving || publishing} onClick={() => save()}
+                    style={{ background: "#F0EDE4", color: "#38382E", width: "100%", justifyContent: "center", border: "1px solid rgba(20,20,16,.1)" }}>
                     {saving ? <span className="aee-spinner" style={{ borderTopColor: "#38382E" }} /> : <IcoSave />}
                     {saving ? "Sauvegarde…" : "Sauvegarder"}
                   </button>
-                  <button
-                    className="aee-btn"
-                    disabled={saving || publishing}
-                    onClick={() => save(!form.published)}
-                    style={{ background: form.published ? "#B8341E" : "#C08435", color: "#fff", width: "100%", justifyContent: "center" }}
-                  >
+                  <button className="aee-btn" disabled={saving || publishing} onClick={() => save(!form.published)}
+                    style={{ background: form.published ? "#B8341E" : "#C08435", color: "#fff", width: "100%", justifyContent: "center" }}>
                     {publishing ? <span className="aee-spinner" /> : null}
                     {publishing ? "En cours…" : form.published ? "Dépublier" : "Publier l'événement"}
                   </button>
                 </div>
               </div>
 
-              {/* Infos complémentaires */}
-              <div style={{ ...sectionStyle, fontSize: ".68rem", color: "#928E80" }}>
-                <p style={{ ...sectionTitleStyle, marginBottom: ".75rem" }}>Conseils</p>
-                <ul style={{ margin: 0, padding: "0 0 0 1rem", lineHeight: 1.7 }}>
-                  <li>Ajoutez un bloc <strong>Agenda</strong> pour le programme détaillé</li>
-                  <li>Utilisez <strong>Intervenants</strong> pour présenter les speakers</li>
-                  <li>Le bloc <strong>Inscription CTA</strong> génère le bouton d'appel à l'action</li>
-                  <li>Ajoutez <strong>Localisation</strong> pour une carte intégrée</li>
-                  <li>Slug & SEO auto-générés — vérifiez avant publication</li>
+              {/* Conseils */}
+              <div style={{ ...section, fontSize: ".75rem", color: "#928E80" }}>
+                <p style={{ ...sectionTitle, marginBottom: ".75rem" }}>Conseils éditoriaux</p>
+                <ul style={{ margin: 0, padding: "0 0 0 1rem", lineHeight: 1.9 }}>
+                  <li>Bloc <strong style={{ color: "#38382E" }}>Programme</strong> pour le planning détaillé</li>
+                  <li><strong style={{ color: "#38382E" }}>Intervenants</strong> pour les speakers</li>
+                  <li><strong style={{ color: "#38382E" }}>Inscription CTA</strong> pour le bouton d'appel</li>
+                  <li><strong style={{ color: "#38382E" }}>Lieu</strong> pour la carte intégrée</li>
+                  <li>Le slug se configure dans l'onglet <strong style={{ color: "#38382E" }}>SEO & Meta</strong></li>
                 </ul>
               </div>
             </div>

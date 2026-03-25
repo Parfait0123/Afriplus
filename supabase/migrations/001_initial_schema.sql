@@ -930,3 +930,15 @@ BEGIN
   EXECUTE format('UPDATE %I SET views = COALESCE(views, 0) + 1 WHERE id = $1', table_name) USING row_id;
 END;
 $$;
+
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS banned BOOLEAN DEFAULT FALSE;
+CREATE INDEX IF NOT EXISTS idx_profiles_banned ON public.profiles (banned);
+
+-- Ajout des colonnes nécessaires
+ALTER TABLE public.newsletter_subscribers 
+ADD COLUMN IF NOT EXISTS tags TEXT[] DEFAULT '{}',
+ADD COLUMN IF NOT EXISTS confirmation_token UUID DEFAULT gen_random_uuid(),
+ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMPTZ;
+
+-- Index pour la recherche rapide par token
+CREATE INDEX IF NOT EXISTS idx_newsletter_token ON public.newsletter_subscribers(confirmation_token);

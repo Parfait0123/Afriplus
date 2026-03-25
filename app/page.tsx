@@ -1,12 +1,67 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import Ticker from "@/components/sections/Ticker";
 import NewsletterBand from "@/components/sections/NewsletterBand";
 import RevealWrapper from "@/components/ui/RevealWrapper";
-import { articles, scholarships, opportunities, events } from "@/lib/data";
+import { createClient } from "@/lib/supabase/client";
 
-/* ─── Palettes catégories ─── */
+/* ─── Types ─── */
+type Article = {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  author_name: string;
+  reading_time: number;
+  published_at: string;
+  image_gradient: string;
+  featured: boolean;
+};
+
+type Scholarship = {
+  id: string;
+  slug: string;
+  title: string;
+  organization: string;
+  country: string;
+  flag: string;
+  level: string;
+  amount: string | null;
+  deadline: string;
+  urgent: boolean;
+  image_gradient: string;
+};
+
+type Opportunity = {
+  id: string;
+  slug: string;
+  title: string;
+  company: string;
+  company_initials: string;
+  location: string;
+  type: string;
+  image_gradient: string;
+};
+
+type Event = {
+  id: string;
+  slug: string;
+  title: string;
+  type: string;
+  location: string;
+  flag: string;
+  day: string;
+  month: string;
+  year: string;
+  image_gradient: string;
+};
+
+/* ─── Palettes catégories (inchangées) ─── */
 const tagColors: Record<string, { bg: string; color: string }> = {
   "Politique":     { bg: "#EBF0FB", color: "#1E4DA8" },
   "Économie":      { bg: "#FBF4E8", color: "#C08435" },
@@ -23,7 +78,7 @@ const oppTagColors: Record<string, { bg: string; color: string }> = {
   "Emploi":     { bg: "#FBF4E8", color: "#C08435" },
 };
 
-/* ─── Styles inline réutilisables ─── */
+/* ─── Styles inline (inchangés) ─── */
 const tagPill: React.CSSProperties = {
   display: "inline-block",
   fontSize: "0.58rem",
@@ -55,18 +110,133 @@ const cardBase: React.CSSProperties = {
 };
 const ArrowIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M5 12h14M12 5l7 7-7 7"/>
+    <path d="M5 12h14M12 5l7 7-7 7" />
   </svg>
 );
 
+/* ─── Composant carte opportunité visuelle ─── */
+function OppCard({ opp, tc, tagPill, cardBase }: {
+  opp: Opportunity;
+  tc: { bg: string; color: string };
+  tagPill: React.CSSProperties;
+  cardBase: React.CSSProperties;
+}) {
+  return (
+    <Link href={`/opportunites/${opp.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
+      <div style={{ ...cardBase, display: "flex", flexDirection: "column", height: "100%" }} className="card-lift">
+        <div style={{ height: 110, background: opp.image_gradient, position: "relative", flexShrink: 0 }}>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 10%, rgba(0,0,0,.5) 100%)" }} />
+          <div style={{ position: "absolute", bottom: "0.7rem", left: "0.85rem", width: 32, height: 32, borderRadius: 9, background: "rgba(255,255,255,.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "#C08435" }}>
+            {opp.company_initials}
+          </div>
+          <span style={{ position: "absolute", top: "0.7rem", right: "0.7rem", ...tagPill, background: tc.bg, color: tc.color }}>
+            {opp.type}
+          </span>
+        </div>
+        <div style={{ padding: "1rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.4rem", flex: 1 }}>
+          <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C08435" }}>{opp.company}</div>
+          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.92rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, flex: 1 }}>{opp.title}</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.75rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
+            <span style={{ fontSize: "0.63rem", color: "#928E80" }}>📍 {opp.location}</span>
+            <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#C08435" }}>Postuler →</span>
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function Home() {
+  const sb = createClient();
+
+  const [loading, setLoading] = useState(true);
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [scholarships, setScholarships] = useState<Scholarship[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        // Articles : publiés, ordre par published_at descendant
+        const { data: articlesData, error: articlesErr } = await sb
+          .from("articles")
+          .select("id,slug,title,excerpt,category,author_name,reading_time,published_at,image_gradient,featured")
+          .eq("published", true)
+          .order("published_at", { ascending: false })
+          .limit(8);
+        if (articlesErr) console.error("Erreur articles:", articlesErr);
+        else setArticles(articlesData as Article[]);
+
+        // Bourses : publiées, urgentes d'abord, puis deadline proche
+        const { data: scholarshipsData, error: schErr } = await sb
+          .from("scholarships")
+          .select("id,slug,title,organization,country,flag,level,amount,deadline,urgent,image_gradient")
+          .eq("published", true)
+          .order("urgent", { ascending: false })
+          .order("deadline", { ascending: true })
+          .limit(6);
+        if (schErr) console.error("Erreur bourses:", schErr);
+        else setScholarships(scholarshipsData as Scholarship[]);
+
+        // Opportunités : publiées, ordre par created_at descendant
+        const { data: oppData, error: oppErr } = await sb
+          .from("opportunities")
+          .select("id,slug,title,company,company_initials,location,type,image_gradient")
+          .eq("published", true)
+          .order("created_at", { ascending: false })
+          .limit(8);
+        if (oppErr) console.error("Erreur opportunités:", oppErr);
+        else setOpportunities(oppData as Opportunity[]);
+
+        // Événements : publiés, ordre par event_date asc (les plus proches d'abord)
+        const { data: eventsData, error: eventsErr } = await sb
+          .from("events")
+          .select("id,slug,title,type,location,flag,day,month,year,image_gradient")
+          .eq("published", true)
+          .order("event_date", { ascending: true })
+          .limit(8);
+        if (eventsErr) console.error("Erreur événements:", eventsErr);
+        else setEvents(eventsData as Event[]);
+
+      } catch (err) {
+        console.error("Erreur générale:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [sb]);
+
+  if (loading) {
+    return (
+      <>
+        <Navbar />
+        <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F6F1" }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid rgba(20,20,16,.08)", borderTopColor: "#C08435", animation: "spin 0.8s linear infinite", margin: "0 auto 1rem" }} />
+            <p style={{ color: "#928E80" }}>Chargement de l'actualité africaine...</p>
+          </div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   const hero       = articles[0];
-  const topRow     = articles.slice(1, 4);  // 3 mini-articles sidebar héro
-  const midRow     = articles.slice(4, 8);  // 4 articles — mosaïque UNIQUEMENT
-  const allBourses = scholarships;           // 6 bourses
+  const topRow     = articles.slice(1, 4);
+  const midRow     = articles.slice(4, 8);
+  const allBourses = scholarships;
   const topOpps    = opportunities.slice(0, 4);
   const botOpps    = opportunities.slice(4, 8);
   const topEvents  = events.slice(0, 4);
+  const sideEvents = events.slice(4, 8);
+
+  // Trouver une bourse urgente pour la bannière (priorité aux urgentes)
+  const urgentScholarship = allBourses.find(s => s.urgent);
+  const urgentCount = allBourses.filter(s => s.urgent).length;
 
   return (
     <>
@@ -113,24 +283,28 @@ export default function Home() {
                 </em>
               </h1>
 
-              <Link href={`/actualites/${hero.slug}`} style={{ textDecoration: "none", display: "block" }} className="anim-up-2">
-                <div className="ap-hero-card card-lift">
-                  <div style={{ background: hero.imageGradient, position: "relative", flexShrink: 0 }} className="ap-hero-card-img">
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,.42) 100%)" }} />
-                    <span style={{ position: "absolute", top: "1rem", left: "1rem", background: "#B8341E", color: "#fff", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.28rem 0.75rem", borderRadius: 100 }}>
-                      À la une
-                    </span>
-                  </div>
-                  <div style={{ padding: "1.75rem 2rem", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.75rem" }}>
-                    <span style={{ ...tagPill, ...(tagColors[hero.category] || {}) }}>{hero.category}</span>
-                    <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.35rem", fontWeight: 700, lineHeight: 1.25, color: "#141410" }}>{hero.title}</h2>
-                    <p style={{ fontSize: "0.82rem", color: "#928E80", fontWeight: 300, lineHeight: 1.72, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{hero.excerpt}</p>
-                    <div style={{ display: "flex", gap: "0.9rem", fontSize: "0.67rem", color: "#928E80", paddingTop: "0.75rem", borderTop: "1px solid rgba(20,20,16,.06)" }}>
-                      <span>{hero.author}</span><span>{hero.date}</span><span>{hero.readTime} min</span>
+              {hero && (
+                <Link href={`/actualites/${hero.slug}`} style={{ textDecoration: "none", display: "block" }} className="anim-up-2">
+                  <div className="ap-hero-card card-lift">
+                    <div style={{ background: hero.image_gradient, position: "relative", flexShrink: 0 }} className="ap-hero-card-img">
+                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,.42) 100%)" }} />
+                      <span style={{ position: "absolute", top: "1rem", left: "1rem", background: "#B8341E", color: "#fff", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.28rem 0.75rem", borderRadius: 100 }}>
+                        À la une
+                      </span>
+                    </div>
+                    <div style={{ padding: "1.75rem 2rem", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.75rem" }}>
+                      <span style={{ ...tagPill, ...(tagColors[hero.category] || {}) }}>{hero.category}</span>
+                      <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.35rem", fontWeight: 700, lineHeight: 1.25, color: "#141410" }}>{hero.title}</h2>
+                      <p style={{ fontSize: "0.82rem", color: "#928E80", fontWeight: 300, lineHeight: 1.72, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{hero.excerpt}</p>
+                      <div style={{ display: "flex", gap: "0.9rem", fontSize: "0.67rem", color: "#928E80", paddingTop: "0.75rem", borderTop: "1px solid rgba(20,20,16,.06)" }}>
+                        <span>{hero.author_name}</span>
+                        <span>{new Date(hero.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        <span>{hero.reading_time} min</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              )}
             </div>
 
             {/* Col droite : stats + mini articles + CTAs */}
@@ -155,11 +329,11 @@ export default function Home() {
                 {topRow.map((art, i) => (
                   <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration: "none" }}>
                     <div style={{ display: "flex", gap: "1rem", padding: "1rem 0", borderBottom: i < topRow.length - 1 ? "1px solid rgba(20,20,16,.08)" : "none" }}>
-                      <div style={{ width: 58, height: 58, flexShrink: 0, borderRadius: 12, background: art.imageGradient }} />
+                      <div style={{ width: 58, height: 58, flexShrink: 0, borderRadius: 12, background: art.image_gradient }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ ...tagPill, ...(tagColors[art.category] || {}), marginBottom: "0.3rem", display: "inline-block" }}>{art.category}</span>
                         <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.85rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{art.title}</div>
-                        <div style={{ fontSize: "0.63rem", color: "#928E80", marginTop: "0.3rem" }}>{art.date}</div>
+                        <div style={{ fontSize: "0.63rem", color: "#928E80", marginTop: "0.3rem" }}>{new Date(art.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
                       </div>
                     </div>
                   </Link>
@@ -203,31 +377,33 @@ export default function Home() {
 
           <div className="ap-news-mosaic">
             {/* Grande carte immersive */}
-            <RevealWrapper>
-              <Link href={`/actualites/${midRow[0].slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
-                <div className="ap-news-big card-lift" style={{ background: midRow[0].imageGradient }}>
-                  <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.78) 100%)" }} />
-                  <span className="ap-news-num">01</span>
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2rem" }}>
-                    <span style={{ ...tagPill, background: "rgba(255,255,255,.15)", color: "#fff", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,.2)", marginBottom: "0.75rem", display: "inline-block" }}>
-                      {midRow[0].category}
-                    </span>
-                    <h3 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(1.25rem, 2.2vw, 1.7rem)", fontWeight: 700, color: "#fff", lineHeight: 1.22, marginBottom: "0.85rem" }}>
-                      {midRow[0].title}
-                    </h3>
-                    <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,.72)", fontWeight: 300, lineHeight: 1.7, marginBottom: "1.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
-                      {midRow[0].excerpt}
-                    </p>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: "0.68rem", color: "rgba(255,255,255,.55)" }}>{midRow[0].author} · {midRow[0].date}</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.78rem", fontWeight: 700, color: "#C08435" }}>
-                        Lire <ArrowIcon />
+            {midRow[0] && (
+              <RevealWrapper>
+                <Link href={`/actualites/${midRow[0].slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
+                  <div className="ap-news-big card-lift" style={{ background: midRow[0].image_gradient }}>
+                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.78) 100%)" }} />
+                    <span className="ap-news-num">01</span>
+                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2rem" }}>
+                      <span style={{ ...tagPill, background: "rgba(255,255,255,.15)", color: "#fff", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,.2)", marginBottom: "0.75rem", display: "inline-block" }}>
+                        {midRow[0].category}
                       </span>
+                      <h3 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(1.25rem, 2.2vw, 1.7rem)", fontWeight: 700, color: "#fff", lineHeight: 1.22, marginBottom: "0.85rem" }}>
+                        {midRow[0].title}
+                      </h3>
+                      <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,.72)", fontWeight: 300, lineHeight: 1.7, marginBottom: "1.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                        {midRow[0].excerpt}
+                      </p>
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: "0.68rem", color: "rgba(255,255,255,.55)" }}>{midRow[0].author_name} · {new Date(midRow[0].published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.78rem", fontWeight: 700, color: "#C08435" }}>
+                          Lire <ArrowIcon />
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            </RevealWrapper>
+                </Link>
+              </RevealWrapper>
+            )}
 
             {/* Liste numérotée droite */}
             <div className="ap-news-list">
@@ -236,18 +412,18 @@ export default function Home() {
                   <Link href={`/actualites/${art.slug}`} style={{ textDecoration: "none", display: "block" }}>
                     <div className="ap-news-row">
                       <span className="ap-news-row-num">0{i + 2}</span>
-                      <div style={{ width: 88, height: 88, flexShrink: 0, borderRadius: 14, background: art.imageGradient, overflow: "hidden", position: "relative" }}>
+                      <div style={{ width: 88, height: 88, flexShrink: 0, borderRadius: 14, background: art.image_gradient, overflow: "hidden", position: "relative" }}>
                         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, transparent 40%, rgba(0,0,0,.28) 100%)" }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
                           <span style={{ ...tagPill, ...(tagColors[art.category] || {}) }}>{art.category}</span>
-                          <span style={{ fontSize: "0.62rem", color: "#928E80" }}>{art.readTime} min</span>
+                          <span style={{ fontSize: "0.62rem", color: "#928E80" }}>{art.reading_time} min</span>
                         </div>
                         <h3 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, marginBottom: "0.35rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
                           {art.title}
                         </h3>
-                        <div style={{ fontSize: "0.65rem", color: "#928E80" }}>{art.author} · {art.date}</div>
+                        <div style={{ fontSize: "0.65rem", color: "#928E80" }}>{art.author_name} · {new Date(art.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
                       </div>
                     </div>
                   </Link>
@@ -280,20 +456,24 @@ export default function Home() {
           </RevealWrapper>
 
           {/* Bandeau urgence */}
-          <RevealWrapper>
-            <div className="ap-urgency-bar">
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <span style={{ fontSize: "1.1rem" }}>⏰</span>
-                <div>
-                  <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#C08435", display: "block" }}>Deadlines proches</span>
-                  <span style={{ fontSize: "0.87rem", color: "#F8F6F1", fontWeight: 500 }}>2 bourses ferment dans moins de 30 jours — ne les ratez pas</span>
+          {urgentScholarship && (
+            <RevealWrapper>
+              <div className="ap-urgency-bar">
+                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                  <span style={{ fontSize: "1.1rem" }}>⏰</span>
+                  <div>
+                    <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#C08435", display: "block" }}>Deadlines proches</span>
+                    <span style={{ fontSize: "0.87rem", color: "#F8F6F1", fontWeight: 500 }}>
+                      {urgentCount} bourse{urgentCount > 1 ? "s" : ""} ferme{urgentCount > 1 ? "nt" : ""} dans moins de 30 jours — ne les ratez pas
+                    </span>
+                  </div>
                 </div>
+                <Link href="/bourses?filter=urgent" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem", fontWeight: 600, padding: "0.55rem 1.2rem", borderRadius: 100, textDecoration: "none", background: "#C08435", color: "#fff", flexShrink: 0 }}>
+                  Voir les urgentes <ArrowIcon />
+                </Link>
               </div>
-              <Link href="/bourses?filter=urgent" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem", fontWeight: 600, padding: "0.55rem 1.2rem", borderRadius: 100, textDecoration: "none", background: "#C08435", color: "#fff", flexShrink: 0 }}>
-                Voir les urgentes <ArrowIcon />
-              </Link>
-            </div>
-          </RevealWrapper>
+            </RevealWrapper>
+          )}
 
           {/* Grille 3×2 */}
           <div className="ap-grid-3">
@@ -301,7 +481,7 @@ export default function Home() {
               <RevealWrapper key={sc.id} delay={0.07 * i}>
                 <Link href={`/bourses/${sc.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
                   <div style={{ ...cardBase, display: "flex", flexDirection: "column", height: "100%" }} className="card-lift">
-                    <div style={{ height: 130, background: sc.imageGradient, position: "relative", flexShrink: 0 }}>
+                    <div style={{ height: 130, background: sc.image_gradient, position: "relative", flexShrink: 0 }}>
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 30%, rgba(0,0,0,.52) 100%)" }} />
                       <div style={{ position: "absolute", bottom: "0.75rem", left: "0.9rem", display: "flex", alignItems: "center", gap: "0.4rem", background: "rgba(255,255,255,.92)", backdropFilter: "blur(8px)", padding: "0.2rem 0.6rem 0.2rem 0.4rem", borderRadius: 100, fontSize: "0.63rem", fontWeight: 700, color: "#141410" }}>
                         <span style={{ fontSize: "0.9rem" }}>{sc.flag}</span>{sc.country}
@@ -322,7 +502,7 @@ export default function Home() {
                         )}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.8rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
-                        <span style={{ fontSize: "0.63rem", color: "#928E80" }}>📅 {sc.deadline}</span>
+                        <span style={{ fontSize: "0.63rem", color: "#928E80" }}>📅 {new Date(sc.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
                         <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#C08435" }}>Postuler →</span>
                       </div>
                     </div>
@@ -398,8 +578,8 @@ export default function Home() {
                 <RevealWrapper key={opp.id} delay={0.07 * i}>
                   <Link href={`/opportunites/${opp.slug}`} style={{ textDecoration: "none", display: "block" }}>
                     <div style={{ ...cardBase, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }} className="card-lift">
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: opp.imageGradient, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "rgba(255,255,255,.85)" }}>
-                        {opp.companyInitials}
+                      <div style={{ width: 44, height: 44, borderRadius: 12, background: opp.image_gradient, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "rgba(255,255,255,.85)" }}>
+                        {opp.company_initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#C08435", marginBottom: "0.2rem" }}>{opp.company}</div>
@@ -447,7 +627,7 @@ export default function Home() {
                       <div style={{ padding: "1.1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.35rem", flex: 1 }}>
                         <div style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#C08435" }}>{ev.type}</div>
                         <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.92rem", fontWeight: 700, lineHeight: 1.3, color: "#141410" }}>{ev.title}</div>
-                        <div style={{ fontSize: "0.63rem", color: "#928E80", marginTop: "auto" }}>📍 {ev.location}</div>
+                        <div style={{ fontSize: "0.63rem", color: "#928E80", marginTop: "auto" }}>📍 {ev.location} {ev.flag}</div>
                       </div>
                     </div>
                   </Link>
@@ -461,9 +641,9 @@ export default function Home() {
                 <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C08435", marginBottom: "0.75rem" }}>
                   📅 Agenda complet
                 </div>
-                {events.slice(4).map((ev, i) => (
+                {sideEvents.map((ev, i) => (
                   <Link key={ev.id} href={`/evenements/${ev.slug}`} style={{ textDecoration: "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.9rem", padding: "0.7rem 0", borderBottom: i < 3 ? "1px solid rgba(248,246,241,.06)" : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.9rem", padding: "0.7rem 0", borderBottom: i < sideEvents.length - 1 ? "1px solid rgba(248,246,241,.06)" : "none" }}>
                       <div style={{ textAlign: "center", flexShrink: 0, width: 40 }}>
                         <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.3rem", fontWeight: 900, color: "#C08435", lineHeight: 1, display: "block" }}>{ev.day}</span>
                         <span style={{ fontSize: "0.55rem", fontWeight: 700, textTransform: "uppercase", color: "rgba(248,246,241,.35)" }}>{ev.month}</span>
@@ -488,37 +668,5 @@ export default function Home() {
       <NewsletterBand />
       <Footer />
     </>
-  );
-}
-
-/* ─── Composant carte opportunité visuelle ─── */
-function OppCard({ opp, tc, tagPill, cardBase }: {
-  opp: { slug: string; companyInitials: string; imageGradient: string; company: string; title: string; location: string; type: string };
-  tc: { bg: string; color: string };
-  tagPill: React.CSSProperties;
-  cardBase: React.CSSProperties;
-}) {
-  return (
-    <Link href={`/opportunites/${opp.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
-      <div style={{ ...cardBase, display: "flex", flexDirection: "column", height: "100%" }} className="card-lift">
-        <div style={{ height: 110, background: opp.imageGradient, position: "relative", flexShrink: 0 }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 10%, rgba(0,0,0,.5) 100%)" }} />
-          <div style={{ position: "absolute", bottom: "0.7rem", left: "0.85rem", width: 32, height: 32, borderRadius: 9, background: "rgba(255,255,255,.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "#C08435" }}>
-            {opp.companyInitials}
-          </div>
-          <span style={{ position: "absolute", top: "0.7rem", right: "0.7rem", ...tagPill, background: tc.bg, color: tc.color }}>
-            {opp.type}
-          </span>
-        </div>
-        <div style={{ padding: "1rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.4rem", flex: 1 }}>
-          <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C08435" }}>{opp.company}</div>
-          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.92rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, flex: 1 }}>{opp.title}</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.75rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
-            <span style={{ fontSize: "0.63rem", color: "#928E80" }}>📍 {opp.location}</span>
-            <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#C08435" }}>Postuler →</span>
-          </div>
-        </div>
-      </div>
-    </Link>
   );
 }

@@ -385,8 +385,8 @@ export default function AdminEvenementsPage() {
   const togglePublished = async (ev: AdminEvent) => {
     setToggling(ev.id);
     try {
-      const { error } = await sb
-        .from("events")
+      const { error } = await (sb
+        .from("events") as any)
         .update({ published: !ev.published })
         .eq("id", ev.id);
       if (!error) {
@@ -405,8 +405,8 @@ export default function AdminEvenementsPage() {
   const toggleFeatured = async (ev: AdminEvent) => {
     setToggling(ev.id);
     try {
-      const { error } = await sb
-        .from("events")
+      const { error } = await (sb
+        .from("events") as any)
         .update({ featured: !ev.featured })
         .eq("id", ev.id);
       if (!error) {

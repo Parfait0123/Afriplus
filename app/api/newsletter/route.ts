@@ -1,61 +1,68 @@
-// app/api/newsletter/route.ts
-import { NextResponse, type NextRequest } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server";
+import { Resend } from "resend";
 
-export async function POST(request: NextRequest) {
-  try {
-    // On garde l'email pour le message de succès, même si on ne l'utilise pas en DB pour l'instant
-    const body = await request.json().catch(() => ({}));
-    const email = body.email;
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-    // --- LOGIQUE RESEND (DESIGN ACTIF) ---
-    const resendKey = process.env.RESEND_API_KEY;
-    
-    if (resendKey && email) {
-      try {
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${resendKey}`,
-          },
-          body: JSON.stringify({
-            from: "AfriPulse <newsletter@afripulse.com>",
-            to: email,
-            subject: "Bienvenue sur AfriPulse Newsletter 🌍",
-            html: `
-              <div style="font-family: Georgia, serif; max-width: 600px; margin: 0 auto; padding: 2rem; background: #F8F6F1;">
-                <h1 style="font-size: 2rem; color: #141410; letter-spacing: -0.04em; margin-bottom: 0.5rem;">
-                  Afri<span style="color: #C08435;">Pulse</span>
-                </h1>
-                <p style="font-size: 1rem; color: #928E80; margin-bottom: 2rem;">L'Afrique en temps réel</p>
-                <div style="background: #fff; border-radius: 20px; padding: 2rem; border: 1px solid rgba(20,20,16,.07);">
-                  <h2 style="font-size: 1.4rem; color: #141410; margin-bottom: 1rem;">
-                    Bienvenue dans la communauté ! 🎉
-                  </h2>
-                  <p style="font-size: 0.95rem; color: #38382E; line-height: 1.75;">
-                    Vous êtes maintenant abonné(e) à la newsletter AfriPulse. Chaque semaine, vous recevrez les meilleures actualités, bourses d'études et opportunités du continent africain.
-                  </p>
-                  <a href="${process.env.NEXT_PUBLIC_SITE_URL || "#"}" 
-                     style="display: inline-block; margin-top: 1.5rem; background: #C08435; color: #fff; padding: 0.75rem 1.5rem; border-radius: 100px; text-decoration: none; font-family: sans-serif; font-size: 0.85rem; font-weight: 700;">
-                    Découvrir AfriPulse →
-                  </a>
-                </div>
-                <p style="font-size: 0.72rem; color: #928E80; margin-top: 2rem; text-align: center;">
-                  Vous pouvez vous désabonner à tout moment. AfriPulse · Construit pour l'Afrique
-                </p>
-              </div>
-            `,
-          }),
-        });
-      } catch (e) {
-        console.error("Resend error:", e);
-      }
-    }
+export async function POST(request: Request) {
+  const { email } = await request.json();
 
-    return NextResponse.json({ message: "subscribed" }, { status: 200 });
-
-  } catch (err) {
-    console.error("Newsletter error:", err);
-    return NextResponse.json({ error: "Erreur serveur." }, { status: 500 });
+  if (!email || !email.includes("@")) {
+    return NextResponse.json({ error: "Email invalide" }, { status: 400 });
   }
+
+  // Vérifier si l'email existe déjà
+  const { data: existing } = await supabase
+    .from("newsletter_subscribers")
+    .select("id")
+    .eq("email", email)
+    .single();
+
+  if (existing) {
+    return NextResponse.json(
+      { message: "already_subscribed" },
+      { status: 409 }
+    );
+  }
+
+  // Créer un token de confirmation
+  const confirmationToken = crypto.randomUUID();
+
+  // Insérer le nouvel abonné
+  const { error } = await supabase.from("newsletter_subscribers").insert({
+    email,
+    confirmed: false,
+    confirmation_token: confirmationToken,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    return NextResponse.json({ error: "Erreur technique" }, { status: 500 });
+  }
+
+  // Envoyer l'email de confirmation
+  try {
+   const response =  await resend.emails.send({
+      from: "AfriPulse <onboarding@resend.dev>",
+      to: email,
+      subject: "Confirmez votre inscription",
+      html: `
+        <h1>Bienvenue sur AfriPulse !</h1>
+        <p>Cliquez ici pour confirmer votre inscription :</p>
+        <a href="${process.env.NEXT_PUBLIC_SITE_URL}/api/newsletter/confirm?token=${confirmationToken}">
+          Confirmer
+        </a>
+      `,
+    });
+      console.log("Réponse Resend :", response);
+  } catch (emailError) {
+    // Même si l'email échoue, l'abonné est enregistré
+    console.error("Erreur d'envoi d'email:", emailError);
+  }
+
+  return NextResponse.json({ success: true });
 }
