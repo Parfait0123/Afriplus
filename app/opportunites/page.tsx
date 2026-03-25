@@ -9,6 +9,8 @@ import Footer from "@/components/layout/Footer";
 import NewsletterBand from "@/components/sections/NewsletterBand";
 import type { Block } from "@/types/blocks";
 
+export const dynamic = "force-dynamic";
+
 /* ─── Types ─── */
 type OpportunityType = "Emploi CDI" | "Emploi" | "Stage" | "Graduate" | "Freelance" | "Volontariat";
 

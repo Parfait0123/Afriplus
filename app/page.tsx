@@ -19,6 +19,7 @@ type Article = {
   author_name: string;
   reading_time: number;
   published_at: string;
+  cover_url: string | null;
   image_gradient: string;
   featured: boolean;
 };
@@ -34,6 +35,7 @@ type Scholarship = {
   amount: string | null;
   deadline: string;
   urgent: boolean;
+  cover_url: string | null;
   image_gradient: string;
 };
 
@@ -45,6 +47,7 @@ type Opportunity = {
   company_initials: string;
   location: string;
   type: string;
+  cover_url: string | null;
   image_gradient: string;
 };
 
@@ -58,6 +61,7 @@ type Event = {
   day: string;
   month: string;
   year: string;
+  cover_url: string | null;
   image_gradient: string;
 };
 
@@ -124,7 +128,7 @@ function OppCard({ opp, tc, tagPill, cardBase }: {
   return (
     <Link href={`/opportunites/${opp.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
       <div style={{ ...cardBase, display: "flex", flexDirection: "column", height: "100%" }} className="card-lift">
-        <div style={{ height: 110, background: opp.image_gradient, position: "relative", flexShrink: 0 }}>
+        <div style={{ height: 110, background: opp.cover_url ? `url(${opp.cover_url}) center/cover no-repeat` : opp.image_gradient, position: "relative", flexShrink: 0 }}>
           <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 10%, rgba(0,0,0,.5) 100%)" }} />
           <div style={{ position: "absolute", bottom: "0.7rem", left: "0.85rem", width: 32, height: 32, borderRadius: 9, background: "rgba(255,255,255,.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "#C08435" }}>
             {opp.company_initials}
@@ -162,7 +166,7 @@ export default function Home() {
         // Articles : publiés, ordre par published_at descendant
         const { data: articlesData, error: articlesErr } = await sb
           .from("articles")
-          .select("id,slug,title,excerpt,category,author_name,reading_time,published_at,image_gradient,featured")
+          .select("id,slug,title,excerpt,category,author_name,reading_time,published_at,cover_url,image_gradient,featured")
           .eq("published", true)
           .order("published_at", { ascending: false })
           .limit(8);
@@ -172,7 +176,7 @@ export default function Home() {
         // Bourses : publiées, urgentes d'abord, puis deadline proche
         const { data: scholarshipsData, error: schErr } = await sb
           .from("scholarships")
-          .select("id,slug,title,organization,country,flag,level,amount,deadline,urgent,image_gradient")
+          .select("id,slug,title,organization,country,flag,level,amount,deadline,urgent,cover_url,image_gradient")
           .eq("published", true)
           .order("urgent", { ascending: false })
           .order("deadline", { ascending: true })
@@ -183,7 +187,7 @@ export default function Home() {
         // Opportunités : publiées, ordre par created_at descendant
         const { data: oppData, error: oppErr } = await sb
           .from("opportunities")
-          .select("id,slug,title,company,company_initials,location,type,image_gradient")
+          .select("id,slug,title,company,company_initials,location,type,cover_url,image_gradient")
           .eq("published", true)
           .order("created_at", { ascending: false })
           .limit(8);
@@ -193,7 +197,7 @@ export default function Home() {
         // Événements : publiés, ordre par event_date asc (les plus proches d'abord)
         const { data: eventsData, error: eventsErr } = await sb
           .from("events")
-          .select("id,slug,title,type,location,flag,day,month,year,image_gradient")
+          .select("id,slug,title,type,location,flag,day,month,year,cover_url,image_gradient")
           .eq("published", true)
           .order("event_date", { ascending: true })
           .limit(8);
@@ -286,7 +290,7 @@ export default function Home() {
               {hero && (
                 <Link href={`/actualites/${hero.slug}`} style={{ textDecoration: "none", display: "block" }} className="anim-up-2">
                   <div className="ap-hero-card card-lift">
-                    <div style={{ background: hero.image_gradient, position: "relative", flexShrink: 0 }} className="ap-hero-card-img">
+                    <div style={{ background: hero.cover_url ? `url(${hero.cover_url}) center/cover no-repeat` : hero.image_gradient, position: "relative", flexShrink: 0 }} className="ap-hero-card-img">
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,.42) 100%)" }} />
                       <span style={{ position: "absolute", top: "1rem", left: "1rem", background: "#B8341E", color: "#fff", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.28rem 0.75rem", borderRadius: 100 }}>
                         À la une
@@ -329,7 +333,7 @@ export default function Home() {
                 {topRow.map((art, i) => (
                   <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration: "none" }}>
                     <div style={{ display: "flex", gap: "1rem", padding: "1rem 0", borderBottom: i < topRow.length - 1 ? "1px solid rgba(20,20,16,.08)" : "none" }}>
-                      <div style={{ width: 58, height: 58, flexShrink: 0, borderRadius: 12, background: art.image_gradient }} />
+                      <div style={{ width: 58, height: 58, flexShrink: 0, borderRadius: 12, background: art.cover_url ? `url(${art.cover_url}) center/cover no-repeat` : art.image_gradient }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <span style={{ ...tagPill, ...(tagColors[art.category] || {}), marginBottom: "0.3rem", display: "inline-block" }}>{art.category}</span>
                         <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.85rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{art.title}</div>
@@ -380,7 +384,7 @@ export default function Home() {
             {midRow[0] && (
               <RevealWrapper>
                 <Link href={`/actualites/${midRow[0].slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
-                  <div className="ap-news-big card-lift" style={{ background: midRow[0].image_gradient }}>
+                  <div className="ap-news-big card-lift" style={{ background: midRow[0].cover_url ? `url(${midRow[0].cover_url}) center/cover no-repeat` : midRow[0].image_gradient }}>
                     <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.78) 100%)" }} />
                     <span className="ap-news-num">01</span>
                     <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2rem" }}>
@@ -412,7 +416,7 @@ export default function Home() {
                   <Link href={`/actualites/${art.slug}`} style={{ textDecoration: "none", display: "block" }}>
                     <div className="ap-news-row">
                       <span className="ap-news-row-num">0{i + 2}</span>
-                      <div style={{ width: 88, height: 88, flexShrink: 0, borderRadius: 14, background: art.image_gradient, overflow: "hidden", position: "relative" }}>
+                      <div style={{ width: 88, height: 88, flexShrink: 0, borderRadius: 14, background: art.cover_url ? `url(${art.cover_url}) center/cover no-repeat` : art.image_gradient, overflow: "hidden", position: "relative" }}>
                         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, transparent 40%, rgba(0,0,0,.28) 100%)" }} />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -481,7 +485,7 @@ export default function Home() {
               <RevealWrapper key={sc.id} delay={0.07 * i}>
                 <Link href={`/bourses/${sc.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
                   <div style={{ ...cardBase, display: "flex", flexDirection: "column", height: "100%" }} className="card-lift">
-                    <div style={{ height: 130, background: sc.image_gradient, position: "relative", flexShrink: 0 }}>
+                    <div style={{ height: 130, background: sc.cover_url ? `url(${sc.cover_url}) center/cover no-repeat` : sc.image_gradient, position: "relative", flexShrink: 0 }}>
                       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 30%, rgba(0,0,0,.52) 100%)" }} />
                       <div style={{ position: "absolute", bottom: "0.75rem", left: "0.9rem", display: "flex", alignItems: "center", gap: "0.4rem", background: "rgba(255,255,255,.92)", backdropFilter: "blur(8px)", padding: "0.2rem 0.6rem 0.2rem 0.4rem", borderRadius: 100, fontSize: "0.63rem", fontWeight: 700, color: "#141410" }}>
                         <span style={{ fontSize: "0.9rem" }}>{sc.flag}</span>{sc.country}
