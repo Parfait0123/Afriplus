@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import NavigationProgress from "@/components/ui/NavigationProgress";
 
@@ -108,7 +109,9 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="antialiased bg-[#FAFAF8] text-[#141410]">
-        <NavigationProgress />
+         <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
         
         {/* Skip to main content pour accessibilité */}
         <a
