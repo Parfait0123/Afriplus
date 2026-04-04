@@ -2,9 +2,8 @@
 
 /**
  * app/admin/opportunites/page.tsx
- * Listing admin des opportunités — design cohérent avec admin/bourses
- * Filtres : type, secteur, statut, remote, featured, recherche
- * Tri : deadline, title, company, created_at, views, saves_count
+ * Design : même structure que admin/evenements (header sombre, CSS classes)
+ * Fonctionnalités : tri, filtres, bulk, suppression MDP, export CSV, remote, secteurs
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -15,13 +14,13 @@ import { createClient } from "@/lib/supabase/client";
 /* ── Types ── */
 type OpportunityType = "Emploi CDI" | "Stage" | "Graduate" | "Emploi" | "Freelance" | "Volontariat";
 const OPP_TYPES: OpportunityType[] = ["Emploi CDI", "Stage", "Graduate", "Emploi", "Freelance", "Volontariat"];
-const TYPE_COLOR: Record<string, string> = {
-  "Emploi CDI": "#1A5C40",
-  "Stage":      "#5A7FD4",
-  "Graduate":   "#C08435",
-  "Emploi":     "#2E7D4F",
-  "Freelance":  "#7A4A1E",
-  "Volontariat":"#928E80",
+const TYPE_STYLE: Record<string, { color: string; bg: string }> = {
+  "Emploi CDI":  { color: "#1A5C40", bg: "#EAF4EF" },
+  "Stage":       { color: "#1E4DA8", bg: "#EBF0FB" },
+  "Graduate":    { color: "#C08435", bg: "#FBF4E8" },
+  "Emploi":      { color: "#2E7D4F", bg: "#E6F4EC" },
+  "Freelance":   { color: "#7A4A1E", bg: "#F9F0E8" },
+  "Volontariat": { color: "#928E80", bg: "#F0EDE4" },
 };
 
 type SortField = "deadline" | "title" | "company" | "created_at" | "views" | "saves_count";
@@ -46,28 +45,38 @@ interface Stats {
 }
 
 /* ── Icônes ── */
-const Ico = {
-  Search:   () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
-  Plus:     () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  Edit:     () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  Eye:      () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  Trash:    () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>,
-  Export:   () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-  ChevD:    () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>,
-  ChevU:    () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>,
-  ChevL:    () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>,
-  ChevR:    () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>,
-  Star:     () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-  Remote:   () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>,
-  Trending: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
-  Bookmark: () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>,
-  Briefcase:() => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>,
-  PwdShow:  () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>,
-  PwdHide:  () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>,
-};
+const IcoPlus     = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+const IcoRefresh  = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.78"/></svg>;
+const IcoSearch   = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+const IcoEdit     = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>;
+const IcoEye      = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+const IcoTrash    = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>;
+const IcoExport   = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>;
+const IcoStar     = ({ filled }: { filled?: boolean }) => <svg width="13" height="13" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>;
+const IcoChevD    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>;
+const IcoChevU    = () => <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>;
+const IcoChevL    = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>;
+const IcoChevR    = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>;
+const IcoPwdShow  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+const IcoPwdHide  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+
+/* ── Pill type ── */
+function TypePill({ type }: { type: string }) {
+  const s = TYPE_STYLE[type] ?? { color: "#928E80", bg: "#F0EDE4" };
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: ".3rem",
+      fontSize: ".58rem", fontWeight: 800, letterSpacing: ".1em",
+      textTransform: "uppercase", padding: ".2rem .7rem",
+      borderRadius: 100, background: s.bg, color: s.color, whiteSpace: "nowrap",
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
+      {type}
+    </span>
+  );
+}
 
 const PAGE_SIZE = 15;
-const GRID = "20px 1fr 100px 120px 90px 80px 60px 70px 70px 90px 120px 140px";
 
 export default function AdminOpportunitesPage() {
   const sb     = createClient();
@@ -99,12 +108,12 @@ export default function AdminOpportunitesPage() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500); };
 
-  /* ── Chargement des secteurs distincts ── */
+  /* ── Secteurs ── */
   useEffect(() => {
     sb.from("opportunities").select("sector").then(({ data }) => {
       if (data) {
         const unique = [...new Set(data.map((d: any) => d.sector).filter(Boolean))];
-        setSectors(unique.sort());
+        setSectors((unique as string[]).sort());
       }
     });
   }, []);
@@ -112,12 +121,8 @@ export default function AdminOpportunitesPage() {
   /* ── Stats ── */
   const loadStats = useCallback(async () => {
     const [
-      { count: tot },
-      { count: pub },
-      { count: feat },
-      { count: rem },
-      viewsRes,
-      savesRes,
+      { count: tot }, { count: pub }, { count: feat }, { count: rem },
+      viewsRes, savesRes,
     ] = await Promise.all([
       sb.from("opportunities").select("id", { count: "exact", head: true }),
       sb.from("opportunities").select("id", { count: "exact", head: true }).eq("published", true),
@@ -128,46 +133,27 @@ export default function AdminOpportunitesPage() {
     ]);
     const totalViews = (viewsRes.data ?? []).reduce((s: number, a: any) => s + (a.views || 0), 0);
     const totalSaves = (savesRes.data ?? []).reduce((s: number, a: any) => s + (a.saves_count || 0), 0);
-    setStats({
-      total: tot ?? 0, published: pub ?? 0,
-      draft: (tot ?? 0) - (pub ?? 0),
-      featured: feat ?? 0, remote: rem ?? 0,
-      totalViews, totalSaves,
-    });
+    setStats({ total: tot ?? 0, published: pub ?? 0, draft: (tot ?? 0) - (pub ?? 0), featured: feat ?? 0, remote: rem ?? 0, totalViews, totalSaves });
   }, []);
 
-  /* ── Chargement des opportunités ── */
+  /* ── Chargement ── */
   const load = useCallback(async () => {
     setLoading(true);
     setSelected(new Set());
-
-    let q = sb
-      .from("opportunities")
-      .select(
-        "id,slug,title,company,company_initials,location,country,flag,type,sector,deadline,posted_at,salary,remote,featured,cover_url,image_gradient,skills,published,views,saves_count,created_at,updated_at",
-        { count: "exact" }
-      )
+    let q = sb.from("opportunities")
+      .select("id,slug,title,company,company_initials,location,country,flag,type,sector,deadline,posted_at,salary,remote,featured,cover_url,image_gradient,skills,published,views,saves_count,created_at,updated_at", { count: "exact" })
       .order(sort, { ascending: dir === "asc" })
       .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
-
-    if (search)   q = q.or(`title.ilike.%${search}%,company.ilike.%${search}%`);
-    if (oppType)  q = q.eq("type", oppType);
-    if (sector)   q = q.eq("sector", sector);
-
-    if (status === "published") q = q.eq("published", true);
-    else if (status === "draft") q = q.eq("published", false);
-    else if (status === "featured") q = q.eq("featured", true);
-    else if (status === "remote") q = q.eq("remote", true);
-
+    if (search)                    q = q.or(`title.ilike.%${search}%,company.ilike.%${search}%`);
+    if (oppType)                   q = q.eq("type", oppType);
+    if (sector)                    q = q.eq("sector", sector);
+    if (status === "published")    q = q.eq("published", true);
+    else if (status === "draft")   q = q.eq("published", false);
+    else if (status === "featured")q = q.eq("featured", true);
+    else if (status === "remote")  q = q.eq("remote", true);
     const { data, count, error } = await q;
-
-    if (error) {
-      console.error("Erreur chargement opportunités :", error);
-      showToast("Erreur de chargement", false);
-    } else {
-      setItems((data ?? []) as OpportunityRow[]);
-      setTotal(count ?? 0);
-    }
+    if (error) { showToast("Erreur de chargement", false); }
+    else { setItems((data ?? []) as OpportunityRow[]); setTotal(count ?? 0); }
     setLoading(false);
   }, [page, search, oppType, sector, status, sort, dir]);
 
@@ -178,6 +164,8 @@ export default function AdminOpportunitesPage() {
     else { setSort(f); setDir(f === "deadline" ? "asc" : "desc"); }
     setPage(1);
   };
+  const SortIcon = ({ f }: { f: SortField }) =>
+    sort === f ? (dir === "asc" ? <IcoChevU /> : <IcoChevD />) : <span style={{ opacity: .2 }}><IcoChevD /></span>;
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -188,7 +176,6 @@ export default function AdminOpportunitesPage() {
     else setSelected(new Set(items.map(i => i.id)));
   };
 
-  /* ── Toggle publié ── */
   const togglePublished = async (id: string, cur: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
     await (sb.from("opportunities") as any).update({ published: !cur }).eq("id", id);
@@ -197,7 +184,6 @@ export default function AdminOpportunitesPage() {
     showToast(cur ? "Opportunité dépubliée" : "Opportunité publiée");
   };
 
-  /* ── Toggle featured ── */
   const toggleFeatured = async (id: string, cur: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
     await (sb.from("opportunities") as any).update({ featured: !cur }).eq("id", id);
@@ -205,7 +191,6 @@ export default function AdminOpportunitesPage() {
     showToast(cur ? "Mise en avant retirée" : "Mise en avant activée");
   };
 
-  /* ── Bulk publish ── */
   const bulkPublish = async (ids: string[], pub: boolean) => {
     await (sb.from("opportunities") as any).update({ published: pub }).in("id", ids);
     setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, published: pub } : i));
@@ -213,7 +198,6 @@ export default function AdminOpportunitesPage() {
     showToast(`${ids.length} opportunité${ids.length > 1 ? "s" : ""} ${pub ? "publiées" : "dépubliées"}`);
   };
 
-  /* ── Suppression avec MDP ── */
   const confirmDelete = async () => {
     if (!delPwd) { setDelErr("Entrez votre mot de passe."); return; }
     setDelLoading(true); setDelErr("");
@@ -227,7 +211,6 @@ export default function AdminOpportunitesPage() {
     showToast(`${ids.length} opportunité${ids.length > 1 ? "s" : ""} supprimée${ids.length > 1 ? "s" : ""}`);
   };
 
-  /* ── Export CSV ── */
   const exportCSV = async () => {
     let q = sb.from("opportunities")
       .select("title,company,type,sector,location,country,remote,featured,deadline,published,views,saves_count")
@@ -241,16 +224,10 @@ export default function AdminOpportunitesPage() {
     if (status === "remote")    q = q.eq("remote", true);
     const { data } = await q;
     if (!data) return;
-    const escape = (s: string) => `"${String(s).replace(/"/g, '""')}"`;
+    const esc = (s: string) => `"${String(s).replace(/"/g,'""')}"`;
     const rows = [
-      ["Titre", "Entreprise", "Type", "Secteur", "Localisation", "Pays", "Remote", "Vedette", "Deadline", "Statut", "Vues", "Saves"].join(","),
-      ...data.map((o: any) => [
-        escape(o.title), escape(o.company), o.type, o.sector || "",
-        escape(o.location || ""), escape(o.country || ""),
-        o.remote ? "Oui" : "Non", o.featured ? "Oui" : "Non",
-        o.deadline || "", o.published ? "Publié" : "Brouillon",
-        o.views, o.saves_count
-      ].join(",")),
+      ["Titre","Entreprise","Type","Secteur","Localisation","Pays","Remote","Vedette","Deadline","Statut","Vues","Saves"].join(","),
+      ...data.map((o: any) => [esc(o.title),esc(o.company),o.type,o.sector||"",esc(o.location||""),esc(o.country||""),o.remote?"Oui":"Non",o.featured?"Oui":"Non",o.deadline||"",o.published?"Publié":"Brouillon",o.views,o.saves_count].join(",")),
     ].join("\n");
     const blob = new Blob([rows], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -262,105 +239,184 @@ export default function AdminOpportunitesPage() {
     if (!iso) return "—";
     return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
   };
-
   const daysLeft = (deadline: string | null) => {
-    if (!deadline) return <span style={{ color: "#928E80", fontSize: ".65rem" }}>—</span>;
+    if (!deadline) return <span style={{ color:"#928E80", fontSize:".65rem" }}>—</span>;
     const d = Math.ceil((new Date(deadline).getTime() - Date.now()) / 86400000);
-    if (d < 0)  return <span style={{ color: "#B8341E", fontWeight: 700, fontSize: ".65rem" }}>Expirée</span>;
-    if (d <= 7) return <span style={{ color: "#B8341E", fontWeight: 700, fontSize: ".65rem" }}>{d}j</span>;
-    if (d <= 30)return <span style={{ color: "#C08435", fontWeight: 700, fontSize: ".65rem" }}>{d}j</span>;
-    return <span style={{ color: "#928E80", fontSize: ".65rem" }}>{d}j</span>;
+    if (d < 0)   return <span style={{ color:"#B8341E", fontWeight:700, fontSize:".65rem" }}>Expirée</span>;
+    if (d <= 7)  return <span style={{ color:"#B8341E", fontWeight:700, fontSize:".65rem" }}>{d}j</span>;
+    if (d <= 30) return <span style={{ color:"#C08435", fontWeight:700, fontSize:".65rem" }}>{d}j</span>;
+    return <span style={{ color:"#928E80", fontSize:".65rem" }}>{d}j</span>;
   };
-
-  const SortIcon = ({ f }: { f: SortField }) =>
-    sort === f ? (dir === "asc" ? <Ico.ChevU /> : <Ico.ChevD />) : <span style={{ opacity: .2 }}><Ico.ChevD /></span>;
-
   const fmtNum = (n: number) => n?.toLocaleString("fr-FR") || "0";
 
   return (
-    <div style={{ padding: "2.5rem 3rem", minHeight: "100vh", background: "var(--bg2, #F0EDE4)" }}>
+    <>
+      {/* ── CSS (même structure que événements) ── */}
       <style>{`
-        @keyframes bs-slide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
-        @keyframes bs-modal { from{opacity:0;transform:scale(.93) translateY(14px)} to{opacity:1;transform:none} }
-        @keyframes bs-back  { from{opacity:0} to{opacity:1} }
-        @keyframes bs-spin  { to{transform:rotate(360deg)} }
-        @keyframes bs-shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
-        .op-tr { transition:background .12s; cursor:pointer; }
-        .op-tr:hover { background:#FAFAF8 !important; }
-        .op-act { transition:all .15s; }
-        .op-act:hover { opacity:.85; }
-        .op-sort:hover { color:#141410 !important; }
-        .op-pwd:focus { border-color:rgba(26,92,64,.7)!important; box-shadow:0 0 0 3px rgba(26,92,64,.12)!important; outline:none; }
+        .aop-wrap { max-width:1380px; margin:0 auto; padding:0 clamp(1rem,3vw,2.5rem); }
+        .aop-btn {
+          display:inline-flex; align-items:center; gap:.4rem;
+          padding:.55rem 1.1rem; border-radius:10px; border:none; cursor:pointer;
+          font-size:.72rem; font-weight:700; letter-spacing:.04em; transition:all .18s;
+          font-family:inherit;
+        }
+        .aop-btn:disabled { opacity:.5; cursor:not-allowed; }
+        .aop-btn-primary { background:#141410; color:#F8F6F1; }
+        .aop-btn-primary:hover:not(:disabled) { background:#2a2a20; }
+        .aop-btn-gold { background:#C08435; color:#fff; }
+        .aop-btn-gold:hover:not(:disabled) { background:#a8702b; }
+        .aop-btn-ghost { background:transparent; color:#928E80; border:1px solid rgba(20,20,16,.12); }
+        .aop-btn-ghost:hover:not(:disabled) { background:rgba(20,20,16,.05); color:#38382E; }
+        .aop-btn-ghost-light { background:transparent; color:rgba(248,246,241,.6); border:1px solid rgba(248,246,241,.15); }
+        .aop-btn-ghost-light:hover:not(:disabled) { background:rgba(248,246,241,.08); color:#F8F6F1; }
+        .aop-input {
+          width:100%; padding:.6rem .9rem; border-radius:10px;
+          border:1px solid rgba(20,20,16,.12); background:#fff;
+          font-size:.8rem; color:#38382E; outline:none; font-family:inherit;
+          transition:border .18s;
+        }
+        .aop-input:focus { border-color:#C08435; }
+        .aop-select {
+          padding:.55rem .85rem; border-radius:10px;
+          border:1px solid rgba(20,20,16,.12); background:#fff;
+          font-size:.75rem; color:#38382E; outline:none; cursor:pointer; font-family:inherit;
+          transition:border .18s;
+        }
+        .aop-select:focus { border-color:#C08435; }
+        .aop-table-wrap {
+          background:#fff; border-radius:16px;
+          border:1px solid rgba(20,20,16,.08);
+          overflow-x:auto; box-shadow:0 2px 24px rgba(20,20,16,.05);
+        }
+        .aop-table { width:100%; border-collapse:collapse; min-width:900px; }
+        .aop-th {
+          padding:.75rem 1rem; text-align:left;
+          font-size:.58rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase;
+          color:#928E80; background:#FAFAF8;
+          border-bottom:1px solid rgba(20,20,16,.07);
+          white-space:nowrap; cursor:default; user-select:none;
+        }
+        .aop-th.sortable { cursor:pointer; }
+        .aop-th.sortable:hover { color:#141410; }
+        .aop-td {
+          padding:.85rem 1rem; vertical-align:middle;
+          border-bottom:1px solid rgba(20,20,16,.055);
+          font-size:.78rem; color:#38382E;
+        }
+        .aop-row { transition:background .15s; cursor:pointer; }
+        .aop-row:hover { background:#FAFAF8; }
+        .aop-row:last-child .aop-td { border-bottom:none; }
+        .aop-action-btn {
+          display:inline-flex; align-items:center; justify-content:center;
+          width:30px; height:30px; border-radius:8px; border:1px solid rgba(20,20,16,.1);
+          background:transparent; cursor:pointer; transition:all .18s; color:#928E80;
+        }
+        .aop-action-btn:hover { background:rgba(20,20,16,.06); color:#38382E; }
+        .aop-action-btn:disabled { opacity:.4; cursor:not-allowed; }
+        .aop-toggle {
+          position:relative; display:inline-flex; align-items:center;
+          width:38px; height:22px; border-radius:100px;
+          border:none; cursor:pointer; transition:background .2s; flex-shrink:0;
+        }
+        .aop-toggle-thumb {
+          position:absolute; width:16px; height:16px; border-radius:50%;
+          background:#fff; transition:transform .2s;
+          box-shadow:0 1px 4px rgba(0,0,0,.2);
+        }
+        .aop-page-btn {
+          display:inline-flex; align-items:center; justify-content:center;
+          min-width:32px; height:32px; padding:0 .4rem; border-radius:8px;
+          border:1px solid rgba(20,20,16,.12); background:transparent;
+          font-size:.72rem; font-weight:600; color:#38382E; cursor:pointer; font-family:inherit;
+          transition:all .15s;
+        }
+        .aop-page-btn:hover { background:rgba(20,20,16,.06); }
+        .aop-page-btn.active { background:#141410; color:#fff; border-color:#141410; }
+        .aop-page-btn:disabled { opacity:.35; cursor:not-allowed; }
+        .aop-spinner {
+          width:36px; height:36px; border-radius:50%;
+          border:3px solid rgba(20,20,16,.08); border-top-color:#C08435;
+          animation:aop-spin .8s linear infinite; margin:0 auto 1rem;
+        }
+        .aop-gradient-thumb {
+          width:44px; height:44px; border-radius:10px; flex-shrink:0;
+          overflow:hidden; position:relative;
+        }
+        @keyframes aop-spin { to { transform:rotate(360deg); } }
+        @keyframes aop-slide { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:none} }
+        @keyframes aop-modal { from{opacity:0;transform:scale(.93) translateY(14px)} to{opacity:1;transform:none} }
+        @keyframes aop-shake { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-5px)} 40%,80%{transform:translateX(5px)} }
+        @keyframes aop-back { from{opacity:0} to{opacity:1} }
       `}</style>
 
-      {/* Toast */}
+      {/* ── Toast ── */}
       {toast && (
         <div style={{
-          position: "fixed", bottom: "1.5rem", right: "1.5rem", zIndex: 9999,
-          background: toast.ok ? "#141410" : "#B8341E", color: "#F8F6F1",
-          padding: ".85rem 1.4rem", borderRadius: 14, fontSize: ".82rem", fontWeight: 600,
-          boxShadow: "0 8px 32px rgba(20,20,16,.3)", animation: "bs-slide .25s ease"
+          position:"fixed", bottom:"1.5rem", right:"1.5rem", zIndex:9999,
+          background: toast.ok ? "#141410" : "#B8341E", color:"#F8F6F1",
+          padding:".85rem 1.4rem", borderRadius:14, fontSize:".82rem", fontWeight:600,
+          boxShadow:"0 8px 32px rgba(20,20,16,.3)", animation:"aop-slide .25s ease",
         }}>
           {toast.ok ? "✓" : "✕"} {toast.msg}
         </div>
       )}
 
-      {/* Modal suppression MDP */}
+      {/* ── Modal suppression MDP ── */}
       {delModal !== null && (
         <div
-          style={{ position: "fixed", inset: 0, zIndex: 9900, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem", animation: "bs-back .18s ease" }}
+          style={{ position:"fixed", inset:0, zIndex:9900, display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem", animation:"aop-back .18s ease" }}
           onClick={e => { if (e.target === e.currentTarget) { setDelModal(null); setDelPwd(""); setDelErr(""); } }}
         >
-          <div style={{ position: "absolute", inset: 0, background: "rgba(14,13,10,.75)", backdropFilter: "blur(10px)" }} />
+          <div style={{ position:"absolute", inset:0, background:"rgba(14,13,10,.75)", backdropFilter:"blur(10px)" }} />
           <div style={{
-            position: "relative", background: "#18170F", borderRadius: 28, padding: "2.5rem",
-            maxWidth: 420, width: "100%", border: "1px solid rgba(248,246,241,.08)",
-            boxShadow: "0 40px 100px rgba(0,0,0,.6), 0 0 0 1px rgba(248,246,241,.04)",
-            animation: "bs-modal .28s cubic-bezier(.34,1.4,.64,1)"
+            position:"relative", background:"#18170F", borderRadius:28, padding:"2.5rem",
+            maxWidth:420, width:"100%", border:"1px solid rgba(248,246,241,.08)",
+            boxShadow:"0 40px 100px rgba(0,0,0,.6)",
+            animation:"aop-modal .28s cubic-bezier(.34,1.4,.64,1)",
           }}>
-            <div style={{ position: "absolute", top: 0, left: "10%", right: "10%", height: 2, background: "linear-gradient(90deg,transparent,#B8341E,transparent)", borderRadius: 100 }} />
-            <div style={{ width: 56, height: 56, borderRadius: 18, marginBottom: "1.4rem", background: "rgba(184,52,30,.12)", border: "1px solid rgba(184,52,30,.2)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 24px rgba(184,52,30,.15)" }}>
-              <Ico.Trash />
+            <div style={{ position:"absolute", top:0, left:"10%", right:"10%", height:2, background:"linear-gradient(90deg,transparent,#B8341E,transparent)", borderRadius:100 }} />
+            <div style={{ width:48, height:48, borderRadius:16, marginBottom:"1.25rem", background:"rgba(184,52,30,.12)", border:"1px solid rgba(184,52,30,.2)", display:"flex", alignItems:"center", justifyContent:"center", color:"#B8341E" }}>
+              <IcoTrash />
             </div>
-            <div style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: "1.3rem", fontWeight: 900, color: "#F8F6F1", marginBottom: ".45rem", letterSpacing: "-.03em" }}>
+            <div style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.25rem", fontWeight:900, color:"#F8F6F1", marginBottom:".4rem", letterSpacing:"-.03em" }}>
               Supprimer {delModal.length > 1 ? `${delModal.length} opportunités` : "cette opportunité"} ?
             </div>
-            <p style={{ fontSize: ".82rem", color: "rgba(248,246,241,.45)", lineHeight: 1.7, marginBottom: "1.8rem" }}>
-              Action <span style={{ color: "#F8F6F1", fontWeight: 600 }}>irréversible</span>. Confirmez votre identité.
+            <p style={{ fontSize:".82rem", color:"rgba(248,246,241,.45)", lineHeight:1.7, marginBottom:"1.75rem" }}>
+              Action <span style={{ color:"#F8F6F1", fontWeight:600 }}>irréversible</span>. Confirmez votre identité.
             </p>
-            <div style={{ marginBottom: "1.25rem" }}>
-              <label style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".12em", textTransform: "uppercase", color: "rgba(248,246,241,.35)", display: "block", marginBottom: ".5rem" }}>Mot de passe</label>
-              <div style={{ position: "relative", animation: delErr ? "bs-shake .35s ease" : "none" }}>
+            <div style={{ marginBottom:"1.25rem" }}>
+              <label style={{ fontSize:".58rem", fontWeight:700, letterSpacing:".12em", textTransform:"uppercase", color:"rgba(248,246,241,.35)", display:"block", marginBottom:".5rem" }}>Mot de passe</label>
+              <div style={{ position:"relative", animation: delErr ? "aop-shake .35s ease" : "none" }}>
                 <input
-                  className="op-pwd"
                   type={delShow ? "text" : "password"}
                   value={delPwd}
                   onChange={e => { setDelPwd(e.target.value); setDelErr(""); }}
                   onKeyDown={e => { if (e.key === "Enter") confirmDelete(); }}
                   placeholder="••••••••••••"
                   autoFocus
-                  style={{ width: "100%", padding: ".75rem 3rem .75rem 1.1rem", borderRadius: 14, fontSize: ".9rem", color: "#F8F6F1", fontFamily: "inherit", boxSizing: "border-box", border: `1.5px solid ${delErr ? "rgba(184,52,30,.6)" : "rgba(248,246,241,.1)"}`, background: delErr ? "rgba(184,52,30,.06)" : "rgba(248,246,241,.05)", transition: "all .15s" }}
+                  style={{
+                    width:"100%", padding:".75rem 3rem .75rem 1.1rem", borderRadius:14,
+                    fontSize:".9rem", color:"#F8F6F1", fontFamily:"inherit", boxSizing:"border-box",
+                    border:`1.5px solid ${delErr ? "rgba(184,52,30,.6)" : "rgba(248,246,241,.1)"}`,
+                    background: delErr ? "rgba(184,52,30,.06)" : "rgba(248,246,241,.05)", outline:"none",
+                  }}
                 />
-                <button type="button" onClick={() => setDelShow(v => !v)} style={{ position: "absolute", right: ".9rem", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "rgba(248,246,241,.35)", display: "flex", alignItems: "center", padding: 0 }}>
-                  {delShow ? <Ico.PwdHide /> : <Ico.PwdShow />}
+                <button type="button" onClick={() => setDelShow(v => !v)}
+                  style={{ position:"absolute", right:".9rem", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"rgba(248,246,241,.35)", display:"flex", alignItems:"center", padding:0 }}>
+                  {delShow ? <IcoPwdHide /> : <IcoPwdShow />}
                 </button>
               </div>
-              {delErr && <div style={{ marginTop: ".4rem", fontSize: ".72rem", color: "#F4866A", fontWeight: 600, display: "flex", alignItems: "center", gap: ".35rem" }}>⚠ {delErr}</div>}
+              {delErr && <div style={{ marginTop:".4rem", fontSize:".72rem", color:"#F4866A", fontWeight:600 }}>⚠ {delErr}</div>}
             </div>
-            <div style={{ display: "flex", gap: ".6rem" }}>
-              <button
-                onClick={() => { setDelModal(null); setDelPwd(""); setDelErr(""); }}
-                style={{ flex: 1, padding: ".72rem", borderRadius: 12, cursor: "pointer", fontFamily: "inherit", fontSize: ".82rem", fontWeight: 600, background: "rgba(248,246,241,.06)", color: "rgba(248,246,241,.6)", border: "1px solid rgba(248,246,241,.08)", transition: "all .15s" }}
-                onMouseEnter={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(248,246,241,.1)"}
-                onMouseLeave={e => (e.currentTarget as HTMLButtonElement).style.background = "rgba(248,246,241,.06)"}
-              >Annuler</button>
-              <button
-                onClick={confirmDelete}
-                disabled={delLoading || !delPwd}
-                style={{ flex: 1, padding: ".72rem", borderRadius: 12, cursor: delLoading || !delPwd ? "default" : "pointer", fontFamily: "inherit", fontSize: ".82rem", fontWeight: 700, border: "none", background: delLoading || !delPwd ? "rgba(184,52,30,.3)" : "linear-gradient(135deg,#C0392B,#922B21)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", gap: ".45rem", boxShadow: delLoading || !delPwd ? "none" : "0 4px 16px rgba(184,52,30,.35)", transition: "all .15s" }}
-              >
+            <div style={{ display:"flex", gap:".6rem" }}>
+              <button onClick={() => { setDelModal(null); setDelPwd(""); setDelErr(""); }}
+                style={{ flex:1, padding:".72rem", borderRadius:12, cursor:"pointer", fontFamily:"inherit", fontSize:".82rem", fontWeight:600, background:"rgba(248,246,241,.06)", color:"rgba(248,246,241,.6)", border:"1px solid rgba(248,246,241,.08)" }}>
+                Annuler
+              </button>
+              <button onClick={confirmDelete} disabled={delLoading || !delPwd}
+                style={{ flex:1, padding:".72rem", borderRadius:12, cursor: delLoading || !delPwd ? "default":"pointer", fontFamily:"inherit", fontSize:".82rem", fontWeight:700, border:"none", background: delLoading || !delPwd ? "rgba(184,52,30,.3)":"linear-gradient(135deg,#C0392B,#922B21)", color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", gap:".45rem" }}>
                 {delLoading
-                  ? <><div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid rgba(255,255,255,.3)", borderTopColor: "#fff", animation: "bs-spin .7s linear infinite" }} /> Vérification…</>
+                  ? <><div style={{ width:14, height:14, borderRadius:"50%", border:"2px solid rgba(255,255,255,.3)", borderTopColor:"#fff", animation:"aop-spin .7s linear infinite" }} /> Vérification…</>
                   : "Supprimer définitivement"
                 }
               </button>
@@ -369,306 +425,356 @@ export default function AdminOpportunitesPage() {
         </div>
       )}
 
-      {/* HEADER */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem", marginBottom: "2rem" }}>
-        <div>
-          <div style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".2em", textTransform: "uppercase", color: "#1A5C40", marginBottom: ".4rem" }}>AfriPulse Admin</div>
-          <h1 style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: "2rem", fontWeight: 900, letterSpacing: "-.04em", color: "#141410", margin: 0 }}>Opportunités</h1>
-          <p style={{ fontSize: ".78rem", color: "#928E80", marginTop: ".25rem" }}>
-            {stats.total.toLocaleString("fr-FR")} opportunités ·{" "}
-            <span style={{ color: "#1A5C40", fontWeight: 600 }}>{stats.published} publiées</span>
-            {" · "}
-            <span style={{ color: "#C08435", fontWeight: 600 }}>{stats.draft} brouillons</span>
-            {stats.featured > 0 && <> · <span style={{ color: "#C08435", fontWeight: 600 }}>⭐ {stats.featured} en vedette</span></>}
-            {stats.remote > 0 && <> · <span style={{ color: "#5A7FD4", fontWeight: 600 }}>🌐 {stats.remote} remote</span></>}
-            {" · "}
-            <span style={{ color: "#5A7FD4", fontWeight: 600 }}>{fmtNum(stats.totalViews)} vues</span>
-            {" · "}
-            <span style={{ color: "#4A9E6F", fontWeight: 600 }}>{fmtNum(stats.totalSaves)} saves</span>
-          </p>
-        </div>
-        <div style={{ display: "flex", gap: ".6rem", flexWrap: "wrap" }}>
-          <button
-            onClick={exportCSV}
-            style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".78rem", fontWeight: 600, padding: ".55rem 1.1rem", borderRadius: 100, cursor: "pointer", background: "transparent", color: "#38382E", border: "1.5px solid rgba(20,20,16,.15)" }}
-          >
-            <Ico.Export /> Exporter CSV
-          </button>
-          <Link
-            href="/admin/opportunites/nouveau"
-            style={{ display: "inline-flex", alignItems: "center", gap: ".45rem", fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".82rem", fontWeight: 700, padding: ".6rem 1.3rem", borderRadius: 100, background: "#141410", color: "#fff", textDecoration: "none" }}
-          >
-            <Ico.Plus /> Nouvelle opportunité
-          </Link>
-        </div>
-      </div>
+      <div style={{ background:"#F5F3EE", minHeight:"100vh", paddingBottom:"4rem" }}>
 
-      {/* STATS (6 cartes) */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6,1fr)", gap: "1rem", marginBottom: "1.75rem" }}>
-        {[
-          { label: "Total",       value: stats.total,      color: "#141410", sub: "opportunités"  },
-          { label: "Publiées",    value: stats.published,  color: "#1A5C40", sub: "en ligne"       },
-          { label: "Brouillons",  value: stats.draft,      color: "#C08435", sub: "en attente"     },
-          { label: "En vedette",  value: stats.featured,   color: "#C08435", sub: "mises en avant" },
-          { label: "Remote",      value: stats.remote,     color: "#5A7FD4", sub: "à distance"     },
-          { label: "Vues totales",value: stats.totalViews, color: "#4A9E6F", sub: "impressions"    },
-        ].map((s, i) => (
-          <div key={i} style={{ background: "#fff", borderRadius: 16, padding: "1.1rem 1.3rem", border: "1px solid rgba(20,20,16,.08)", boxShadow: "0 1px 4px rgba(20,20,16,.06)", borderTop: `3px solid ${s.color}` }}>
-            <div style={{ fontSize: ".58rem", fontWeight: 700, letterSpacing: ".14em", textTransform: "uppercase", color: "#928E80", marginBottom: ".3rem" }}>{s.label}</div>
-            <div style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: "1.6rem", fontWeight: 900, color: s.color, letterSpacing: "-.04em", lineHeight: 1 }}>{fmtNum(s.value)}</div>
-            <div style={{ fontSize: ".6rem", color: "#928E80", marginTop: ".2rem" }}>{s.sub}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* FILTRES */}
-      <div style={{ background: "#fff", borderRadius: 16, border: "1px solid rgba(20,20,16,.08)", padding: "1.1rem 1.4rem", marginBottom: "1.25rem", boxShadow: "0 1px 4px rgba(20,20,16,.06)", display: "flex", gap: "1rem", flexWrap: "wrap", alignItems: "center" }}>
-        {/* Recherche */}
-        <div style={{ display: "flex", alignItems: "center", gap: ".5rem", background: "#F8F6F1", border: "1.5px solid rgba(20,20,16,.09)", borderRadius: 100, padding: ".42rem .42rem .42rem 1rem", flex: "0 0 280px" }}>
-          <span style={{ color: "#928E80", display: "flex", flexShrink: 0 }}><Ico.Search /></span>
-          <input
-            value={searchQ}
-            onChange={e => setSearchQ(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") { setSearch(searchQ); setPage(1); } }}
-            placeholder="Rechercher une opportunité…"
-            style={{ border: "none", background: "transparent", fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".82rem", color: "#141410", outline: "none", width: "100%" }}
-          />
-          {searchQ && <button onClick={() => { setSearchQ(""); setSearch(""); setPage(1); }} style={{ background: "rgba(20,20,16,.08)", border: "none", borderRadius: "50%", width: 20, height: 20, cursor: "pointer", fontSize: ".65rem", color: "#928E80", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>✕</button>}
-        </div>
-
-        {/* Statut */}
-        <div style={{ display: "flex", gap: ".35rem" }}>
-          {([
-            { k: "all", l: "Tout" },
-            { k: "published", l: "Publiées" },
-            { k: "draft", l: "Brouillons" },
-            { k: "featured", l: "⭐ Vedette" },
-            { k: "remote", l: "🌐 Remote" },
-          ] as { k: FilterStatus; l: string }[]).map(f => (
-            <button key={f.k} onClick={() => { setStatus(f.k); setPage(1); }}
-              style={{ fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".72rem", fontWeight: 600, padding: ".38rem .85rem", borderRadius: 100, cursor: "pointer", transition: "all .15s", background: status === f.k ? "#141410" : "transparent", color: status === f.k ? "#fff" : "#38382E", border: status === f.k ? "none" : "1.5px solid rgba(20,20,16,.12)" }}>
-              {f.l}
-            </button>
-          ))}
-        </div>
-
-        {/* Type */}
-        <select value={oppType} onChange={e => { setOppType(e.target.value as OpportunityType | ""); setPage(1); }}
-          style={{ fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".78rem", fontWeight: 500, padding: ".42rem .9rem", borderRadius: 100, border: "1.5px solid rgba(20,20,16,.12)", background: "#fff", color: oppType ? "#141410" : "#928E80", cursor: "pointer", appearance: "none", outline: "none" }}>
-          <option value="">Tous types</option>
-          {OPP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-
-        {/* Secteur */}
-        {sectors.length > 0 && (
-          <select value={sector} onChange={e => { setSector(e.target.value); setPage(1); }}
-            style={{ fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".78rem", fontWeight: 500, padding: ".42rem .9rem", borderRadius: 100, border: "1.5px solid rgba(20,20,16,.12)", background: "#fff", color: sector ? "#141410" : "#928E80", cursor: "pointer", appearance: "none", outline: "none" }}>
-            <option value="">Tous secteurs</option>
-            {sectors.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-        )}
-
-        <div style={{ marginLeft: "auto", fontSize: ".72rem", color: "#928E80", fontWeight: 500 }}>
-          {total.toLocaleString("fr-FR")} résultat{total !== 1 ? "s" : ""}
-        </div>
-      </div>
-
-      {/* BULK BAR */}
-      {selected.size > 0 && (
-        <div style={{ background: "#141410", borderRadius: 12, padding: ".85rem 1.4rem", marginBottom: "1rem", display: "flex", alignItems: "center", gap: "1rem", boxShadow: "0 4px 16px rgba(20,20,16,.2)", animation: "bs-slide .2s ease" }}>
-          <span style={{ fontSize: ".78rem", fontWeight: 700, color: "#1A5C40" }}>{selected.size} sélectionnée{selected.size > 1 ? "s" : ""}</span>
-          <div style={{ width: 1, height: 18, background: "rgba(255,255,255,.1)" }} />
-          <button onClick={() => bulkPublish(Array.from(selected), true)} style={{ fontFamily: "inherit", fontSize: ".75rem", fontWeight: 600, color: "#4A9E6F", background: "rgba(74,158,111,.12)", border: "none", padding: ".38rem .85rem", borderRadius: 100, cursor: "pointer" }}>Publier tout</button>
-          <button onClick={() => bulkPublish(Array.from(selected), false)} style={{ fontFamily: "inherit", fontSize: ".75rem", fontWeight: 600, color: "#C08435", background: "rgba(192,132,53,.12)", border: "none", padding: ".38rem .85rem", borderRadius: 100, cursor: "pointer" }}>Dépublier tout</button>
-          <button onClick={() => { setDelModal(Array.from(selected)); setDelPwd(""); setDelErr(""); }} style={{ fontFamily: "inherit", fontSize: ".75rem", fontWeight: 600, color: "#C25B3F", background: "rgba(194,91,63,.12)", border: "none", padding: ".38rem .85rem", borderRadius: 100, cursor: "pointer" }}>Supprimer</button>
-          <button onClick={() => setSelected(new Set())} style={{ marginLeft: "auto", fontFamily: "inherit", fontSize: ".72rem", color: "rgba(255,255,255,.4)", background: "none", border: "none", cursor: "pointer" }}>Annuler</button>
-        </div>
-      )}
-
-      {/* TABLE */}
-      <div style={{ background: "#fff", borderRadius: 20, border: "1px solid rgba(20,20,16,.08)", boxShadow: "0 2px 12px rgba(20,20,16,.08)", overflow: "auto" }}>
-        <div style={{ minWidth: "max-content" }}>
-          {/* En-têtes */}
-          <div style={{ display: "grid", gridTemplateColumns: GRID, gap: "0 .75rem", padding: ".75rem 1.4rem", background: "#F8F6F1", borderBottom: "1px solid rgba(20,20,16,.08)" }}>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <input type="checkbox"
-                checked={selected.size > 0 && selected.size === items.length}
-                ref={el => { if (el) el.indeterminate = selected.size > 0 && selected.size < items.length; }}
-                onChange={toggleAll}
-                style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#1A5C40" }}
-              />
-            </div>
-            {([
-              { label: "Opportunité", field: "title"      as SortField },
-              { label: "Type",        field: null },
-              { label: "Entreprise",  field: "company"    as SortField },
-              { label: "Secteur",     field: null },
-              { label: "Deadline",    field: "deadline"   as SortField },
-              { label: "Vues",        field: "views"      as SortField },
-              { label: "Saves",       field: "saves_count"as SortField },
-              { label: "Statut",      field: null },
-              { label: "Créé",        field: "created_at" as SortField },
-              { label: "Actions",     field: null },
-            ]).map(col => (
-              <div key={col.label}
-                onClick={() => col.field && toggleSort(col.field)}
-                className={col.field ? "op-sort" : ""}
-                style={{ display: "flex", alignItems: "center", gap: ".35rem", fontSize: ".6rem", fontWeight: 700, letterSpacing: ".1em", textTransform: "uppercase", color: "#928E80", cursor: col.field ? "pointer" : "default", userSelect: "none" }}
-              >
-                {col.label}
-                {col.field && <SortIcon f={col.field} />}
-              </div>
-            ))}
-          </div>
-
-          {/* Lignes */}
-          {loading ? (
-            <div style={{ padding: "5rem", textAlign: "center" }}>
-              <div style={{ width: 32, height: 32, borderRadius: "50%", border: "3px solid rgba(20,20,16,.08)", borderTopColor: "#1A5C40", animation: "bs-spin .8s linear infinite", margin: "0 auto" }} />
-            </div>
-          ) : items.length === 0 ? (
-            <div style={{ padding: "5rem", textAlign: "center" }}>
-              <div style={{ fontFamily: "'Fraunces',Georgia,serif", fontSize: "1.2rem", fontWeight: 700, color: "#141410", marginBottom: ".5rem" }}>Aucune opportunité</div>
-              <p style={{ fontSize: ".82rem", color: "#928E80", marginBottom: "1.5rem" }}>
-                {search || oppType || sector || status !== "all" ? "Aucun résultat pour ces filtres." : "Ajoutez votre première opportunité."}
-              </p>
-              <Link href="/admin/opportunites/nouveau" style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", fontFamily: "'DM Sans',system-ui,sans-serif", fontSize: ".82rem", fontWeight: 700, padding: ".6rem 1.3rem", borderRadius: 100, background: "#141410", color: "#fff", textDecoration: "none" }}>
-                <Ico.Plus /> Ajouter une opportunité
-              </Link>
-            </div>
-          ) : items.map((item, i) => {
-            const isSel = selected.has(item.id);
-            const tc    = TYPE_COLOR[item.type] ?? "#928E80";
-            return (
-              <div key={item.id} className="op-tr"
-                onClick={() => router.push(`/admin/opportunites/${item.id}`)}
-                style={{ display: "grid", gridTemplateColumns: GRID, gap: "0 .75rem", padding: ".9rem 1.4rem", alignItems: "center", borderBottom: i < items.length - 1 ? "1px solid rgba(20,20,16,.05)" : "none", background: isSel ? "rgba(26,92,64,.03)" : "transparent" }}
-              >
-                <div onClick={e => toggleSelect(item.id, e)} style={{ display: "flex", alignItems: "center" }}>
-                  <input type="checkbox" checked={isSel} onChange={() => {}} style={{ width: 15, height: 15, cursor: "pointer", accentColor: "#1A5C40" }} />
+        {/* ══ HEADER SOMBRE (style événements) ══ */}
+        <div style={{ background:"#141410", borderBottom:"3px solid #1A5C40", padding:"2rem 0 1.75rem" }}>
+          <div className="aop-wrap">
+            <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:"1.5rem", flexWrap:"wrap" }}>
+              <div>
+                <div style={{ display:"flex", alignItems:"center", gap:".65rem", marginBottom:".5rem" }}>
+                  <Link href="/admin" style={{ fontSize:".6rem", fontWeight:700, letterSpacing:".1em", textTransform:"uppercase", color:"rgba(248,246,241,.35)", textDecoration:"none" }}>
+                    Admin
+                  </Link>
+                  <span style={{ color:"rgba(248,246,241,.2)" }}>›</span>
+                  <span style={{ fontSize:".6rem", fontWeight:800, letterSpacing:".1em", textTransform:"uppercase", color:"#1A5C40" }}>
+                    Opportunités
+                  </span>
                 </div>
+                <h1 style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"clamp(1.6rem,3vw,2.4rem)", fontWeight:900, color:"#F8F6F1", letterSpacing:"-.03em", margin:0 }}>
+                  Gestion des Opportunités
+                </h1>
+                <p style={{ fontSize:".75rem", color:"rgba(248,246,241,.4)", marginTop:".35rem" }}>
+                  {stats.total} opportunité{stats.total !== 1 ? "s" : ""} au total
+                </p>
+              </div>
+              <div style={{ display:"flex", gap:".75rem", flexWrap:"wrap" }}>
+                <button className="aop-btn aop-btn-ghost-light" onClick={() => { load(); loadStats(); }}>
+                  <IcoRefresh /> Actualiser
+                </button>
+                <button className="aop-btn aop-btn-ghost-light" onClick={exportCSV}>
+                  <IcoExport /> Exporter CSV
+                </button>
+                <Link href="/admin/opportunites/nouveau">
+                  <button className="aop-btn" style={{ background:"#1A5C40", color:"#fff" }}>
+                    <IcoPlus /> Nouvelle opportunité
+                  </button>
+                </Link>
+              </div>
+            </div>
 
-                {/* Opportunité */}
-                <div style={{ display: "flex", alignItems: "center", gap: ".85rem", minWidth: 0 }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0, overflow: "hidden", position: "relative" }}>
-                    {item.cover_url
-                      ? <img src={item.cover_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                      : <div style={{ position: "absolute", inset: 0, background: item.image_gradient || `linear-gradient(135deg,${tc}22,#0a0800)` }} />
-                    }
-                    {item.featured && (
-                      <div style={{ position: "absolute", top: 2, right: 2, width: 8, height: 8, borderRadius: "50%", background: "#C08435", border: "1.5px solid #fff" }} />
-                    )}
-                    {!item.cover_url && (
-                      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces',Georgia,serif", fontSize: ".75rem", fontWeight: 900, color: "#fff", opacity: .85 }}>
-                        {item.company_initials || item.company?.slice(0, 2).toUpperCase()}
-                      </div>
-                    )}
+            {/* Stats dans le header */}
+            <div style={{ display:"flex", gap:"1rem", marginTop:"1.5rem", flexWrap:"wrap" }}>
+              {[
+                { label:"Total",       value: stats.total,      color:"#F8F6F1", sub:"opportunités" },
+                { label:"Publiées",    value: stats.published,  color:"#6FCF97", sub:"en ligne" },
+                { label:"Brouillons",  value: stats.draft,      color:"#928E80", sub:"non publiés" },
+                { label:"En vedette",  value: stats.featured,   color:"#C08435", sub:"mis en avant" },
+                { label:"Remote",      value: stats.remote,     color:"#5A7FD4", sub:"à distance" },
+                { label:"Vues totales",value: stats.totalViews, color:"#4A9E6F", sub:"impressions" },
+              ].map(s => (
+                <div key={s.label} style={{ background:"rgba(248,246,241,.06)", border:"1px solid rgba(248,246,241,.1)", borderRadius:12, padding:".75rem 1.25rem" }}>
+                  <div style={{ fontSize:"1.5rem", fontWeight:900, color:s.color, fontFamily:"'Fraunces',Georgia,serif", lineHeight:1 }}>
+                    {fmtNum(s.value)}
                   </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: ".84rem", fontWeight: 700, color: "#141410", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", letterSpacing: "-.01em", marginBottom: ".15rem" }}>
-                      {item.title}
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
-                      <span style={{ fontSize: ".6rem", color: "#928E80" }}>{item.flag} {item.location || item.country}</span>
-                      {item.remote && <span style={{ fontSize: ".55rem", fontWeight: 700, color: "#5A7FD4", background: "rgba(90,127,212,.1)", padding: ".1rem .4rem", borderRadius: 100 }}>Remote</span>}
-                    </div>
+                  <div style={{ fontSize:".58rem", fontWeight:700, letterSpacing:".08em", textTransform:"uppercase", color:"rgba(248,246,241,.35)", marginTop:".2rem" }}>
+                    {s.label} · {s.sub}
                   </div>
                 </div>
-
-                {/* Type */}
-                <span style={{ display: "inline-block", fontSize: ".56rem", fontWeight: 800, letterSpacing: ".08em", textTransform: "uppercase", color: tc, background: `${tc}14`, padding: ".22rem .65rem", borderRadius: 100, whiteSpace: "nowrap" }}>
-                  {item.type}
-                </span>
-
-                {/* Entreprise */}
-                <span style={{ fontSize: ".75rem", color: "#38382E", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {item.company}
-                </span>
-
-                {/* Secteur */}
-                <span style={{ fontSize: ".72rem", color: "#928E80", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {item.sector || "—"}
-                </span>
-
-                {/* Deadline */}
-                <div style={{ display: "flex", flexDirection: "column", gap: ".15rem" }}>
-                  <span style={{ fontSize: ".72rem", color: "#38382E", fontWeight: 500 }}>{fmtDate(item.deadline)}</span>
-                  {daysLeft(item.deadline)}
-                </div>
-
-                {/* Vues */}
-                <div style={{ display: "flex", alignItems: "center", gap: ".35rem", fontFamily: "'Fraunces',Georgia,serif", fontSize: ".8rem", fontWeight: 700, color: "#5A7FD4" }}>
-                  <Ico.Trending /> {fmtNum(item.views)}
-                </div>
-
-                {/* Saves */}
-                <div style={{ display: "flex", alignItems: "center", gap: ".35rem", fontFamily: "'Fraunces',Georgia,serif", fontSize: ".8rem", fontWeight: 700, color: "#4A9E6F" }}>
-                  <Ico.Bookmark /> {fmtNum(item.saves_count)}
-                </div>
-
-                {/* Statut */}
-                <div style={{ display: "inline-flex", alignItems: "center", gap: ".35rem", fontSize: ".62rem", fontWeight: 700, letterSpacing: ".06em", textTransform: "uppercase", padding: ".28rem .7rem", borderRadius: 100, background: item.published ? "rgba(26,92,64,.1)" : "rgba(20,20,16,.06)", color: item.published ? "#1A5C40" : "#928E80" }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: item.published ? "#4A9E6F" : "#D0CCBF" }} />
-                  {item.published ? "Publiée" : "Brouillon"}
-                </div>
-
-                {/* Date */}
-                <span style={{ fontSize: ".72rem", color: "#928E80", whiteSpace: "nowrap" }}>{fmtDate(item.created_at)}</span>
-
-                {/* Actions */}
-                <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: ".3rem", justifyContent: "flex-end" }}>
-                  <button title={item.featured ? "Retirer vedette" : "Mettre en vedette"}
-                    onClick={e => toggleFeatured(item.id, item.featured, e)} className="op-act"
-                    style={{ width: 28, height: 28, borderRadius: 8, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: item.featured ? "rgba(192,132,53,.1)" : "rgba(20,20,16,.06)", color: item.featured ? "#C08435" : "#928E80" }}>
-                    <Ico.Star />
-                  </button>
-                  <Link href={`/opportunites/${item.slug}${!item.published ? "?preview=1" : ""}`}
-                    target="_blank" title="Voir" onClick={e => e.stopPropagation()} className="op-act"
-                    style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(20,20,16,.06)", color: "#928E80", textDecoration: "none" }}>
-                    <Ico.Eye />
-                  </Link>
-                  <Link href={`/admin/opportunites/${item.id}`} title="Éditer"
-                    onClick={e => e.stopPropagation()} className="op-act"
-                    style={{ width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(26,92,64,.08)", color: "#1A5C40", textDecoration: "none" }}>
-                    <Ico.Edit />
-                  </Link>
-                  <button title="Supprimer" className="op-act"
-                    onClick={e => { e.stopPropagation(); setDelModal([item.id]); setDelPwd(""); setDelErr(""); }}
-                    style={{ width: 28, height: 28, borderRadius: 8, border: "none", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: "rgba(184,52,30,.08)", color: "#B8341E" }}>
-                    <Ico.Trash />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* PAGINATION */}
-      {!loading && totalPages > 1 && (
-        <div style={{ marginTop: "1.5rem", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
-          <span style={{ fontSize: ".75rem", color: "#928E80" }}>Page {page} sur {totalPages} · {total} opportunités</span>
-          <div style={{ display: "flex", gap: ".4rem" }}>
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-              style={{ display: "flex", alignItems: "center", gap: ".3rem", fontFamily: "inherit", fontSize: ".75rem", fontWeight: 600, padding: ".45rem .9rem", borderRadius: 100, cursor: page === 1 ? "not-allowed" : "pointer", background: "transparent", color: page === 1 ? "#D0CCBF" : "#38382E", border: "1.5px solid", borderColor: page === 1 ? "#E8E4DC" : "rgba(20,20,16,.15)" }}>
-              <Ico.ChevL /> Précédent
-            </button>
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-              const p = totalPages <= 7 ? i + 1 : page <= 4 ? i + 1 : page >= totalPages - 3 ? totalPages - 6 + i : page - 3 + i;
+        {/* ══ FILTRES (sticky, style événements) ══ */}
+        <div style={{ background:"#fff", borderBottom:"1px solid rgba(20,20,16,.07)", padding:"1rem 0", position:"sticky", top:0, zIndex:10, boxShadow:"0 2px 12px rgba(20,20,16,.05)" }}>
+          <div className="aop-wrap">
+            <div style={{ display:"flex", gap:".75rem", alignItems:"center", flexWrap:"wrap" }}>
+              {/* Recherche */}
+              <div style={{ position:"relative", flex:"1", minWidth:"220px", maxWidth:"380px" }}>
+                <span style={{ position:"absolute", left:".8rem", top:"50%", transform:"translateY(-50%)", color:"#928E80", pointerEvents:"none" }}>
+                  <IcoSearch />
+                </span>
+                <input className="aop-input" style={{ paddingLeft:"2.2rem" }}
+                  placeholder="Rechercher titre, entreprise…"
+                  value={searchQ}
+                  onChange={e => setSearchQ(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { setSearch(searchQ); setPage(1); } }}
+                />
+              </div>
+
+              {/* Type */}
+              <select className="aop-select" value={oppType} onChange={e => { setOppType(e.target.value as OpportunityType | ""); setPage(1); }}>
+                <option value="">Tous les types</option>
+                {OPP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+
+              {/* Secteur */}
+              {sectors.length > 0 && (
+                <select className="aop-select" value={sector} onChange={e => { setSector(e.target.value); setPage(1); }}>
+                  <option value="">Tous secteurs</option>
+                  {sectors.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
+
+              {/* Statut */}
+              <select className="aop-select" value={status} onChange={e => { setStatus(e.target.value as FilterStatus); setPage(1); }}>
+                <option value="all">Tous les statuts</option>
+                <option value="published">Publiées</option>
+                <option value="draft">Brouillons</option>
+                <option value="featured">En vedette</option>
+                <option value="remote">Remote</option>
+              </select>
+
+              {(search || oppType || sector || status !== "all") && (
+                <button className="aop-btn aop-btn-ghost" onClick={() => { setSearch(""); setSearchQ(""); setOppType(""); setSector(""); setStatus("all"); setPage(1); }}>
+                  ✕ Réinitialiser
+                </button>
+              )}
+
+              <div style={{ marginLeft:"auto", fontSize:".72rem", color:"#928E80", whiteSpace:"nowrap" }}>
+                {total} résultat{total !== 1 ? "s" : ""}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ══ CORPS ══ */}
+        <div className="aop-wrap" style={{ paddingTop:"1.75rem" }}>
+
+          {/* Raccourcis types */}
+          <div style={{ display:"flex", gap:".5rem", flexWrap:"wrap", marginBottom:"1.25rem" }}>
+            {(["" , ...OPP_TYPES] as (OpportunityType | "")[]).map(t => {
+              const active = oppType === t;
+              const s = TYPE_STYLE[t as string];
+              const count = t === "" ? stats.total : items.filter(i => i.type === t).length;
               return (
-                <button key={p} onClick={() => setPage(p)}
-                  style={{ width: 34, height: 34, borderRadius: "50%", cursor: "pointer", fontFamily: "inherit", fontSize: ".75rem", fontWeight: 600, background: page === p ? "#141410" : "transparent", color: page === p ? "#fff" : "#38382E", border: page === p ? "none" : "1.5px solid rgba(20,20,16,.12)", transition: "all .15s" }}>
-                  {p}
+                <button key={t || "all"} onClick={() => { setOppType(t); setPage(1); }}
+                  style={{
+                    padding:".3rem .85rem", borderRadius:100, cursor:"pointer",
+                    border: active ? "none" : "1px solid rgba(20,20,16,.12)",
+                    background: active ? (s?.color ?? "#141410") : "#fff",
+                    color: active ? "#fff" : "#928E80",
+                    fontSize:".6rem", fontWeight:700, letterSpacing:".08em",
+                    textTransform:"uppercase", fontFamily:"inherit", transition:"all .18s",
+                  }}>
+                  {t || "Tout"}{" "}
+                  <span style={{ opacity:.6, fontWeight:400, fontSize:".55rem" }}>({count})</span>
                 </button>
               );
             })}
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-              style={{ display: "flex", alignItems: "center", gap: ".3rem", fontFamily: "inherit", fontSize: ".75rem", fontWeight: 600, padding: ".45rem .9rem", borderRadius: 100, cursor: page === totalPages ? "not-allowed" : "pointer", background: "transparent", color: page === totalPages ? "#D0CCBF" : "#38382E", border: "1.5px solid", borderColor: page === totalPages ? "#E8E4DC" : "rgba(20,20,16,.15)" }}>
-              Suivant <Ico.ChevR />
-            </button>
           </div>
+
+          {/* Bulk bar */}
+          {selected.size > 0 && (
+            <div style={{ background:"#141410", borderRadius:12, padding:".85rem 1.4rem", marginBottom:"1rem", display:"flex", alignItems:"center", gap:"1rem", boxShadow:"0 4px 16px rgba(20,20,16,.2)", animation:"aop-slide .2s ease" }}>
+              <span style={{ fontSize:".78rem", fontWeight:700, color:"#1A5C40" }}>{selected.size} sélectionnée{selected.size > 1 ? "s" : ""}</span>
+              <div style={{ width:1, height:18, background:"rgba(255,255,255,.1)" }} />
+              <button onClick={() => bulkPublish(Array.from(selected), true)} style={{ fontFamily:"inherit", fontSize:".75rem", fontWeight:600, color:"#4A9E6F", background:"rgba(74,158,111,.12)", border:"none", padding:".38rem .85rem", borderRadius:100, cursor:"pointer" }}>Publier tout</button>
+              <button onClick={() => bulkPublish(Array.from(selected), false)} style={{ fontFamily:"inherit", fontSize:".75rem", fontWeight:600, color:"#C08435", background:"rgba(192,132,53,.12)", border:"none", padding:".38rem .85rem", borderRadius:100, cursor:"pointer" }}>Dépublier tout</button>
+              <button onClick={() => { setDelModal(Array.from(selected)); setDelPwd(""); setDelErr(""); }} style={{ fontFamily:"inherit", fontSize:".75rem", fontWeight:600, color:"#C25B3F", background:"rgba(194,91,63,.12)", border:"none", padding:".38rem .85rem", borderRadius:100, cursor:"pointer" }}>Supprimer</button>
+              <button onClick={() => setSelected(new Set())} style={{ marginLeft:"auto", fontFamily:"inherit", fontSize:".72rem", color:"rgba(255,255,255,.4)", background:"none", border:"none", cursor:"pointer" }}>Annuler</button>
+            </div>
+          )}
+
+          {/* Tableau */}
+          {loading ? (
+            <div style={{ textAlign:"center", padding:"4rem 0" }}>
+              <div className="aop-spinner" />
+              <p style={{ color:"#928E80", fontSize:".8rem" }}>Chargement des opportunités…</p>
+            </div>
+          ) : items.length === 0 ? (
+            <div style={{ textAlign:"center", padding:"5rem 2rem" }}>
+              <div style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"3rem", color:"rgba(20,20,16,.1)", marginBottom:".5rem" }}>💼</div>
+              <p style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:"1.4rem", color:"rgba(20,20,16,.2)", fontWeight:900 }}>
+                Aucune opportunité trouvée
+              </p>
+              <p style={{ color:"#928E80", fontSize:".8rem", marginTop:".4rem" }}>
+                {search || oppType || sector || status !== "all" ? "Essayez de modifier vos filtres." : "Créez votre première opportunité."}
+              </p>
+              {!search && !oppType && !sector && status === "all" && (
+                <Link href="/admin/opportunites/nouveau">
+                  <button className="aop-btn" style={{ marginTop:"1.5rem", background:"#1A5C40", color:"#fff" }}>
+                    <IcoPlus /> Créer une opportunité
+                  </button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="aop-table-wrap">
+              <table className="aop-table">
+                <thead>
+                  <tr>
+                    <th className="aop-th" style={{ width:40 }}>
+                      <input type="checkbox"
+                        checked={selected.size > 0 && selected.size === items.length}
+                        ref={el => { if (el) el.indeterminate = selected.size > 0 && selected.size < items.length; }}
+                        onChange={toggleAll}
+                        style={{ width:14, height:14, cursor:"pointer", accentColor:"#1A5C40" }}
+                      />
+                    </th>
+                    <th className="aop-th sortable" onClick={() => toggleSort("title")}>
+                      <span style={{ display:"flex", alignItems:"center", gap:".3rem" }}>Opportunité <SortIcon f="title" /></span>
+                    </th>
+                    <th className="aop-th">Type</th>
+                    <th className="aop-th sortable" onClick={() => toggleSort("company")}>
+                      <span style={{ display:"flex", alignItems:"center", gap:".3rem" }}>Entreprise <SortIcon f="company" /></span>
+                    </th>
+                    <th className="aop-th">Secteur</th>
+                    <th className="aop-th sortable" onClick={() => toggleSort("deadline")}>
+                      <span style={{ display:"flex", alignItems:"center", gap:".3rem" }}>Deadline <SortIcon f="deadline" /></span>
+                    </th>
+                    <th className="aop-th sortable" onClick={() => toggleSort("views")}>
+                      <span style={{ display:"flex", alignItems:"center", gap:".3rem" }}>Vues <SortIcon f="views" /></span>
+                    </th>
+                    <th className="aop-th" style={{ textAlign:"center" }}>En ligne</th>
+                    <th className="aop-th" style={{ textAlign:"center" }}>Vedette</th>
+                    <th className="aop-th" style={{ textAlign:"right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map(item => {
+                    const isSel = selected.has(item.id);
+                    return (
+                      <tr key={item.id} className="aop-row"
+                        onClick={() => router.push(`/admin/opportunites/${item.id}`)}
+                        style={{ background: isSel ? "rgba(26,92,64,.03)" : undefined }}>
+
+                        {/* Checkbox */}
+                        <td className="aop-td" onClick={e => toggleSelect(item.id, e)}>
+                          <input type="checkbox" checked={isSel} onChange={() => {}}
+                            style={{ width:14, height:14, cursor:"pointer", accentColor:"#1A5C40" }} />
+                        </td>
+
+                        {/* Opportunité */}
+                        <td className="aop-td" style={{ maxWidth:260 }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:".75rem" }}>
+                            <div className="aop-gradient-thumb" style={{ background: item.image_gradient || "#0a0800" }}>
+                              {item.cover_url
+                                ? <img src={item.cover_url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
+                                : <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Fraunces',Georgia,serif", fontSize:".72rem", fontWeight:900, color:"#fff", opacity:.85 }}>
+                                    {item.company_initials || item.company?.slice(0,2).toUpperCase()}
+                                  </div>
+                              }
+                              {item.featured && (
+                                <div style={{ position:"absolute", top:2, right:2, width:8, height:8, borderRadius:"50%", background:"#C08435", border:"1.5px solid #fff" }} />
+                              )}
+                            </div>
+                            <div style={{ minWidth:0 }}>
+                              <div style={{ fontWeight:700, color:"#141410", fontSize:".82rem", lineHeight:1.35, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginBottom:".18rem" }}>
+                                {item.title}
+                              </div>
+                              <div style={{ fontSize:".62rem", color:"#928E80", display:"flex", alignItems:"center", gap:".4rem" }}>
+                                <span>{item.flag} {item.location || item.country}</span>
+                                {item.remote && <span style={{ fontSize:".55rem", fontWeight:700, color:"#5A7FD4", background:"rgba(90,127,212,.1)", padding:".1rem .4rem", borderRadius:100 }}>Remote</span>}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Type */}
+                        <td className="aop-td"><TypePill type={item.type} /></td>
+
+                        {/* Entreprise */}
+                        <td className="aop-td">
+                          <span style={{ fontSize:".78rem", color:"#38382E", fontWeight:500, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", display:"block", maxWidth:120 }}>
+                            {item.company}
+                          </span>
+                        </td>
+
+                        {/* Secteur */}
+                        <td className="aop-td">
+                          <span style={{ fontSize:".72rem", color:"#928E80" }}>{item.sector || "—"}</span>
+                        </td>
+
+                        {/* Deadline */}
+                        <td className="aop-td">
+                          <div style={{ fontSize:".72rem", color:"#38382E", fontWeight:500 }}>{fmtDate(item.deadline)}</div>
+                          {daysLeft(item.deadline)}
+                        </td>
+
+                        {/* Vues */}
+                        <td className="aop-td">
+                          <span style={{ fontFamily:"'Fraunces',Georgia,serif", fontSize:".82rem", fontWeight:700, color:"#141410" }}>
+                            {fmtNum(item.views)}
+                          </span>
+                        </td>
+
+                        {/* Toggle publié */}
+                        <td className="aop-td" style={{ textAlign:"center" }} onClick={e => e.stopPropagation()}>
+                          <button className="aop-toggle" title={item.published ? "Dépublier" : "Publier"}
+                            onClick={e => togglePublished(item.id, item.published, e)}
+                            style={{ background: item.published ? "#1A5C40" : "rgba(20,20,16,.15)" }}>
+                            <span className="aop-toggle-thumb" style={{ transform: item.published ? "translateX(18px)" : "translateX(3px)" }} />
+                          </button>
+                        </td>
+
+                        {/* Toggle vedette */}
+                        <td className="aop-td" style={{ textAlign:"center" }} onClick={e => e.stopPropagation()}>
+                          <button className="aop-action-btn" title={item.featured ? "Retirer vedette" : "Mettre en vedette"}
+                            onClick={e => toggleFeatured(item.id, item.featured, e)}
+                            style={{ color: item.featured ? "#C08435":"#928E80", background: item.featured ? "#FDF4E7":"transparent", borderColor: item.featured ? "rgba(192,132,53,.25)":"rgba(20,20,16,.1)" }}>
+                            <IcoStar filled={item.featured} />
+                          </button>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="aop-td" onClick={e => e.stopPropagation()}>
+                          <div style={{ display:"flex", gap:".35rem", justifyContent:"flex-end" }}>
+                            <Link href={`/opportunites/${item.slug}${!item.published ? "?preview=1":""}`} target="_blank" rel="noopener noreferrer">
+                              <button className="aop-action-btn" title="Prévisualiser"><IcoEye /></button>
+                            </Link>
+                            <Link href={`/admin/opportunites/${item.id}`}>
+                              <button className="aop-action-btn" title="Modifier"
+                                style={{ color:"#1A5C40", borderColor:"rgba(26,92,64,.2)", background:"rgba(26,92,64,.05)" }}>
+                                <IcoEdit />
+                              </button>
+                            </Link>
+                            <button className="aop-action-btn" title="Supprimer"
+                              onClick={() => { setDelModal([item.id]); setDelPwd(""); setDelErr(""); }}
+                              style={{ color:"#B8341E", borderColor:"rgba(184,52,30,.2)", background:"rgba(184,52,30,.05)" }}>
+                              <IcoTrash />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginTop:"1.5rem", flexWrap:"wrap", gap:"1rem" }}>
+              <span style={{ fontSize:".72rem", color:"#928E80" }}>
+                Page {page} sur {totalPages} — {total} résultat{total !== 1 ? "s" : ""}
+              </span>
+              <div style={{ display:"flex", gap:".35rem" }}>
+                <button className="aop-page-btn" disabled={page <= 1} onClick={() => setPage(p => p - 1)}><IcoChevL /></button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  const pg = totalPages <= 7 ? i + 1 : page <= 4 ? i + 1 : page >= totalPages - 3 ? totalPages - 6 + i : page - 3 + i;
+                  return (
+                    <button key={pg} className={`aop-page-btn${page === pg ? " active" : ""}`} onClick={() => setPage(pg)}>
+                      {pg}
+                    </button>
+                  );
+                })}
+                {totalPages > 7 && (
+                  <>
+                    <span style={{ padding:"0 .2rem", color:"#928E80" }}>…</span>
+                    <button className={`aop-page-btn${page === totalPages ? " active" : ""}`} onClick={() => setPage(totalPages)}>
+                      {totalPages}
+                    </button>
+                  </>
+                )}
+                <button className="aop-page-btn" disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}><IcoChevR /></button>
+              </div>
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

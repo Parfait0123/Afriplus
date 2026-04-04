@@ -85,6 +85,13 @@ export default function DashboardPage() {
   const [saveError, setSaveError]     = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  /* Changement de mot de passe */
+  const [pwdForm, setPwdForm]     = useState({ current:"", next:"", confirm:"" });
+  const [pwdShow, setPwdShow]     = useState({ current:false, next:false, confirm:false });
+  const [pwdSaving, setPwdSaving] = useState(false);
+  const [pwdOk, setPwdOk]         = useState(false);
+  const [pwdError, setPwdError]   = useState<string|null>(null);
+
   /* Hydratation SSR */
   useEffect(() => { setMounted(true); }, []);
 
@@ -207,7 +214,43 @@ export default function DashboardPage() {
     }
   };
 
-  /* ── Upload photo ── */
+  const handleLogout = async () => {
+  if (confirm("Voulez-vous vraiment vous déconnecter ?")) {
+    await supabase.auth.signOut();
+    router.push("/");
+  }
+};
+
+  /* ── Changement de mot de passe ── */
+  const changePassword = async () => {
+    setPwdError(null);
+    if (!pwdForm.next || pwdForm.next.length < 8) {
+      setPwdError("Le nouveau mot de passe doit contenir au moins 8 caractères."); return;
+    }
+    if (pwdForm.next !== pwdForm.confirm) {
+      setPwdError("Les mots de passe ne correspondent pas."); return;
+    }
+    setPwdSaving(true);
+    // Vérifier l'ancien mot de passe via signInWithPassword
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email: user?.email ?? "",
+      password: pwdForm.current,
+    });
+    if (signInErr) {
+      setPwdError("Mot de passe actuel incorrect.");
+      setPwdSaving(false); return;
+    }
+    // Changer le mot de passe
+    const { error: updateErr } = await supabase.auth.updateUser({ password: pwdForm.next });
+    setPwdSaving(false);
+    if (updateErr) {
+      setPwdError("Erreur : " + updateErr.message); return;
+    }
+    setPwdOk(true);
+    setPwdForm({ current:"", next:"", confirm:"" });
+    setTimeout(() => setPwdOk(false), 4000);
+  };
   const uploadAvatar = async (file: File) => {
     if (!profile?.id) return;
     setAvatarUploading(true);
@@ -489,41 +532,59 @@ export default function DashboardPage() {
           {/* ══ PROFIL ══ */}
           {tab === "profile" && (
             <section className="db-profile-wrap" style={{ animation:"db-rise .3s ease both" }}>
-              <div className="db-card" style={{ padding:"1.75rem" }}>
 
-                {/* Avatar + identité */}
-                <div style={{ display:"flex", alignItems:"center", gap:"1.25rem", paddingBottom:"1.5rem", borderBottom:"1px solid rgba(20,20,16,.06)", marginBottom:"1.75rem" }}>
+              {/* ── Carte identité hero ── */}
+              <div style={{ background:"linear-gradient(135deg,#141410 0%,#1e1d17 60%,#2a2618 100%)", borderRadius:24, padding:"2rem 2rem 1.5rem", marginBottom:"1.25rem", position:"relative", overflow:"hidden" }}>
+                {/* Motif décoratif */}
+                <div style={{ position:"absolute", top:-40, right:-40, width:200, height:200, borderRadius:"50%", background:"rgba(192,132,53,.06)", pointerEvents:"none" }}/>
+                <div style={{ position:"absolute", bottom:-20, left:100, width:120, height:120, borderRadius:"50%", background:"rgba(192,132,53,.04)", pointerEvents:"none" }}/>
+                {/* Trait doré */}
+                <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#C08435 30%,#E8B86D 60%,transparent)" }}/>
+
+                <div style={{ display:"flex", alignItems:"center", gap:"1.4rem", position:"relative" }}>
                   <AvatarUpload
                     url={profile?.avatar_url ?? null}
-                    initials={profile?.full_name?.[0]?.toUpperCase() ?? "A"}
+                    initials={profile?.full_name?.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase() ?? "?"}
                     uploading={avatarUploading}
                     onFile={uploadAvatar}
                   />
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontFamily:"'Fraunces',serif", fontSize:"1.05rem", fontWeight:900, color:"#141410", lineHeight:1.2 }}>
+                    <div style={{ fontSize:"0.58rem", fontWeight:700, letterSpacing:"0.18em", textTransform:"uppercase", color:"#C08435", marginBottom:"0.3rem" }}>
+                      Mon profil
+                    </div>
+                    <div style={{ fontFamily:"'Fraunces',serif", fontSize:"1.35rem", fontWeight:900, color:"#F8F6F1", lineHeight:1.15, marginBottom:"0.3rem" }}>
                       {profile?.full_name ?? "—"}
                     </div>
-                    <div style={{ fontSize:"0.7rem", color:"#928E80", marginTop:"0.2rem" }}>
-                      {[profile?.domain, profile?.country].filter(Boolean).join(" · ") || "Domaine non renseigné"}
+                    <div style={{ fontSize:"0.68rem", color:"rgba(248,246,241,.4)", marginBottom:"0.5rem" }}>
+                      {[profile?.domain, profile?.country, profile?.city].filter(Boolean).join(" · ") || "Profil incomplet"}
                     </div>
-                    {/* Lien vers profil public */}
                     {profile?.id && (
                       <Link href={`/profil/${profile.id}`} target="_blank"
-                        style={{ display:"inline-flex", alignItems:"center", gap:"0.25rem", fontSize:"0.65rem", fontWeight:700, color:"#C08435", textDecoration:"none", marginTop:"0.4rem" }}>
+                        style={{ display:"inline-flex", alignItems:"center", gap:"0.3rem", fontSize:"0.62rem", fontWeight:700, color:"#C08435", textDecoration:"none", border:"1px solid rgba(192,132,53,.3)", padding:"0.25rem 0.7rem", borderRadius:100, background:"rgba(192,132,53,.08)" }}>
                         Voir mon profil public <IcoArrow />
                       </Link>
                     )}
                   </div>
                 </div>
 
-                {/* Formulaire */}
-                <FormSection title="Informations">
+              </div>
+
+              {/* ── Formulaire infos ── */}
+              <div className="db-card" style={{ padding:"1.75rem", marginBottom:"1.25rem" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"1.5rem", paddingBottom:"1rem", borderBottom:"1px solid rgba(20,20,16,.06)" }}>
+                  <div style={{ width:32, height:32, borderRadius:10, background:"linear-gradient(135deg,#C08435,#8C5A1C)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  </div>
+                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:"1rem", fontWeight:900, color:"#141410" }}>Informations personnelles</div>
+                </div>
+
+                <FormSection title="">
                   {([
-                    { k:"full_name",    l:"Nom complet", t:"text", ph:"Votre nom" },
-                    { k:"country",      l:"Pays",        t:"text", ph:"Ex : Sénégal" },
-                    { k:"city",         l:"Ville",       t:"text", ph:"Ex : Dakar" },
-                    { k:"linkedin_url", l:"LinkedIn",    t:"url",  ph:"https://linkedin.com/in/…" },
-                    { k:"website_url",  l:"Site web",    t:"url",  ph:"https://…" },
+                    { k:"full_name",    l:"Nom complet",  t:"text", ph:"Votre nom et prénom" },
+                    { k:"country",      l:"Pays",         t:"text", ph:"Ex : Sénégal" },
+                    { k:"city",         l:"Ville",        t:"text", ph:"Ex : Dakar" },
+                    { k:"linkedin_url", l:"LinkedIn URL", t:"url",  ph:"https://linkedin.com/in/…" },
+                    { k:"website_url",  l:"Site web",     t:"url",  ph:"https://monsite.com" },
                   ] as const).map(f => (
                     <Field key={f.k} label={f.l}>
                       <input type={f.t} placeholder={f.ph} className="db-inp"
@@ -533,7 +594,7 @@ export default function DashboardPage() {
                     </Field>
                   ))}
                   <Field label="Bio courte">
-                    <textarea rows={3} placeholder="Quelques mots sur vous…" className="db-inp"
+                    <textarea rows={3} placeholder="Quelques mots sur vous, vos ambitions…" className="db-inp"
                       value={profileForm.bio ?? ""}
                       onChange={e => setProfileForm(p => ({ ...p, bio:e.target.value }))}
                       style={{ resize:"vertical" }}
@@ -541,8 +602,8 @@ export default function DashboardPage() {
                   </Field>
                   <div className="db-domain-grid">
                     {([
-                      { k:"domain", l:"Domaine",         opts:DOMAINS },
-                      { k:"level",  l:"Niveau / Profil", opts:LEVELS  },
+                      { k:"domain", l:"Domaine d'activité", opts:DOMAINS },
+                      { k:"level",  l:"Niveau / Profil",    opts:LEVELS  },
                     ] as const).map(f => (
                       <Field key={f.k} label={f.l}>
                         <select className="db-inp"
@@ -556,66 +617,169 @@ export default function DashboardPage() {
                   </div>
                 </FormSection>
 
-                <FormSection title="Préférences">
+                <div style={{ marginBottom:"1.5rem" }}>
+                  <div style={{ fontFamily:"'Fraunces',serif", fontSize:"0.88rem", fontWeight:900, color:"#141410", marginBottom:"1rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C08435" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+                    Préférences notifications
+                  </div>
                   {([
-                    { k:"notify_saves", l:"Rappels deadlines", d:"Email avant l'expiration de vos sauvegardes" },
-                    { k:"notify_news",  l:"Newsletter hebdo",  d:"Le récap AfriPulse chaque semaine" },
+                    { k:"notify_saves", l:"Rappels deadlines",   d:"Email avant l'expiration de vos sauvegardes" },
+                    { k:"notify_news",  l:"Newsletter hebdomadaire", d:"Le récap AfriPulse chaque semaine" },
                   ] as const).map(pref => {
                     const on = !!(profileForm as Record<string,unknown>)[pref.k];
                     return (
-                      <div key={pref.k} style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"0.9rem 0", borderBottom:"1px solid rgba(20,20,16,.05)" }}>
+                      <div key={pref.k} style={{ display:"flex", alignItems:"center", gap:"1rem", padding:"0.85rem 1rem", borderRadius:12, background:"#F8F6F1", marginBottom:"0.6rem", border:"1px solid rgba(20,20,16,.05)" }}>
                         <div style={{ flex:1 }}>
-                          <div style={{ fontSize:"0.88rem", fontWeight:600, color:"#141410" }}>{pref.l}</div>
-                          <div style={{ fontSize:"0.68rem", color:"#928E80", marginTop:"0.1rem" }}>{pref.d}</div>
+                          <div style={{ fontSize:"0.85rem", fontWeight:600, color:"#141410" }}>{pref.l}</div>
+                          <div style={{ fontSize:"0.65rem", color:"#928E80", marginTop:"0.1rem" }}>{pref.d}</div>
                         </div>
                         <Toggle on={on} onToggle={() => setProfileForm(p => ({ ...p, [pref.k]:!on }))} />
                       </div>
                     );
                   })}
-                </FormSection>
+                </div>
 
-                {/* Message d'erreur */}
                 {saveError && (
-                  <div style={{ margin:"0 0 1rem", padding:"0.75rem 1rem", borderRadius:12, background:"#FAEBE8", border:"1px solid rgba(184,52,30,.15)", fontSize:"0.78rem", color:"#B8341E", fontWeight:600 }}>
-                    {saveError}
+                  <div style={{ marginBottom:"1rem", padding:"0.75rem 1rem", borderRadius:12, background:"#FAEBE8", border:"1px solid rgba(184,52,30,.15)", fontSize:"0.78rem", color:"#B8341E", fontWeight:600, display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                    ⚠ {saveError}
                   </div>
                 )}
 
-                <button
-                  type="button"
+                <button type="button"
                   disabled={saving || avatarUploading}
-                  onClick={() => { saveProfile().catch(err => { console.error(err); setSaveError("Erreur inattendue."); setSaving(false); }); }}
-                  style={{
-                    width: "100%",
-                    padding: "0.95rem",
-                    borderRadius: 14,
-                    background: savedOk ? "#1A5C40" : saving ? "#a0732e" : "#C08435",
-                    color: "#fff",
-                    border: "none",
-                    fontWeight: 700,
-                    fontSize: "0.92rem",
-                    cursor: (saving || avatarUploading) ? "not-allowed" : "pointer",
-                    transition: "background .2s",
-                    fontFamily: "inherit",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "0.5rem",
-                    opacity: (saving || avatarUploading) ? 0.85 : 1,
-                  }}
-                >
-                  {saving ? (
-                    <>
-                      <span style={{ width:16, height:16, border:"2px solid rgba(255,255,255,.35)", borderTopColor:"#fff", borderRadius:"50%", animation:"db-spin .7s linear infinite", display:"inline-block", flexShrink:0 }} />
-                      Enregistrement…
-                    </>
-                  ) : savedOk ? (
-                    <><IcoCheck /> Profil mis à jour !</>
-                  ) : (
-                    "Enregistrer le profil"
-                  )}
+                  onClick={() => saveProfile().catch(()=>{})}
+                  style={{ width:"100%", padding:"0.95rem", borderRadius:14,
+                    background:savedOk?"linear-gradient(135deg,#1A5C40,#0F3828)":saving?"rgba(192,132,53,.6)":"linear-gradient(135deg,#C08435,#8C5A1C)",
+                    color:"#fff", border:"none", fontWeight:700, fontSize:"0.92rem",
+                    cursor:(saving||avatarUploading)?"not-allowed":"pointer",
+                    transition:"all .2s", fontFamily:"inherit",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:"0.5rem",
+                    boxShadow:savedOk?"none":saving?"none":"0 4px 16px rgba(192,132,53,.3)",
+                  }}>
+                  {saving
+                    ? <><span style={{ width:16,height:16,border:"2px solid rgba(255,255,255,.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"db-spin .7s linear infinite",display:"inline-block",flexShrink:0 }}/> Enregistrement…</>
+                    : savedOk ? <><IcoCheck /> Profil mis à jour !</>
+                    : "Enregistrer le profil"
+                  }
                 </button>
               </div>
+
+              {/* ── Changement de mot de passe ── */}
+              <div className="db-card" style={{ padding:"1.75rem" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"1.5rem", paddingBottom:"1rem", borderBottom:"1px solid rgba(20,20,16,.06)" }}>
+                  <div style={{ width:32, height:32, borderRadius:10, background:"linear-gradient(135deg,#1A5C40,#0F3828)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:"'Fraunces',serif", fontSize:"1rem", fontWeight:900, color:"#141410" }}>Sécurité du compte</div>
+                    <div style={{ fontSize:"0.62rem", color:"#928E80", marginTop:"0.1rem" }}>Changer votre mot de passe</div>
+                  </div>
+                </div>
+
+                {/* Champ mot de passe actuel */}
+                {[
+                  { k:"current" as const, l:"Mot de passe actuel",    ph:"Votre mot de passe actuel" },
+                  { k:"next"    as const, l:"Nouveau mot de passe",   ph:"8 caractères minimum" },
+                  { k:"confirm" as const, l:"Confirmer le nouveau",   ph:"Répétez le nouveau mot de passe" },
+                ].map(f => (
+                  <Field key={f.k} label={f.l}>
+                    <div style={{ position:"relative" }}>
+                      <input
+                        type={pwdShow[f.k] ? "text" : "password"}
+                        placeholder={f.ph}
+                        className="db-inp"
+                        value={pwdForm[f.k]}
+                        onChange={e => setPwdForm(p=>({...p,[f.k]:e.target.value}))}
+                        onKeyDown={e => { if(e.key==="Enter") changePassword(); }}
+                        style={{ paddingRight:"3rem" }}
+                      />
+                      <button type="button"
+                        onClick={() => setPwdShow(p=>({...p,[f.k]:!p[f.k]}))}
+                        style={{ position:"absolute", right:"0.85rem", top:"50%", transform:"translateY(-50%)", background:"none", border:"none", cursor:"pointer", color:"#928E80", display:"flex", alignItems:"center", padding:0 }}>
+                        {pwdShow[f.k]
+                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        }
+                      </button>
+                    </div>
+                  </Field>
+                ))}
+
+                {/* Indicateur force du mot de passe */}
+                {pwdForm.next.length > 0 && (
+                  <div style={{ marginBottom:"1rem", marginTop:"-0.5rem" }}>
+                    <div style={{ display:"flex", gap:"0.3rem", marginBottom:"0.3rem" }}>
+                      {[1,2,3,4].map(i => {
+                        const score = pwdForm.next.length >= 12 && /[A-Z]/.test(pwdForm.next) && /[0-9]/.test(pwdForm.next) && /[^A-Za-z0-9]/.test(pwdForm.next) ? 4
+                          : pwdForm.next.length >= 10 && /[A-Z]/.test(pwdForm.next) && /[0-9]/.test(pwdForm.next) ? 3
+                          : pwdForm.next.length >= 8 ? 2 : 1;
+                        const colors = ["","#B8341E","#C08435","#1A5C40","#1A5C40"];
+                        return <div key={i} style={{ flex:1, height:3, borderRadius:100, background:i<=score?colors[score]:"rgba(20,20,16,.1)", transition:"background .3s" }}/>;
+                      })}
+                    </div>
+                    <div style={{ fontSize:"0.6rem", color:"#928E80" }}>
+                      {pwdForm.next.length < 8 ? "Trop court" : pwdForm.next.length < 10 ? "Faible" : /[A-Z]/.test(pwdForm.next)&&/[0-9]/.test(pwdForm.next)&&/[^A-Za-z0-9]/.test(pwdForm.next) ? "Très fort ✓" : "Moyen"}
+                    </div>
+                  </div>
+                )}
+
+                {pwdError && (
+                  <div style={{ marginBottom:"1rem", padding:"0.75rem 1rem", borderRadius:12, background:"#FAEBE8", border:"1px solid rgba(184,52,30,.15)", fontSize:"0.78rem", color:"#B8341E", fontWeight:600, display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                    ⚠ {pwdError}
+                  </div>
+                )}
+                {pwdOk && (
+                  <div style={{ marginBottom:"1rem", padding:"0.75rem 1rem", borderRadius:12, background:"#EAF4EF", border:"1px solid rgba(26,92,64,.15)", fontSize:"0.78rem", color:"#1A5C40", fontWeight:600, display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                    ✓ Mot de passe mis à jour avec succès !
+                  </div>
+                )}
+
+                <button type="button"
+                  disabled={pwdSaving || !pwdForm.current || !pwdForm.next || !pwdForm.confirm}
+                  onClick={changePassword}
+                  style={{ width:"100%", padding:"0.95rem", borderRadius:14,
+                    background:pwdOk?"linear-gradient(135deg,#1A5C40,#0F3828)":pwdSaving?"rgba(26,92,64,.5)":"linear-gradient(135deg,#1A5C40,#0F3828)",
+                    color:"#fff", border:"none", fontWeight:700, fontSize:"0.92rem",
+                    cursor:(pwdSaving||!pwdForm.current||!pwdForm.next||!pwdForm.confirm)?"not-allowed":"pointer",
+                    transition:"all .2s", fontFamily:"inherit",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:"0.5rem",
+                    opacity:(pwdSaving||!pwdForm.current||!pwdForm.next||!pwdForm.confirm)?0.6:1,
+                    boxShadow:pwdOk||pwdSaving?"none":"0 4px 16px rgba(26,92,64,.25)",
+                  }}>
+                  {pwdSaving
+                    ? <><span style={{ width:16,height:16,border:"2px solid rgba(255,255,255,.35)",borderTopColor:"#fff",borderRadius:"50%",animation:"db-spin .7s linear infinite",display:"inline-block",flexShrink:0 }}/> Vérification…</>
+                    : pwdOk ? <><IcoCheck /> Mot de passe mis à jour !</>
+                    : "Changer le mot de passe"
+                  }
+                </button>
+              </div>
+{/* ── Déconnexion ── */}
+<div className="db-card" style={{ padding:"1.75rem", marginTop:"1.25rem" }}>
+  <div style={{ display:"flex", alignItems:"center", gap:"0.6rem", marginBottom:"1.5rem", paddingBottom:"1rem", borderBottom:"1px solid rgba(20,20,16,.06)" }}>
+    <div style={{ width:32, height:32, borderRadius:10, background:"linear-gradient(135deg,#B8341E,#8A2A1A)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </div>
+    <div>
+      <div style={{ fontFamily:"'Fraunces',serif", fontSize:"1rem", fontWeight:900, color:"#141410" }}>Déconnexion</div>
+      <div style={{ fontSize:"0.62rem", color:"#928E80", marginTop:"0.1rem" }}>Quitter votre session</div>
+    </div>
+  </div>
+  <button
+    onClick={handleLogout}
+    style={{ width:"100%", padding:"0.95rem", borderRadius:14, background:"linear-gradient(135deg,#B8341E,#8A2A1A)", color:"#fff", border:"none", fontWeight:700, fontSize:"0.92rem", cursor:"pointer", transition:"all .2s", fontFamily:"inherit", display:"flex", alignItems:"center", justifyContent:"center", gap:"0.5rem", boxShadow:"0 4px 12px rgba(184,52,30,.2)" }}
+  >
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+      <polyline points="16 17 21 12 16 7"/>
+      <line x1="21" y1="12" x2="9" y2="12"/>
+    </svg>
+    Se déconnecter
+  </button>
+</div>
             </section>
           )}
 

@@ -1,0 +1,1675 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>GUIDE_CLIENT.md</title>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+html,footer,header{
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Custom MD PDF CSS
+ */
+html,footer,header{
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+
+ }
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+<link rel="stylesheet" href="file:///r%3A/2.Travail/1.Enseignement/Cours/_1.Outils/2.Developpement/1.SCSS/main.css" type="text/css"><link rel="stylesheet" href="file:///d%3A/rdaros/Cours/_1.Outils/2.Developpement/1.SCSS/main.css" type="text/css">
+</head>
+
+<body>
+    <h1 id="%F0%9F%93%B1-guide-utilisateur-afripulse">📱 Guide Utilisateur AfriPulse</h1>
+<h2 id="bienvenue-sur-afripulse">Bienvenue sur AfriPulse !</h2>
+<p><strong>AfriPulse</strong> est votre plateforme digitale pour rester connecté aux actualités, opportunités et ressources du continent africain. Que vous cherchiez une bourse d'étude, une opportunité de carrière, un événement professionnel ou simplement les dernières actualités africaines, vous êtes au bon endroit.</p>
+<p>Ce guide vous accompagnera pas à pas pour tirer le meilleur parti de la plateforme.</p>
+<hr>
+<h2 id="%F0%9F%93%91-table-des-mati%C3%A8res">📑 Table des matières</h2>
+<ol>
+<li><a href="#-premiers-pas">Premiers pas</a></li>
+<li><a href="#-cr%C3%A9er-un-compte">Créer un compte</a></li>
+<li><a href="#-se-connecter">Se connecter</a></li>
+<li><a href="#-accueil--navigation">Accueil &amp; Navigation</a></li>
+<li><a href="#-les-actualit%C3%A9s">Les actualités</a></li>
+<li><a href="#-les-bourses-d%C3%A9tudes">Les bourses d'études</a></li>
+<li><a href="#-les-opportunit%C3%A9s-professionnelles">Les opportunités professionnelles</a></li>
+<li><a href="#-les-%C3%A9v%C3%A9nements">Les événements</a></li>
+<li><a href="#-rechercher-un-contenu">Rechercher un contenu</a></li>
+<li><a href="#-sabonner-%C3%A0-la-newsletter">S'abonner à la newsletter</a></li>
+<li><a href="#-votre-profil--tableau-de-bord">Votre profil &amp; tableau de bord</a></li>
+<li><a href="#-faq--d%C3%A9pannage">FAQ &amp; Dépannage</a></li>
+<li><a href="#-support--contact">Support &amp; Contact</a></li>
+</ol>
+<hr>
+<h2 id="%F0%9F%9A%80-premiers-pas">🚀 Premiers pas</h2>
+<h3 id="configuration-requise">Configuration requise</h3>
+<ul>
+<li><strong>Navigateur web</strong> : Chrome, Firefox, Safari, Edge (version récente)</li>
+<li><strong>Connexion Internet</strong> : Haut débit recommandé</li>
+<li><strong>Adresse email</strong> : Nécessaire pour créer un compte</li>
+<li><strong>JavaScript</strong> : Actif dans votre navigateur</li>
+</ul>
+<h3 id="acc%C3%A8s-%C3%A0-la-plateforme">Accès à la plateforme</h3>
+<p><strong>URL</strong> : <code>www.afripulse.com</code></p>
+<blockquote>
+<p>💡 <strong>Conseil</strong> : Mettez la plateforme en favori pour un accès rapide !</p>
+</blockquote>
+<hr>
+<h2 id="%F0%9F%91%A4-cr%C3%A9er-un-compte">👤 Créer un compte</h2>
+<h3 id="%C3%A9tape-1--acc%C3%A9der-%C3%A0-linscription">Étape 1 : Accéder à l'inscription</h3>
+<ol>
+<li>Cliquez sur le bouton <strong>&quot;S'inscrire&quot;</strong> en haut à droite de la page d'accueil</li>
+<li>Ou allez directement sur : <code>www.afripulse.com/auth/inscription</code></li>
+</ol>
+<h3 id="%C3%A9tape-2--remplir-le-formulaire">Étape 2 : Remplir le formulaire</h3>
+<pre class="hljs"><code><div>Prénom &amp; Nom complet        [________________________]
+Adresse email              [________________________]  (ex: votre@email.com)
+Mot de passe              [________________________]  (min. 8 caractères)
+Confirmer le mot de passe [________________________]
+</div></code></pre>
+<p><strong>Requirements du mot de passe</strong> :</p>
+<ul>
+<li>✅ Au moins 8 caractères</li>
+<li>✅ Un mélange de majuscules et minuscules</li>
+<li>✅ Au moins un chiffre</li>
+<li>✅ Un caractère spécial (@, #, $, %, etc.)</li>
+</ul>
+<h3 id="%C3%A9tape-3--accepter-les-conditions">Étape 3 : Accepter les conditions</h3>
+<p>☑️ J'accepte les <a href="/cgu">Conditions Générales d'Utilisation</a><br>
+☑️ J'accepte la <a href="/confidentialite">Politique de Confidentialité</a></p>
+<h3 id="%C3%A9tape-4--valider">Étape 4 : Valider</h3>
+<p>Cliquez sur le bouton <strong>&quot;Créer mon compte&quot;</strong></p>
+<h3 id="%C3%A9tape-5--confirmation-email">Étape 5 : Confirmation email</h3>
+<ol>
+<li>Ouvrez votre boîte email</li>
+<li>Cherchez un email de <strong>&quot;AfriPulse&quot;</strong> (sujet : Bienvenue sur AfriPulse)</li>
+<li>Cliquez sur le lien <strong>&quot;Confirmer mon email&quot;</strong></li>
+<li>Vous êtes prêt ! ✅</li>
+</ol>
+<blockquote>
+<p>⚠️ <strong>N'oubliez pas</strong> : Vérifiez votre dossier spam si vous ne trouvez pas l'email</p>
+</blockquote>
+<hr>
+<h2 id="%F0%9F%94%90-se-connecter">🔐 Se connecter</h2>
+<h3 id="connexion-classique">Connexion classique</h3>
+<ol>
+<li>Allez sur <code>www.afripulse.com/auth/connexion</code></li>
+<li>Entrez votre <strong>email</strong> et <strong>mot de passe</strong></li>
+<li>Cliquez sur <strong>&quot;Me connecter&quot;</strong></li>
+<li>Vous êtes connecté ! 🎉</li>
+</ol>
+<h3 id="mot-de-passe-oubli%C3%A9">Mot de passe oublié ?</h3>
+<ol>
+<li>Sur la page de connexion, cliquez sur <strong>&quot;Mot de passe oublié ?&quot;</strong></li>
+<li>Entrez votre adresse email</li>
+<li>Vous recevrez un email avec un lien de réinitialisation</li>
+<li>Cliquez sur le lien et créez un nouveau mot de passe</li>
+<li>Reconnectez-vous avec votre nouveau mot de passe</li>
+</ol>
+<h3 id="rester-connect%C3%A9">Rester connecté</h3>
+<p>Une case <strong>&quot;Rester connecté&quot;</strong> est disponible.</p>
+<ul>
+<li>✅ <strong>Activé</strong> : Vous resterez connecté 30 jours (sur cet appareil)</li>
+<li>❌ <strong>Désactivé</strong> : Vous devrez vous reconnecter à chaque visite</li>
+</ul>
+<h3 id="d%C3%A9connexion">Déconnexion</h3>
+<p>Pour vous déconnecter, cliquez sur votre <strong>profil</strong> (en haut à droite) → <strong>&quot;Se déconnecter&quot;</strong></p>
+<hr>
+<h2 id="%F0%9F%8F%A0-accueil--navigation">🏠 Accueil &amp; Navigation</h2>
+<h3 id="structure-de-la-page-daccueil">Structure de la page d'accueil</h3>
+<p><strong>1. En-tête (Navbar)</strong></p>
+<pre class="hljs"><code><div>Logo AfriPulse  |  Actualités  Bourses  Opportunités  Événements  Recherche  Profil
+</div></code></pre>
+<p><strong>2. Bloc Héros</strong></p>
+<ul>
+<li>Bienvenue avec image inspirante</li>
+<li>Résumé des 4 piliers (actualités, bourses, opportunités, événements)</li>
+</ul>
+<p><strong>3. Articles en vedette</strong></p>
+<ul>
+<li>Affiche les 3 dernières actualités importantes</li>
+<li>Cliquez pour lire l'article complet</li>
+</ul>
+<p><strong>4. Ticker d'actualités</strong></p>
+<ul>
+<li>Défilement continu des plus récentes news</li>
+<li>Utile pour rester informé en temps réel</li>
+</ul>
+<p><strong>5. Section Bourses</strong></p>
+<ul>
+<li>6 meilleures bourses actuelles</li>
+<li>Avec deadline visible</li>
+</ul>
+<p><strong>6. Section Opportunités</strong></p>
+<ul>
+<li>Dernières offres d'emploi et stages</li>
+</ul>
+<p><strong>7. Section Événements</strong></p>
+<ul>
+<li>Événements à venir et conférences</li>
+</ul>
+<p><strong>8. Newsletter</strong></p>
+<ul>
+<li>Formulaire pour s'abonner (détails ci-dessous)</li>
+</ul>
+<p><strong>9. Pied de page (Footer)</strong></p>
+<ul>
+<li>Liens utiles, CGU, Confidentialité, Contact</li>
+</ul>
+<h3 id="navigateur-principal">Navigateur principal</h3>
+<p>Accessible en haut de chaque page :</p>
+<table>
+<thead>
+<tr>
+<th>Menu</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>📰 <strong>Actualités</strong></td>
+<td>Articles d'actualité catégorisés</td>
+</tr>
+<tr>
+<td>🎓 <strong>Bourses</strong></td>
+<td>Programmes de bourses d'études</td>
+</tr>
+<tr>
+<td>💼 <strong>Opportunités</strong></td>
+<td>Offres d'emploi, stages, volontariat</td>
+</tr>
+<tr>
+<td>🎪 <strong>Événements</strong></td>
+<td>Conférences, forums, ateliers</td>
+</tr>
+<tr>
+<td>🔍 <strong>Recherche</strong></td>
+<td>Moteur de recherche global</td>
+</tr>
+<tr>
+<td>👤 <strong>Profil</strong></td>
+<td>Votre compte &amp; tableau de bord</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="%F0%9F%93%B0-les-actualit%C3%A9s">📰 Les actualités</h2>
+<h3 id="acc%C3%A9der-%C3%A0-la-section-actualit%C3%A9s">Accéder à la section actualités</h3>
+<ol>
+<li>Cliquez sur <strong>&quot;Actualités&quot;</strong> dans la barre de navigation</li>
+<li>Ou allez sur : <code>www.afripulse.com/actualites</code></li>
+</ol>
+<h3 id="interface-de-la-liste-des-articles">Interface de la liste des articles</h3>
+<p><strong>Affichage</strong> :</p>
+<ul>
+<li><strong>Vue par carte</strong> : Articles avec image, titre, catégorie, auteur</li>
+<li><strong>Scrolling infini</strong> : Charger plus d'articles en descendant</li>
+</ul>
+<p><strong>Filtres disponibles</strong> :</p>
+<pre class="hljs"><code><div>Catégories:
+  ├─ Politique
+  ├─ Économie
+  ├─ Tech
+  ├─ Sport
+  ├─ Culture
+  ├─ Santé
+  └─ Environnement
+
+Tri:
+  ├─ Plus récent (défaut)
+  ├─ Plus ancien
+  ├─ Populaire
+  └─ Temps de lecture
+</div></code></pre>
+<h3 id="informations-par-article">Informations par article</h3>
+<pre class="hljs"><code><div>┌─────────────────────────────────────┐
+│  🖼️ [IMAGE]                         │
+│                                     │
+│  [CATÉGORIE]  ⭐ [Populaire]       │
+│  Titre de l'article complet        │
+│  Description courte du contenu...  │
+│                                     │
+│  👤 Auteur  |  📅 Date    |  ⏱️ Durée│
+└─────────────────────────────────────┘
+</div></code></pre>
+<p><strong>Informations clés</strong> :</p>
+<ul>
+<li><strong>Catégorie</strong> : Code couleur (Politique = bleu, Économie = orange, etc.)</li>
+<li><strong>Favori</strong> : ⭐ Marquer comme article favori</li>
+<li><strong>Auteur</strong> : Journaliste ou éditeur</li>
+<li><strong>Date de publication</strong> : Quand l'article a été publié</li>
+<li><strong>Temps de lecture</strong> : 3-5 minutes pour une lecture rapide</li>
+</ul>
+<h3 id="lire-un-article-complet">Lire un article complet</h3>
+<ol>
+<li>Cliquez sur l'article qui vous intéresse</li>
+<li>Vous serez dirigé vers : <code>www.afripulse.com/actualites/[titre-article]</code></li>
+</ol>
+<p><strong>Layout de l'article</strong> :</p>
+<pre class="hljs"><code><div>┌──────────────────────────────────┐
+│  Titre principal                 │
+│  Sous-titre / Description        │
+│  👤 Auteur | 📅 Date | ⏱️ Durée  │
+│                                  │
+│  [IMAGE COUVERTURE]              │
+│                                  │
+│  ═════ CONTENU PRINCIPAL ═════   │
+│  • Paragraphes                   │
+│  • Images avec légendés          │
+│  • Vidéos intégrées              │
+│  • Citations marquées             │
+│  • Boîtes de faits               │
+│  • Étapes détaillées             │
+│                                  │
+│  📚 Articles associés            │
+│  🔗 Liens externes               │
+└──────────────────────────────────┘
+</div></code></pre>
+<p><strong>Actions disponibles</strong> :</p>
+<ul>
+<li>❤️ <strong>Aimer</strong> l'article</li>
+<li>📤 <strong>Partager</strong> via réseaux sociaux</li>
+<li>🔗 <strong>Copier le lien</strong></li>
+<li>💬 <strong>Commenter</strong> (si commentaires activés)</li>
+<li>⬅️ <strong>Retour</strong> à la liste</li>
+</ul>
+<h3 id="astuces-pour-les-actualit%C3%A9s">Astuces pour les actualités</h3>
+<p>✅ <strong>S'abonner à une catégorie</strong> : Recevez les articles de votre catégorie préférée<br>
+✅ <strong>Marquer comme lu</strong> : Vous suivez vos articles lus automatiquement<br>
+✅ <strong>Partager avec amis</strong> : Cliquez sur le bouton partage</p>
+<hr>
+<h2 id="%F0%9F%8E%93-les-bourses-d%C3%A9tudes">🎓 Les bourses d'études</h2>
+<h3 id="acc%C3%A9der-%C3%A0-la-section-bourses">Accéder à la section bourses</h3>
+<ol>
+<li>Cliquez sur <strong>&quot;Bourses&quot;</strong> dans la navigation</li>
+<li>Ou allez sur : <code>www.afripulse.com/bourses</code></li>
+</ol>
+<h3 id="parcourir-les-bourses">Parcourir les bourses</h3>
+<p><strong>Vue d'ensemble</strong> :</p>
+<pre class="hljs"><code><div>Bourse: &quot;African Excellence Scholarship&quot;
+📍 Afrique de l'Ouest | 🎓 Master
+💰 Couverture complète | ⏰ Deadline: 31 Mai 2026
+Organisation: Institut Africain des Études
+</div></code></pre>
+<p><strong>Filtres disponibles</strong> :</p>
+<pre class="hljs"><code><div>Par niveau d'études:
+  ├─ Licence
+  ├─ Master
+  ├─ Doctorat
+  ├─ Postdoc
+  └─ Toutes formations
+
+Par région:
+  ├─ Afrique de l'Ouest
+  ├─ Afrique du Nord
+  ├─ Afrique centrale
+  ├─ Afrique de l'Est
+  └─ Afrique australe
+
+Par pays:
+  ├─ Sénégal, Côte d'Ivoire, Nigeria...
+  └─ (Tous les pays africains)
+
+Par couverture:
+  ├─ Couverture complète
+  ├─ Frais de scolarité
+  ├─ Allocation mensuelle
+  └─ Partiellement financée
+
+Tri:
+  ├─ Plus urgente (deadline proche)
+  ├─ Plus récente
+  ├─ Montant le plus élevé
+  └─ Couverture complète d'abord
+</div></code></pre>
+<h3 id="voir-une-bourse-en-d%C3%A9tail">Voir une bourse en détail</h3>
+<ol>
+<li>Cliquez sur la bourse convoitée</li>
+<li>Accédez à la page complète avec :</li>
+</ol>
+<pre class="hljs"><code><div>┌─────────────────────────────────┐
+│  SCHOLARSHIP DETAILS            │
+├─────────────────────────────────┤
+│  Titre                          │
+│  📍 Pays/Région                 │
+│  🏢 Organisation                │
+│  🎓 Niveau                      │
+│  💰 Financement                 │
+│  ⏰ Deadline: XX Mois 20XX      │
+│  🚨 URGENT (si &lt; 1 mois)       │
+│                                 │
+│  ═══ DESCRIPTION DÉTAILLÉE ══   │
+│  • Qu'est-ce que la bourse      │
+│  • Éligibilité critique         │
+│  • Processus de candidature     │
+│  • Documents requis             │
+│  • Calendrier important         │
+│  • Critères de sélection        │
+│                                 │
+│  [BOUTON] POSTULER              │
+│  [LIEN] Visiter site officiel   │
+└─────────────────────────────────┘
+</div></code></pre>
+<h3 id="candidater-%C3%A0-une-bourse">Candidater à une bourse</h3>
+<p><strong>Méthode 1 : Via AfriPulse</strong></p>
+<ol>
+<li>Sur la page de la bourse, cliquez <strong>&quot;Postuler&quot;</strong></li>
+<li>Connectez-vous (si nécessaire)</li>
+<li>Remplissez le formulaire de candidature intégré (le cas échéant)</li>
+<li>Votre candidature est enregistrée dans votre tableau de bord</li>
+</ol>
+<p><strong>Méthode 2 : Site officiel</strong></p>
+<ol>
+<li>Cliquez sur <strong>&quot;Visiter le site officiel&quot;</strong></li>
+<li>Vous êtes redirigé vers le portail de candidature</li>
+<li>Suivez les instructions de l'organisation</li>
+</ol>
+<h3 id="gestion-des-candidatures">Gestion des candidatures</h3>
+<p>Une fois une bourse postulée :</p>
+<ol>
+<li>Allez sur votre <strong>Profil</strong> → <strong>&quot;Mes candidatures&quot;</strong></li>
+<li>Vous verrez toutes vos candidatures avec le statut :
+<ul>
+<li>📝 <strong>Candidature enregistrée</strong></li>
+<li>📞 <strong>En attente d'entretien</strong></li>
+<li>✅ <strong>Acceptée</strong></li>
+<li>❌ <strong>Rejetée</strong></li>
+</ul>
+</li>
+</ol>
+<h3 id="conseils-pour-les-bourses">Conseils pour les bourses</h3>
+<p>✅ <strong>Lire les critères d'éligibilité</strong> : Avant de postuler, vérifiez que vous êtes éligible<br>
+✅ <strong>Vérifier la deadline</strong> : Ne tardez pas, postulez au moins 2 semaines avant<br>
+✅ <strong>Préparer les documents</strong> : Réunissez tous les documents avant de commencer<br>
+✅ <strong>Sauvegarder les liens</strong> : Gardez les liens des pages officielles pour la référence<br>
+✅ <strong>Prendre des notes</strong> : Notez les requêtes de chaque bourse pour votre dossier</p>
+<hr>
+<h2 id="%F0%9F%92%BC-les-opportunit%C3%A9s-professionnelles">💼 Les opportunités professionnelles</h2>
+<h3 id="acc%C3%A9der-%C3%A0-la-section-opportunit%C3%A9s">Accéder à la section opportunités</h3>
+<ol>
+<li>Cliquez sur <strong>&quot;Opportunités&quot;</strong> dans la navigation</li>
+<li>Ou allez sur : <code>www.afripulse.com/opportunites</code></li>
+</ol>
+<h3 id="types-dopportunit%C3%A9s-disponibles">Types d'opportunités disponibles</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+<th>Durée typique</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🏢 <strong>Emploi CDI</strong></td>
+<td>Contrat permanent</td>
+<td>Illimitée</td>
+</tr>
+<tr>
+<td>📅 <strong>Stage</strong></td>
+<td>Formation en entreprise</td>
+<td>2-6 mois</td>
+</tr>
+<tr>
+<td>🎓 <strong>Graduate Program</strong></td>
+<td>Programme pour jeunes diplômés</td>
+<td>1-2 ans</td>
+</tr>
+<tr>
+<td>💰 <strong>Freelance</strong></td>
+<td>Travail indépendant par projet</td>
+<td>Variable</td>
+</tr>
+<tr>
+<td>🤝 <strong>Volontariat</strong></td>
+<td>Engagement social/humanitaire</td>
+<td>Variable</td>
+</tr>
+</tbody>
+</table>
+<h3 id="naviguer-les-opportunit%C3%A9s">Naviguer les opportunités</h3>
+<p><strong>Filtres disponibles</strong> :</p>
+<pre class="hljs"><code><div>Par type:
+  ├─ Emploi CDI ✨ (Recommandé)
+  ├─ Stage
+  ├─ Graduate Program
+  ├─ Freelance
+  └─ Volontariat
+
+Par secteur:
+  ├─ Technologie &amp; IT
+  ├─ Finance &amp; Banque
+  ├─ Marketing &amp; Ventes
+  ├─ Ressources Humaines
+  ├─ Santé
+  ├─ Éducation
+  ├─ Gouvernance
+  └─ Autres
+
+Par localisation:
+  ├─ Télétravail
+  ├─ Hybride
+  ├─ Sur site
+  └─ Pays spécifique
+
+Par niveau d'expérience:
+  ├─ Débutant / Stage
+  ├─ Junior (0-2 ans)
+  ├─ Confirmé (2-5 ans)
+  ├─ Senior (5+ ans)
+  └─ C-Level
+
+Tri:
+  ├─ Les plus récentes
+  ├─ Salaire élevé
+  ├─ Companies populaires
+  └─ Urgentes
+</div></code></pre>
+<h3 id="consulter-une-opportunit%C3%A9">Consulter une opportunité</h3>
+<pre class="hljs"><code><div>┌──────────────────────────────────┐
+│  OFFRE D'EMPLOI                  │
+├──────────────────────────────────┤
+│  👔 Titre du poste               │
+│  🏢 Entreprise (avec logo)       │
+│  📍 Localisation                 │
+│  💼 Type: Emploi CDI             │
+│  💰 Fourchette salariale         │
+│  ⏰ Deadline candidature          │
+│  📊 Expérience requise           │
+│                                  │
+│  📋 DESCRIPTION DU POSTE         │
+│  • Vos responsabilités           │
+│  • Votre profil idéal            │
+│  • Compétences requises          │
+│  • Ce que nous offrons           │
+│  • Avantages &amp; bénéfices         │
+│  • Processus de recrutement      │
+│                                  │
+│  [BOUTON] POSTULER               │
+│  [LIEN] Visiter l'entreprise    │
+└──────────────────────────────────┘
+</div></code></pre>
+<h3 id="postuler-%C3%A0-une-opportunit%C3%A9">Postuler à une opportunité</h3>
+<p><strong>Étape 1 : Préparez vos documents</strong></p>
+<ul>
+<li>CV à jour (PDF recommandé)</li>
+<li>Lettre de motivation</li>
+<li>Portfolio (si applicable)</li>
+<li>Références professionnelles</li>
+</ul>
+<p><strong>Étape 2 : Cliquez sur &quot;POSTULER&quot;</strong></p>
+<p><strong>Étape 3 : Complétez votre profil</strong> (si première candidature)</p>
+<pre class="hljs"><code><div>Prénom / Nom complet
+Téléphone
+Adresse
+Niveau d'études
+Années d'expérience
+Skills/Compétences
+</div></code></pre>
+<p><strong>Étape 4 : Uploadez vos documents</strong></p>
+<ul>
+<li>Glissez-déposez ou sélectionnez vos fichiers</li>
+<li>Formats acceptés : PDF, DOC, DOCX</li>
+</ul>
+<p><strong>Étape 5 : Ajoutez une lettre de motivation</strong> (optionnel)</p>
+<p><strong>Étape 6 : Confirmez la candidature</strong></p>
+<ul>
+<li>Cochez les conditions d'emploi</li>
+<li>Cliquez <strong>&quot;Soumettre ma candidature&quot;</strong></li>
+<li>Confirmation immédiate ✅</li>
+</ul>
+<h3 id="suivi-des-candidatures">Suivi des candidatures</h3>
+<p>Après candidature :</p>
+<ol>
+<li>Vous recevez un <strong>email de confirmation</strong></li>
+<li>La candidature apparaît dans <strong>Profil → Mes candidatures</strong></li>
+<li>Vous pouvez voir le statut :
+<ul>
+<li>📝 <strong>En révision</strong> : L'équipe RH examine votre candidature</li>
+<li>👁️ <strong>Présélectionné</strong> : Vous êtes sélectionné pour la suite</li>
+<li>📞 <strong>Entretien programmé</strong> : Date/heure de l'entretien</li>
+<li>✅ <strong>Acceptée</strong> : Bienvenue dans l'équipe !</li>
+<li>❌ <strong>Rejetée</strong> : Merci de votre intérêt</li>
+</ul>
+</li>
+</ol>
+<h3 id="conseils-pour-lemploi">Conseils pour l'emploi</h3>
+<p>✅ <strong>CV percutant</strong> : Présentez votre meilleure version optimisée<br>
+✅ <strong>Lettre personnalisée</strong> : Montrez pourquoi vous êtes le bon candidat<br>
+✅ <strong>Reposez-vous</strong> : Avant un entretien, reposez-vous bien<br>
+✅ <strong>Préparez des exemples</strong> : Préparez des histoires de succès<br>
+✅ <strong>Suivi professionnel</strong> : Relancez poliment après 1-2 semaines sans nouvelle</p>
+<hr>
+<h2 id="%F0%9F%8E%AA-les-%C3%A9v%C3%A9nements">🎪 Les événements</h2>
+<h3 id="acc%C3%A9der-%C3%A0-la-section-%C3%A9v%C3%A9nements">Accéder à la section événements</h3>
+<ol>
+<li>Cliquez sur <strong>&quot;Événements&quot;</strong> dans la navigation</li>
+<li>Ou allez sur : <code>www.afripulse.com/evenements</code></li>
+</ol>
+<h3 id="types-d%C3%A9v%C3%A9nements">Types d'événements</h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Focus</th>
+<th>Audience</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>🎤 <strong>Conférence</strong></td>
+<td>Présentation expertise</td>
+<td>Professionnels</td>
+</tr>
+<tr>
+<td>🤝 <strong>Forum</strong></td>
+<td>Interactions &amp; réseautage</td>
+<td>Généraliste</td>
+</tr>
+<tr>
+<td>💻 <strong>Hackathon</strong></td>
+<td>Compétition technologique</td>
+<td>Développeurs</td>
+</tr>
+<tr>
+<td>🏪 <strong>Salon</strong></td>
+<td>Exposition &amp; networking</td>
+<td>Large</td>
+</tr>
+<tr>
+<td>🛠️ <strong>Atelier</strong></td>
+<td>Formation hands-on</td>
+<td>Tous niveaux</td>
+</tr>
+<tr>
+<td>🏆 <strong>Sommet</strong></td>
+<td>Événement majeur annuel</td>
+<td>VIP + invités</td>
+</tr>
+</tbody>
+</table>
+<h3 id="parcourir-les-%C3%A9v%C3%A9nements">Parcourir les événements</h3>
+<p><strong>Filtres</strong> :</p>
+<pre class="hljs"><code><div>Par type:
+  ├─ Conférence
+  ├─ Forum
+  ├─ Hackathon
+  ├─ Salon
+  ├─ Atelier
+  └─ Sommet
+
+Par date:
+  ├─ Ce mois-ci
+  ├─ Prochains 3 mois
+  ├─ Passés
+  └─ Date personnalisée
+
+Par région/Pays:
+  ├─ En ligne / Virtuel
+  ├─ À proximité
+  └─ Sélectionner un pays
+
+Par secteur:
+  ├─ Technologie
+  ├─ Entrepreneuriat
+  ├─ Finance
+  ├─ Santé
+  └─ Autres
+
+Tri:
+  ├─ Les plus proches
+  ├─ Gratuit en priorité
+  ├─ Plus populaires
+  └─ À venir
+</div></code></pre>
+<h3 id="consulter-un-%C3%A9v%C3%A9nement">Consulter un événement</h3>
+<pre class="hljs"><code><div>┌──────────────────────────────────┐
+│  EVENT DETAILS                   │
+├──────────────────────────────────┤
+│  🎪 Titre de l'événement         │
+│  📅 Date: Sam 15 Juin 2026       │
+│  🕐 Horaire: 09h00 - 17h00      │
+│  📍 Localisation / Virtuel       │
+│  🎫 Type: Forum de Networking    │
+│  💰 Gratuit / Payant            │
+│  👥 Environ 500+ participants   │
+│                                  │
+│  📝 DESCRIPTION                 │
+│  • Qui organise?                │
+│  • Quel est le programme?        │
+│  • Qui doit participer?         │
+│  • Quels sont les bénéfices?    │
+│                                  │
+│  👥 SPEAKERS / INTERVENANTS     │
+│  • [Intervenant 1]              │
+│  • [Intervenant 2]              │
+│                                  │
+│  ⏰ AGENDA DÉTAILLÉ             │
+│  09h00 - Accueil &amp; Networking   │
+│  10h00 - Keynote d'ouverture   │
+│  ...                            │
+│                                  │
+│  🎫 [BOUTON] S'INSCRIRE         │
+│  🗓️ [SAUVGARDER] Dans mon cal   │
+└──────────────────────────────────┘
+</div></code></pre>
+<h3 id="sinscrire-%C3%A0-un-%C3%A9v%C3%A9nement">S'inscrire à un événement</h3>
+<p><strong>Étape 1 : Consultez les détails</strong></p>
+<ul>
+<li>Vérifiez la date, heure et lieu</li>
+<li>Lisez la description complète</li>
+<li>Consultez le programme / agenda</li>
+</ul>
+<p><strong>Étape 2 : Cliquez sur &quot;S'INSCRIRE&quot;</strong></p>
+<p><strong>Étape 3 : Complétez le formulaire d'inscription</strong></p>
+<pre class="hljs"><code><div>Prénom
+Nom
+Email
+Téléphone
+Organisation / Entreprise
+Fonction / Poste
+Créneaux horaires concernés
+Questions / Commentaires
+</div></code></pre>
+<p><strong>Étape 4 : Confirmez votre inscription</strong></p>
+<ul>
+<li>Acceptez les conditions</li>
+<li>Cliquez <strong>&quot;Confirmer mon inscription&quot;</strong></li>
+<li>Vous recevez une <strong>confirmation par email</strong> ✅</li>
+</ul>
+<p><strong>Étape 5 : Préparez-vous</strong></p>
+<ul>
+<li>Ajoutez l'événement à votre calendrier</li>
+<li>Préparez vos documents/cartes de visite</li>
+<li>Envisagez un transport</li>
+</ul>
+<h3 id="quelques-jours-avant-l%C3%A9v%C3%A9nement">Quelques jours avant l'événement</h3>
+<p>Vous recevrez :</p>
+<ul>
+<li>📧 Email de rappel (3 jours avant)</li>
+<li>ℹ️ Informations pratiques (accès, parking, etc.)</li>
+<li>🗺️ Plan du lieu (si physique)</li>
+<li>🔗 Lien de connexion (si virtuel)</li>
+</ul>
+<h3 id="apr%C3%A8s-l%C3%A9v%C3%A9nement">Après l'événement</h3>
+<ul>
+<li>Connectez-vous avec attendus (si forum)</li>
+<li>Donner retours / feedback</li>
+<li>Consulter les ressources partagées</li>
+<li>Revoir les présentations enregistrées</li>
+</ul>
+<h3 id="conseils-pour-les-%C3%A9v%C3%A9nements">Conseils pour les événements</h3>
+<p>✅ <strong>Préparez votre pitch</strong> : Ayez une présentation courte de vous-même<br>
+✅ <strong>Cartes de visite</strong> : Venez avec des cartes de visite à échanger<br>
+✅ <strong>Écoutez activement</strong> : Notez les points clés des présentations<br>
+✅ <strong>Restez ouvert</strong> : Dialoguez avec des gens nouveaux<br>
+✅ <strong>Suivi</strong> : Connectez-vous avec les gens rencontrés dans la semaine</p>
+<hr>
+<h2 id="%F0%9F%94%8D-rechercher-un-contenu">🔍 Rechercher un contenu</h2>
+<h3 id="acc%C3%A9der-%C3%A0-la-recherche">Accéder à la recherche</h3>
+<p><strong>Méthode 1 : Barre de recherche</strong></p>
+<ul>
+<li>Cliquez sur la loupe 🔍 en haut de page</li>
+<li>Entrez votre recherche</li>
+<li>Appuyez sur Entrée</li>
+</ul>
+<p><strong>Méthode 2 : Menu navigation</strong></p>
+<ul>
+<li>Cliquez sur <strong>&quot;Recherche&quot;</strong> dans la navbar</li>
+<li>Accédez à la page complète de recherche</li>
+</ul>
+<p><strong>Méthode 3 : URL directe</strong><br>
+<code>www.afripulse.com/recherche?q=mon-terme</code></p>
+<h3 id="exemple-de-recherche">Exemple de recherche</h3>
+<pre class="hljs"><code><div>[ 🔍 Entrez votre recherche... ] [🔎 Chercher]
+
+Suggestions rapides:
+- &quot;Tech Africa&quot; 
+- &quot;Développeur Python&quot;
+- &quot;Bourses Master&quot;
+- &quot;Hackathon Senegal&quot;
+</div></code></pre>
+<h3 id="r%C3%A9sultats-de-recherche">Résultats de recherche</h3>
+<p>Les résultats affichent 4 catégories :</p>
+<p><strong>1. Articles</strong> (📰)</p>
+<pre class="hljs"><code><div>Titre: &quot;Web3 en Afrique : Les oportunités 2026&quot;
+Catégorie: Tech | Auteur: Jean Dupont
+Extrait: &quot;La blockchain transforme le paysage digital africain...
+Lire l'article →
+</div></code></pre>
+<p><strong>2. Bourses</strong> (🎓)</p>
+<pre class="hljs"><code><div>&quot;Tech Leaders Scholarship 2026&quot;
+Niveau: Master | Région: Toute l'Afrique
+Deadline: 31 Juillet 2026 | Couverture: Complète
+Voir la bourse →
+</div></code></pre>
+<p><strong>3. Opportunités</strong> (💼)</p>
+<pre class="hljs"><code><div>&quot;Senior Developer - Lagos, Nigeria&quot;
+Type: Emploi CDI | Secteur: Technologie
+Entreprise: TechCorp Africa | Salaire: 150k-200k USD
+Postuler →
+</div></code></pre>
+<p><strong>4. Événements</strong> (🎪)</p>
+<pre class="hljs"><code><div>&quot;African Tech Summit 2026&quot;
+Date: 20-22 Septembre 2026 | Localisation: Durban, Afrique du Sud
+Type: Sommet | Participants: 2000+
+S'inscrire →
+</div></code></pre>
+<h3 id="filtrer-les-r%C3%A9sultats">Filtrer les résultats</h3>
+<pre class="hljs"><code><div>Filtres disponibles:
+├─ Type de contenu
+│  ├─ Articles
+│  ├─ Bourses
+│  ├─ Opportunités
+│  └─ Événements
+├─ Date
+│  ├─ Cette semaine
+│  ├─ Ce mois
+│  ├─ Trimestre
+│  └─ Personnalisé
+├─ Localisation
+│  ├─ En ligne
+│  ├─ Pays (dropdown)
+│  └─ Proximité
+└─ Pertinence
+   ├─ Plus pertinent
+   ├─ Plus récent
+   └─ Plus populaire
+</div></code></pre>
+<h3 id="conseils-de-recherche">Conseils de recherche</h3>
+<p>✅ <strong>Mots-clés précis</strong> : &quot;Développeur Python&quot; plutôt que &quot;travail&quot;<br>
+✅ <strong>Utilisez les guillemets</strong> : &quot;Web3 Africa&quot; pour phrase exacte<br>
+✅ <strong>Essayez les variations</strong> : &quot;Emploi&quot;, &quot;Job&quot;, &quot;Opportunité&quot;<br>
+✅ <strong>Réduisez les filtres</strong> : Commencez large, affinez ensuite<br>
+✅ <strong>Sauvegarder les recherches</strong> : Pour les recherches fréquentes</p>
+<hr>
+<h2 id="%F0%9F%93%A7-sabonner-%C3%A0-la-newsletter">📧 S'abonner à la newsletter</h2>
+<h3 id="pourquoi-sabonner">Pourquoi s'abonner ?</h3>
+<p>✅ <strong>Actualités curatées</strong> : Les meilleures news directement dans votre inbox<br>
+✅ <strong>Bourses fraîches</strong> : Nouvelles opportunités avant tout le monde<br>
+✅ <strong>Contenus exclusifs</strong> : Articles réservés aux abonnés<br>
+✅ <strong>Aucun spam</strong> : 1 email par semaine maximum<br>
+✅ <strong>Gratuit</strong> : 100% gratuit et sans engagement</p>
+<h3 id="sabonner-%C3%A0-laccueil">S'abonner à l'accueil</h3>
+<p><strong>Bloc &quot;Restez informé&quot;</strong> en bas de la page d'accueil:</p>
+<pre class="hljs"><code><div>┌──────────────────────────────────┐
+│  📬 Restez informé             │
+│  Recevez les meilleures news    │
+│  directement dans votre email   │
+│                                  │
+│  Email: [____________@___.]      │
+│         [BOUTON] S'ABONNER      │
+└──────────────────────────────────┘
+</div></code></pre>
+<h3 id="processus-dabonnement">Processus d'abonnement</h3>
+<p><strong>Étape 1 : Entrez votre email</strong></p>
+<pre class="hljs"><code><div>Votre adresse email: user@example.com
+</div></code></pre>
+<p><strong>Étape 2 : Cliquez sur &quot;S'ABONNER&quot;</strong></p>
+<p><strong>Étape 3 : Confirmez votre inscription</strong><br>
+Un email de confirmation est envoyé à votre adresse.</p>
+<p><strong>Étape 4 : Vérifiez votre email</strong><br>
+Ouvrez l'email &quot;Confirmez votre abonnement AfriPulse&quot;</p>
+<p><strong>Étape 5 : Cliquez sur le lien de confirmation</strong></p>
+<pre class="hljs"><code><div>[CONFIRMER MON ABONNEMENT]
+</div></code></pre>
+<p><strong>Étape 6 : Abonnement activé</strong> ✅</p>
+<blockquote>
+<p>💡 Gardez l'email de bienvenue pour retrouver les préférences</p>
+</blockquote>
+<h3 id="g%C3%A9rer-votre-abonnement">Gérer votre abonnement</h3>
+<p><strong>Changer vos préférences</strong></p>
+<ol>
+<li>
+<p>Très bas de chaque email newsletter :</p>
+<pre class="hljs"><code><div>Gérer mes préférences → [LIEN]
+</div></code></pre>
+</li>
+<li>
+<p>Ou allez directement sur votre <strong>Profil → Préférences newsletter</strong></p>
+</li>
+<li>
+<p>Sélectionnez les catégories qui vous intéressent :</p>
+<pre class="hljs"><code><div>☑️ Actualités (Toutes)
+☑️ Politique
+☑️ Économie
+☑️ Tech
+☑️ Sport
+☑️ Bourses d'études
+☑️ Opportunités
+☑️ Événements
+</div></code></pre>
+</li>
+<li>
+<p>Choisissez la fréquence :</p>
+<pre class="hljs"><code><div>⬜ Quotidien
+◈ Hebdomadaire (recommandé)
+⬜ Mensuel
+</div></code></pre>
+</li>
+<li>
+<p>Cliquez <strong>&quot;Sauvegarder&quot;</strong></p>
+</li>
+</ol>
+<h3 id="me-d%C3%A9sabonner">Me désabonner</h3>
+<p>Si vous ne souhaitez plus recevoir les emails :</p>
+<p><strong>Méthode 1 : Depuis un email</strong></p>
+<ul>
+<li>Rendez-vous au bas de l'email</li>
+<li>Cliquez sur <strong>&quot;Se désabonner&quot;</strong></li>
+</ul>
+<p><strong>Méthode 2 : Depuis votre profil</strong></p>
+<ul>
+<li>Allez sur <strong>Profil → Préférences newsletter</strong></li>
+<li>Cliquez <strong>&quot;Se désabonner complètement&quot;</strong></li>
+</ul>
+<blockquote>
+<p>Tous les abonnements cessent immédiatement</p>
+</blockquote>
+<hr>
+<h2 id="%F0%9F%91%A4-votre-profil--tableau-de-bord">👤 Votre profil &amp; tableau de bord</h2>
+<h3 id="acc%C3%A9der-%C3%A0-votre-profil">Accéder à votre profil</h3>
+<ol>
+<li>Cliquez sur votre <strong>photo/initiales</strong> en haut à droite</li>
+<li>Sélectionnez <strong>&quot;Mon Profil&quot;</strong></li>
+<li>Ou allez sur : <code>www.afripulse.com/dashboard</code></li>
+</ol>
+<h3 id="tableau-de-bord-personnel">Tableau de bord personnel</h3>
+<p>Votre espace privé avec plusieurs sections :</p>
+<pre class="hljs"><code><div>┌────────────────────────────────────────────┐
+│  👤 Profil - Tableau de Bord              │
+├────────────────────────────────────────────┤
+│                                            │
+│  📊 VOS STATISTIQUES EN UN COUP D'ŒIL    │
+│  ├─ Articles lus: 25                     │
+│  ├─ Bourses sauvegardées: 8              │
+│  ├─ Candidatures actives: 3              │
+│  └─ Événements inscrits: 2               │
+│                                            │
+│  🎯 VOS CANDIDATURES                      │
+│  ✓ Candidature 1  [05 Juin]  ✅ Accepté │
+│  ⏳ Candidature 2  [27 Avril] 📞 Entretien│
+│  ⏳ Candidature 3  [15 Avril] 📝 En révision│
+│  [Voir toutes les candidatures]           │
+│                                            │
+│  📚 VOS ARTICLES SAUVEGARDÉS              │
+│  • &quot;Tech Trends 2026&quot;                    │
+│  • &quot;Entrepreneuriat en Afrique&quot;          │
+│  [Voir tous]                              │
+│                                            │
+│  🎪 VOS ÉVÉNEMENTS À VENIR               │
+│  📌 22 Mai - African Tech Summit         │
+│  [Voir tous]                              │
+│                                            │
+│  ⚙️ ACTIONS RAPIDES                       │
+│  [Éditer mon profil]  [Mes préférences]  │
+│  [Historique candidatures]  [Déconnexion]│
+│                                            │
+└────────────────────────────────────────────┘
+</div></code></pre>
+<h3 id="%C3%A9diter-votre-profil">Éditer votre profil</h3>
+<p>Cliquez sur <strong>&quot;Éditer mon profil&quot;</strong> pour modifier :</p>
+<pre class="hljs"><code><div>Prénom &amp; Nom           [____________________]
+Email                  [____________________]
+Téléphone             [____________________]
+Pays/Région           [____________________]
+Secteur d'activité    [____________________]
+Bio / À propos        [____________________]
+                       (max 200 caractères)
+Photo de profil       [UPLOAD]  [📷 Webcam]
+</div></code></pre>
+<p><strong>Après modification</strong> :</p>
+<ul>
+<li>Cliquez <strong>&quot;Enregistrer les modifications&quot;</strong></li>
+<li>Message de confirmation ✅</li>
+</ul>
+<h3 id="mes-candidatures">Mes candidatures</h3>
+<p>Consultez l'historique complet de toutes vos candidatures :</p>
+<pre class="hljs"><code><div>OFFRE                              STATUT          DATE      ACTION
+────────────────────────────────────────────────────────────────
+Senior Developer - Lagos           Entretien       15 Juin   👁️ Voir
+Marketing Manager - Dakar         Acceptée        08 Mai    ✅ Accepter
+UX Designer - Johannesburg         Rejetée         22 Avril  
+Data Analyst - Casablanca         En révision     03 Avril  ⏳
+</div></code></pre>
+<p><strong>Filtres</strong> :</p>
+<ul>
+<li>Toutes | En cours | Réussies | Rejetées</li>
+</ul>
+<p><strong>Détails par candidature</strong> :</p>
+<ul>
+<li>Date candidature</li>
+<li>Dernier statut</li>
+<li>Date du dernier changement</li>
+<li>Entreprise &amp; contact</li>
+<li>Documents fournis</li>
+<li>Notes personnelles</li>
+</ul>
+<h3 id="mes-%C3%A9v%C3%A9nements">Mes événements</h3>
+<p>Liste de tous vos événements inscrits :</p>
+<pre class="hljs"><code><div>ÉVÉNEMENT                          DATE            LIEU         STATUS
+──────────────────────────────────────────────────────────────────
+African Tech Summit 2026           20-22 Juin      Durban       ✅ Confirmé
+Hackathon Senegal 2026             15 Juin         Dakar        ⏳ Confirmé
+Web3 Masterclass                   10 Juin         En ligne     ✅ Confirmé
+</div></code></pre>
+<p><strong>Actions</strong> :</p>
+<ul>
+<li>🗑️ <strong>Supprimer</strong> (annuler inscription)</li>
+<li>📅 <strong>Ajouter au calendrier</strong></li>
+<li>🔗 <strong>Obtenir lien accès</strong> (si virtuel)</li>
+<li>📧 <strong>Recevoir rappel</strong></li>
+</ul>
+<h3 id="pr%C3%A9f%C3%A9rences--param%C3%A8tres">Préférences &amp; Paramètres</h3>
+<p>Cliquez sur <strong>&quot;Mes préférences&quot;</strong> pour :</p>
+<p><strong>1. Notifications par email</strong></p>
+<pre class="hljs"><code><div>☑️ Actualités dans mes domaines
+☑️ Nouvelles bourses
+☑️ Opportunités correspondant mon profil
+☑️ Rappels événements
+☐ Tips &amp; Conseils
+☑️ Mises à jour compte
+</div></code></pre>
+<p><strong>2. Confidentialité</strong></p>
+<pre class="hljs"><code><div>☐ Profil visible publiquement
+☐ Partager ma bio
+☑️ Rester anonyme dans les stats
+</div></code></pre>
+<p><strong>3. Langue &amp; Zone horaire</strong></p>
+<pre class="hljs"><code><div>Langue: Français ▼
+Zone horaire: GMT+1 (Dakar) ▼
+</div></code></pre>
+<p><strong>4. Suppression de compte</strong><br>
+⚠️ Cette action est irréversible<br>
+[SUPPRIMER MON COMPTE]</p>
+<h3 id="changer-votre-mot-de-passe">Changer votre mot de passe</h3>
+<ol>
+<li><strong>Profil</strong> → <strong>&quot;Paramètres de sécurité&quot;</strong></li>
+<li>Cliquez <strong>&quot;Changer mon mot de passe&quot;</strong></li>
+<li>Entrez votre <strong>mot de passe actuel</strong></li>
+<li>Entrez votre <strong>nouveau mot de passe</strong> (2x)</li>
+<li>Cliquez <strong>&quot;Mettre à jour&quot;</strong></li>
+</ol>
+<hr>
+<h2 id="%E2%9D%93-faq--d%C3%A9pannage">❓ FAQ &amp; Dépannage</h2>
+<h3 id="authentification">Authentification</h3>
+<p><strong>Q1 : Je n'ai pas reçu l'email de confirmation d'inscription</strong></p>
+<p><strong>R :</strong></p>
+<ol>
+<li>Vérifiez votre dossier <strong>spam/courrier indésirable</strong></li>
+<li>Attendez 5-10 minutes (email peut être lent)</li>
+<li>Check si vous avez utilisé la bonne adresse email</li>
+<li>Cliquez <strong>&quot;Renvoyer l'email&quot;</strong> sur la page d'inscription</li>
+<li>Si toujours rien, contactez le support</li>
+</ol>
+<hr>
+<p><strong>Q2 : Comment réinitialiser mon mot de passe ?</strong></p>
+<p><strong>R :</strong></p>
+<ol>
+<li>Allez sur <code>/auth/connexion</code></li>
+<li>Cliquez <strong>&quot;Mot de passe oublié ?&quot;</strong></li>
+<li>Entrez votre email</li>
+<li>Ouvrez l'email reçu et cliquez le lien</li>
+<li>Créez un nouveau mot de passe</li>
+<li>Reconnectez-vous</li>
+</ol>
+<hr>
+<p><strong>Q3 : Mon compte a été bloqué. Pourquoi ?</strong></p>
+<p><strong>R :</strong><br>
+Généralement à cause de :</p>
+<ul>
+<li>⚠️ Trop de tentatives de connexion échouées (réessayez dans 30 min)</li>
+<li>⚠️ Activité suspecte (contactez le support)</li>
+<li>⚠️ Violation des CGU (vous serez averti)</li>
+</ul>
+<p>Contactez support: support@afripulse.com</p>
+<hr>
+<h3 id="recherche--navigation">Recherche &amp; Navigation</h3>
+<p><strong>Q4 : Comment sauvegarder une bourse pour plus tard ?</strong></p>
+<p><strong>R :</strong></p>
+<ol>
+<li>Consultez la page de la bourse</li>
+<li>Cliquez sur le cœur ❤️ en haut</li>
+<li>La bourse est sauvegardée dans <strong>Profil → Articles sauvegardés</strong></li>
+</ol>
+<hr>
+<p><strong>Q5 : Puis-je rechercher par plusieurs critères ?</strong></p>
+<p><strong>R :</strong><br>
+Oui ! Utilisez les <strong>filtres multiples</strong> :</p>
+<ol>
+<li>Allez sur la section (Actualités, Bourses, etc.)</li>
+<li>Cumulez les filtres (ex: Master + Afrique de l'Ouest + Deadline)</li>
+<li>Les résultats se mettent à jour automatiquement</li>
+</ol>
+<hr>
+<p><strong>Q6 : Comment trier les résultats ?</strong></p>
+<p><strong>R :</strong><br>
+Utilisez le menu <strong>&quot;Trier par&quot;</strong> :</p>
+<ul>
+<li>Plus récent</li>
+<li>Plus pertinent</li>
+<li>Deadline proche</li>
+<li>Populaire</li>
+</ul>
+<hr>
+<h3 id="candidatures">Candidatures</h3>
+<p><strong>Q7 : Puis-je modifier ma candidature après l'avoir soumise ?</strong></p>
+<p><strong>R :</strong><br>
+Non, les candidatures ne peuvent pas être modifiées après soumission.<br>
+Si vous avez fait une erreur, contactez l'organisation RH directement.</p>
+<hr>
+<p><strong>Q8 : Quand commencerai-je à voir des résultats ?</strong></p>
+<p><strong>R :</strong><br>
+Cela varie selon l'organisation. En général :</p>
+<ul>
+<li>📊 <strong>Petites organisations</strong> : 1-2 semaines</li>
+<li>🏢 <strong>Grandes entreprises</strong> : 3-4 semaines</li>
+<li>🏛️ <strong>Organismes publics</strong> : 6-8 semaines</li>
+</ul>
+<p>Vous recevrez un email à chaque changement de statut.</p>
+<hr>
+<p><strong>Q9 : At-il des frais de candidature ?</strong></p>
+<p><strong>R :</strong><br>
+Non ! AfriPulse est gratuit pour les candidatures. Toute plateforme de candidature externe peut être payante à la discrétion de l'organisation.</p>
+<hr>
+<h3 id="newsletter">Newsletter</h3>
+<p><strong>Q10 : À quelle fréquence recevrai-je les emails ?</strong></p>
+<p><strong>R :</strong><br>
+Selon votre choix dans les préférences :</p>
+<ul>
+<li>📬 <strong>Quotidien</strong> : 1 email par jour</li>
+<li>📨 <strong>Hebdomadaire</strong> : 1 email par semaine (lundi recommandé)</li>
+<li>📬 <strong>Mensuel</strong> : 1 email par mois</li>
+</ul>
+<hr>
+<p><strong>Q11 : Puis-je me désabonner facilement ?</strong></p>
+<p><strong>R :</strong><br>
+Oui, 2 options :</p>
+<ol>
+<li>Bas de chaque email : <strong>&quot;Se désabonner&quot;</strong></li>
+<li>Profil → <strong>Préférences newsletter</strong> → <strong>&quot;Désabonnement&quot;</strong></li>
+</ol>
+<p>Immédiat, sans question.</p>
+<hr>
+<h3 id="probl%C3%A8mes-techniques">Problèmes techniques</h3>
+<p><strong>Q12 : Le site est très lent / ne charge pas</strong></p>
+<p><strong>R :</strong></p>
+<ol>
+<li>🔄 Rechargez la page (Ctrl+R)</li>
+<li>💾 Videz le cache (Ctrl+Maj+Suppr)</li>
+<li>🌐 Vérifiez votre connexion Internet</li>
+<li>🔗 Essayez un autre navigateur</li>
+<li>📞 Si toujours bloqué, contactez support</li>
+</ol>
+<hr>
+<p><strong>Q13 :Un bouton/lien ne fonctionne pas</strong></p>
+<p><strong>R :</strong></p>
+<ol>
+<li>🔄 Rechargez la page</li>
+<li>💾 Videz le cache du navigateur</li>
+<li>📱 Essayez sur un appareil différent</li>
+<li>📧 Signalez le bug : support@afripulse.com</li>
+</ol>
+<p>Décrivez :</p>
+<ul>
+<li>Quel navigateur/version</li>
+<li>Quelle page</li>
+<li>Ce que vous essayiez de faire</li>
+<li>Screenshot si possible</li>
+</ul>
+<hr>
+<h3 id="confidentialit%C3%A9--donn%C3%A9es">Confidentialité &amp; Données</h3>
+<p><strong>Q14 : Mes données sont-elles sécurisées ?</strong></p>
+<p><strong>R :</strong><br>
+✅ Oui ! Nous utilisons :</p>
+<ul>
+<li>🔐 Chiffrement SSL/TLS pour tous les transferts</li>
+<li>🔒 Authentification par JWT sécurisé</li>
+<li>🛡️ Politique RLS sur la base de données</li>
+<li>✔️ Conformité RGPD</li>
+<li>📋 Aucun partage de données avec tiers</li>
+</ul>
+<p>Consultez notre <a href="/confidentialite">Politique de confidentialité</a></p>
+<hr>
+<p><strong>Q15 : Comment puis-je télécharger mes données ?</strong></p>
+<p><strong>R :</strong></p>
+<ol>
+<li>Allez sur <strong>Profil → Paramètres</strong></li>
+<li>Cliquez <strong>&quot;Télécharger mes données&quot;</strong></li>
+<li>Vous recevrez un zip avec :
+<ul>
+<li>Profil complet</li>
+<li>Historique candidatures</li>
+<li>Articles sauvegardés</li>
+<li>Préférences</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h3 id="g%C3%A9n%C3%A9ral">Général</h3>
+<p><strong>Q16 : Est-ce que c'est vraiment gratuit ?</strong></p>
+<p><strong>R :</strong><br>
+✅ Oui, 100% gratuit :</p>
+<ul>
+<li>🎓 Parcourir bourses : Gratuit</li>
+<li>💼 Postuler à des offres : Gratuit</li>
+<li>🎪 S'inscrire à événements : Gratuit (sauf si payants)</li>
+<li>📧 Newsletter : Gratuit</li>
+<li>👤 Créer un compte : Gratuit</li>
+</ul>
+<p>Aucune limite, aucun frais caché.</p>
+<hr>
+<p><strong>Q17 : Comment contacter le support ?</strong></p>
+<p><strong>R :</strong><br>
+Plusieurs canaux :</p>
+<ul>
+<li>📧 Email : support@afripulse.com</li>
+<li>💬 Chat en direct : (si disponible en bas à droite)</li>
+<li>📞 Téléphone : Voir page Contact</li>
+<li>🐦 Twitter : @AfriPulseApp</li>
+<li>📋 Formulaire : Page Contact</li>
+</ul>
+<p><strong>Temps de réponse typiques</strong> :</p>
+<ul>
+<li>Chat : Immédiat (heures ouvrables)</li>
+<li>Email : &lt; 24h</li>
+<li>Téléphone : Pendant les heures de bureau</li>
+</ul>
+<hr>
+<h2 id="%F0%9F%93%9E-support--contact">📞 Support &amp; Contact</h2>
+<h3 id="nous-contacter">Nous contacter</h3>
+<p><strong>Email général</strong></p>
+<pre class="hljs"><code><div>support@afripulse.com
+Réponse en &lt; 24 heures
+</div></code></pre>
+<p><strong>Formulaire de contact</strong></p>
+<pre class="hljs"><code><div>www.afripulse.com/contact
+- Sujet de votre message
+- Description détaillée
+- Joindre des pièces si nécessaire
+</div></code></pre>
+<p><strong>Heures d'ouverture</strong></p>
+<pre class="hljs"><code><div>Lundi - Vendredi : 09h00 - 18h00 (GMT+1)
+Samedi - Dimanche : Support par email
+</div></code></pre>
+<h3 id="signaler-un-probl%C3%A8me">Signaler un problème</h3>
+<p>⚠️ <strong>Bug ou problème technique ?</strong></p>
+<ol>
+<li>Note précis du problème</li>
+<li>Capture d'écran</li>
+<li>Votre navigateur (Chrome v90, etc.)</li>
+<li>Appareil (Desktop/Mobile)</li>
+<li>Envoyez à : support@afripulse.com avec sujet <strong>[BUG]</strong></li>
+</ol>
+<p>💡 <strong>Idée d'amélioration ?</strong></p>
+<ul>
+<li>Envoyez vos suggestions à : feedback@afripulse.com</li>
+<li>Nous lisons chaque suggestion !</li>
+</ul>
+<h3 id="r%C3%A9seaux-sociaux">Réseaux sociaux</h3>
+<p>Suivez-nous pour les mises à jour et actualités :</p>
+<ul>
+<li>🐦 <strong>Twitter</strong> : @AfriPulseApp</li>
+<li>💼 <strong>LinkedIn</strong> : /company/afripulse</li>
+<li>📱 <strong>Instagram</strong> : @afripulse_official</li>
+<li>🎥 <strong>YouTube</strong> : AfriPulse Channel</li>
+</ul>
+<h3 id="ressources-additionnelles">Ressources additionnelles</h3>
+<ul>
+<li>📖 <a href="/README.md">README Technique</a> - Pour les développeurs</li>
+<li>⚖️ <a href="/cgu">Conditions Générales d'Utilisation</a></li>
+<li>🔒 <a href="/confidentialite">Politique de Confidentialité</a></li>
+<li>🤝 <a href="/a-propos">À Propos</a></li>
+</ul>
+<hr>
+<h2 id="%E2%9C%A8-conseils-pour-maximiser-votre-exp%C3%A9rience">✨ Conseils pour maximiser votre expérience</h2>
+<h3 id="%F0%9F%8E%AF-15-conseils-pro">🎯 15 Conseils Pro</h3>
+<ol>
+<li>
+<p><strong>Profil complet</strong> → Augmente les chances de sélection</p>
+</li>
+<li>
+<p><strong>Sauvegardez vos recherches</strong> → Retrouvez-les rapidement</p>
+</li>
+<li>
+<p><strong>Postulez tôt</strong> → Les meilleures places se remplissent vite</p>
+</li>
+<li>
+<p><strong>Personnalisez votre CV</strong> → Pour chaque candidature</p>
+</li>
+<li>
+<p><strong>Newsletter</strong> → Reste informé des opportunités fraîches</p>
+</li>
+<li>
+<p><strong>Événements</strong> → Construisez votre réseau professionnel</p>
+</li>
+<li>
+<p><strong>Lire les commentaires</strong> → Insights sur les expériences</p>
+</li>
+<li>
+<p><strong>Document tous les deadlines</strong> → Dans votre calendrier</p>
+</li>
+<li>
+<p><strong>Suivez les demandes</strong> → Préparez les documents à l'avance</p>
+</li>
+<li>
+<p><strong>Recherches enregistrées</strong> → Gagnez du temps</p>
+</li>
+<li>
+<p><strong>Variez les sources</strong> → Diversifiez vos candidatures</p>
+</li>
+<li>
+<p><strong>Feedbacks positifs</strong> → Complimentez les bonnes experiences</p>
+</li>
+<li>
+<p><strong>Calendrier synchronisé</strong> → N'oubliez jamais un deadline</p>
+</li>
+<li>
+<p><strong>Clés de recherche</strong> → Découvrez des opportunités cachées</p>
+</li>
+<li>
+<p><strong>Ask for help</strong> → Contactez le support si vous êtes bloqué</p>
+</li>
+</ol>
+<hr>
+<h2 id="%F0%9F%8E%93-termes--d%C3%A9finitions">🎓 Termes &amp; Définitions</h2>
+<table>
+<thead>
+<tr>
+<th>Terme</th>
+<th>Définition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bourse</strong></td>
+<td>Programme financier pour études</td>
+</tr>
+<tr>
+<td><strong>Opportunité</strong></td>
+<td>Emploi, stage, ou position</td>
+</tr>
+<tr>
+<td><strong>Candidature</strong></td>
+<td>Votre application pour une ressource</td>
+</tr>
+<tr>
+<td><strong>Deadline</strong></td>
+<td>Date limite pour candidater</td>
+</tr>
+<tr>
+<td><strong>RLS</strong></td>
+<td>Row Level Security (sécurité DB)</td>
+</tr>
+<tr>
+<td><strong>CMS</strong></td>
+<td>Système de gestion de contenu</td>
+</tr>
+<tr>
+<td><strong>Newsletter</strong></td>
+<td>Email récurrent avec actualités</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="%F0%9F%93%9D-derniers-mots">📝 Derniers mots</h2>
+<p>Bienvenue dans la communauté AfriPulse !</p>
+<p>Nous sommes déterminés à vous fournir la plateforme la meilleure pour explorer les opportunités africaines. Si vous avez des questions, n'hésitez pas à nous contacter.</p>
+<p><strong>Bonne chance dans vos démarches ! 🍀</strong></p>
+<hr>
+<p><strong>Version</strong> : 1.0<br>
+<strong>Mise à jour</strong> : Avril 2026<br>
+<strong>Langue</strong> : Français<br>
+<strong>Status</strong> : Document officiel client</p>
+<p>Pour toute mise à jour future, consultez <a href="https://afripulse.com/aide">afripulse.com/aide</a></p>
+
+</body>
+
+</html>

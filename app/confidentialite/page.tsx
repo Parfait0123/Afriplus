@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
@@ -127,12 +127,20 @@ const SECTIONS = [
 
 export default function ConfidentialitePage() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   return (
     <>
       <Navbar />
       <main style={{ background: "#F0EDE4" }}>
-
         {/* ── HERO ── */}
         <section style={{
           background: "#141410",
@@ -141,22 +149,22 @@ export default function ConfidentialitePage() {
           position: "relative", overflow: "hidden",
         }}>
           <div style={{ position: "absolute", inset: 0, opacity: .3, pointerEvents: "none", backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E\")" }} />
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 clamp(1.5rem,5vw,4rem)", position: "relative" }}>
-            <div style={{ maxWidth: 700, paddingBottom: "4rem" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 clamp(1rem,5vw,4rem)", position: "relative" }}>
+            <div style={{ maxWidth: 700, paddingBottom: "clamp(2rem,5vw,4rem)" }}>
               <div style={{ display: "inline-flex", alignItems: "center", gap: ".5rem", fontSize: ".6rem", fontWeight: 800, letterSpacing: ".18em", textTransform: "uppercase", color: "#C08435", marginBottom: "1.5rem" }}>
                 <span style={{ width: 20, height: 1, background: "#C08435", display: "inline-block" }} />
                 Vos données
               </div>
               <h1 style={{
                 fontFamily: "'Fraunces', Georgia, serif",
-                fontSize: "clamp(2.2rem,5vw,3.5rem)",
+                fontSize: "clamp(1.8rem,6vw,3.5rem)",
                 fontWeight: 900, color: "#F8F6F1",
                 lineHeight: 1.08, letterSpacing: "-0.04em", marginBottom: "1.25rem",
               }}>
                 Politique de<br />
                 <span style={{ color: "#C08435", fontStyle: "italic", fontWeight: 200 }}>confidentialité</span>
               </h1>
-              <p style={{ fontSize: ".88rem", color: "rgba(248,246,241,.45)", lineHeight: 1.7 }}>
+              <p style={{ fontSize: ".85rem", color: "rgba(248,246,241,.45)", lineHeight: 1.7 }}>
                 Dernière mise à jour : <strong style={{ color: "rgba(248,246,241,.65)" }}>{LAST_UPDATE}</strong>
                 &ensp;·&ensp; Applicable à tous les services AfriPulse
               </p>
@@ -166,47 +174,108 @@ export default function ConfidentialitePage() {
         </section>
 
         {/* ── CORPS ── */}
-        <section style={{ padding: "4rem 0 6rem" }}>
-          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 clamp(1.5rem,5vw,4rem)" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "4rem", alignItems: "start" }}>
-
-              {/* Sommaire sticky */}
-              <div style={{ position: "sticky", top: 100 }}>
-                <div style={{ background: "#fff", borderRadius: 14, border: "1px solid rgba(20,20,16,.08)", padding: "1.25rem", boxShadow: "0 1px 8px rgba(20,20,16,.04)" }}>
-                  <div style={{ fontSize: ".58rem", fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: "#928E80", marginBottom: "1rem", paddingBottom: ".6rem", borderBottom: "1px solid rgba(20,20,16,.07)" }}>
+        <section style={{ padding: "clamp(2rem,5vw,4rem) 0 clamp(3rem,8vw,6rem)" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto", padding: "0 clamp(1rem,5vw,4rem)" }}>
+            <div style={{
+              display: "flex",
+              flexDirection: isMobile ? "column" : "row",
+              gap: isMobile ? "2rem" : "4rem",
+              alignItems: "flex-start"
+            }}>
+              {/* Sommaire - Version mobile : dropdown */}
+              {isMobile ? (
+                <div style={{ width: "100%" }}>
+                  <button
+                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "1rem 1.25rem",
+                      background: "#fff",
+                      border: "1px solid rgba(20,20,16,.08)",
+                      borderRadius: 12,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      fontSize: ".82rem",
+                      fontWeight: 700,
+                      color: "#141410",
+                    }}
+                  >
                     Sommaire
-                  </div>
-                  <nav style={{ display: "flex", flexDirection: "column", gap: ".2rem" }}>
-                    {SECTIONS.map((s) => (
-                      <a
-                        key={s.id}
-                        href={`#${s.id}`}
-                        style={{
-                          fontSize: ".72rem", fontWeight: 600, color: "#928E80",
-                          textDecoration: "none", padding: ".35rem .5rem", borderRadius: 7,
-                          transition: "all .15s", lineHeight: 1.4,
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = "#141410"; e.currentTarget.style.background = "#F0EDE4"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = "#928E80"; e.currentTarget.style.background = "transparent"; }}
-                      >
-                        {s.title}
-                      </a>
-                    ))}
-                  </nav>
-                  <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
-                    <Link href="/contact" style={{ textDecoration: "none", display: "block", background: "#F0EDE4", borderRadius: 8, padding: ".6rem .75rem", fontSize: ".7rem", fontWeight: 700, color: "#C08435" }}>
-                      Une question ? →
-                    </Link>
+                    <span style={{ transform: isMobileMenuOpen ? "rotate(180deg)" : "none", transition: "transform .2s" }}>▼</span>
+                  </button>
+                  {isMobileMenuOpen && (
+                    <div style={{
+                      marginTop: ".5rem",
+                      background: "#fff",
+                      borderRadius: 12,
+                      border: "1px solid rgba(20,20,16,.08)",
+                      padding: ".5rem",
+                    }}>
+                      {SECTIONS.map((s) => (
+                        <a
+                          key={s.id}
+                          href={`#${s.id}`}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          style={{
+                            display: "block",
+                            fontSize: ".75rem",
+                            fontWeight: 600,
+                            color: "#928E80",
+                            textDecoration: "none",
+                            padding: ".6rem .75rem",
+                            borderRadius: 8,
+                            transition: "all .15s",
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = "#141410"; e.currentTarget.style.background = "#F0EDE4"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = "#928E80"; e.currentTarget.style.background = "transparent"; }}
+                        >
+                          {s.title}
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ position: "sticky", top: 100, width: 220, flexShrink: 0 }}>
+                  <div style={{ background: "#fff", borderRadius: 14, border: "1px solid rgba(20,20,16,.08)", padding: "1.25rem", boxShadow: "0 1px 8px rgba(20,20,16,.04)" }}>
+                    <div style={{ fontSize: ".58rem", fontWeight: 800, letterSpacing: ".14em", textTransform: "uppercase", color: "#928E80", marginBottom: "1rem", paddingBottom: ".6rem", borderBottom: "1px solid rgba(20,20,16,.07)" }}>
+                      Sommaire
+                    </div>
+                    <nav style={{ display: "flex", flexDirection: "column", gap: ".2rem" }}>
+                      {SECTIONS.map((s) => (
+                        <a
+                          key={s.id}
+                          href={`#${s.id}`}
+                          style={{
+                            fontSize: ".72rem", fontWeight: 600, color: "#928E80",
+                            textDecoration: "none", padding: ".35rem .5rem", borderRadius: 7,
+                            transition: "all .15s", lineHeight: 1.4,
+                          }}
+                          onMouseEnter={(e) => { e.currentTarget.style.color = "#141410"; e.currentTarget.style.background = "#F0EDE4"; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.color = "#928E80"; e.currentTarget.style.background = "transparent"; }}
+                        >
+                          {s.title}
+                        </a>
+                      ))}
+                    </nav>
+                    <div style={{ marginTop: "1.25rem", paddingTop: "1rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
+                      <Link href="/contact" style={{ textDecoration: "none", display: "block", background: "#F0EDE4", borderRadius: 8, padding: ".6rem .75rem", fontSize: ".7rem", fontWeight: 700, color: "#C08435" }}>
+                        Une question ? →
+                      </Link>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Contenu */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "3rem" }}>
+              <div style={{ flex: 1, minWidth: 0, width: "100%" }}>
                 {/* Résumé */}
                 <div style={{
                   background: "#FDF4E7", border: "1px solid rgba(192,132,53,.2)",
-                  borderRadius: 14, padding: "1.75rem",
+                  borderRadius: 14, padding: "1.5rem",
                 }}>
                   <h2 style={{ fontWeight: 800, fontSize: ".95rem", color: "#141410", marginBottom: ".75rem" }}>
                     En résumé
@@ -219,30 +288,30 @@ export default function ConfidentialitePage() {
                       "✅ Suppression du compte complète et immédiate",
                       "✅ Aucun cookie publicitaire ni tracker tiers",
                     ].map((item) => (
-                      <p key={item} style={{ fontSize: ".82rem", color: "#7A4A1E", lineHeight: 1.5 }}>{item}</p>
+                      <p key={item} style={{ fontSize: ".8rem", color: "#7A4A1E", lineHeight: 1.5 }}>{item}</p>
                     ))}
                   </div>
                 </div>
 
                 {SECTIONS.map((section) => (
-                  <div key={section.id} id={section.id}>
+                  <div key={section.id} id={section.id} style={{ scrollMarginTop: "80px" }}>
                     <h2 style={{
                       fontFamily: "'Fraunces', Georgia, serif",
-                      fontSize: "clamp(1.2rem,2vw,1.6rem)",
+                      fontSize: "clamp(1.1rem,4vw,1.6rem)",
                       fontWeight: 900, color: "#141410",
-                      letterSpacing: "-0.02em", marginBottom: "1.5rem",
+                      letterSpacing: "-0.02em", marginTop: "2rem", marginBottom: "1rem",
                       paddingBottom: ".75rem",
                       borderBottom: "2px solid rgba(192,132,53,.2)",
                     }}>
                       {section.title}
                     </h2>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
                       {section.content.map((block) => (
                         <div key={block.subtitle}>
-                          <h3 style={{ fontSize: ".88rem", fontWeight: 800, color: "#141410", marginBottom: ".6rem" }}>
+                          <h3 style={{ fontSize: ".85rem", fontWeight: 800, color: "#141410", marginBottom: ".5rem" }}>
                             {block.subtitle}
                           </h3>
-                          <p style={{ fontSize: ".88rem", color: "#5A5A4A", lineHeight: 1.85 }}>
+                          <p style={{ fontSize: ".85rem", color: "#5A5A4A", lineHeight: 1.85 }}>
                             {block.text}
                           </p>
                         </div>
@@ -253,15 +322,15 @@ export default function ConfidentialitePage() {
 
                 {/* Contact DPO */}
                 <div style={{
-                  background: "#141410", borderRadius: 16, padding: "2rem",
+                  background: "#141410", borderRadius: 16, padding: "1.5rem", marginTop: "2rem",
                 }}>
-                  <h2 style={{ fontWeight: 800, fontSize: ".95rem", color: "#F8F6F1", marginBottom: ".6rem" }}>
+                  <h2 style={{ fontWeight: 800, fontSize: ".9rem", color: "#F8F6F1", marginBottom: ".6rem" }}>
                     Délégué à la protection des données
                   </h2>
-                  <p style={{ fontSize: ".82rem", color: "rgba(248,246,241,.55)", lineHeight: 1.7, marginBottom: "1rem" }}>
+                  <p style={{ fontSize: ".8rem", color: "rgba(248,246,241,.55)", lineHeight: 1.7, marginBottom: "1rem" }}>
                     Pour toute question relative à cette politique ou pour exercer vos droits, contactez notre délégué à la protection des données.
                   </p>
-                  <a href="mailto:privacy@afripulse.com" style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", padding: ".6rem 1.25rem", borderRadius: 9, background: "#C08435", color: "#fff", fontSize: ".78rem", fontWeight: 700, textDecoration: "none" }}>
+                  <a href="mailto:privacy@afripulse.com" style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", padding: ".6rem 1.25rem", borderRadius: 9, background: "#C08435", color: "#fff", fontSize: ".75rem", fontWeight: 700, textDecoration: "none" }}>
                     ✉️ privacy@afripulse.com
                   </a>
                 </div>
@@ -269,7 +338,6 @@ export default function ConfidentialitePage() {
             </div>
           </div>
         </section>
-
       </main>
       <Footer />
     </>

@@ -37,7 +37,7 @@ const footerCols = [
   {
     title: "Infos",
     links: [
-      { href: "/about", label: "À propos" },
+      { href: "/a-propos", label: "À propos" },
       { href: "/confidentialite", label: "Confidentialité" },
       { href: "/cgu", label: "CGU" },
       { href: "/contact", label: "Contact" },

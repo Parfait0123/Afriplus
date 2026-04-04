@@ -561,3 +561,26 @@ create policy "avatars_own_update"
 
 -- À exécuter manuellement après le script :
 -- update public.profiles set role = 'admin' where email = 'ton@email.com';
+
+
+-- 1. Activer RLS sur la table (si ce n'est pas déjà fait)
+ALTER TABLE contact_messages ENABLE ROW LEVEL SECURITY;
+
+-- 2. Créer une politique pour permettre l'insertion par des utilisateurs non authentifiés (public)
+CREATE POLICY "Allow public insert" ON contact_messages
+    FOR INSERT
+    TO public
+    WITH CHECK (true);
+
+-- 3. (Optionnel) Créer une politique pour permettre aux admins de voir/update les messages
+CREATE POLICY "Allow authenticated select" ON contact_messages
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+-- 4. (Optionnel) Créer une politique pour permettre aux admins de mettre à jour le statut "read"
+CREATE POLICY "Allow authenticated update" ON contact_messages
+    FOR UPDATE
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
