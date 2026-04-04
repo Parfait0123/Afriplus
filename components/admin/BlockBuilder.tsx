@@ -729,29 +729,159 @@ function BlockEditor({ block, onChange }: { block: Block; onChange: (b: Block) =
       );
 
     case "location":
-      return (
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-          <div style={field}>
-            <label style={lbl}>Nom du lieu</label>
-            <input value={block.label} onChange={e => set({ label: e.target.value })}
-              style={inp} placeholder="Ex : Palais des Congrès de Dakar" />
-          </div>
-          <div style={field}>
-            <label style={lbl}>Adresse complète (optionnel)</label>
-            <input value={block.address ?? ""} onChange={e => set({ address: e.target.value })}
-              style={inp} placeholder="Ex : Avenue Cheikh Anta Diop, Dakar, Sénégal" />
-          </div>
-          <div style={field}>
-            <label style={lbl}>Lien Google Maps (optionnel)</label>
-            <input type="url" value={block.mapUrl ?? ""} onChange={e => set({ mapUrl: e.target.value })}
-              style={inp} placeholder="https://maps.google.com/maps?…&output=embed" />
-            <div style={{ fontSize: "0.65rem", color: "#928E80", marginTop: "0.2rem" }}>
-              💡 Google Maps → Partager → Intégrer → copier l&apos;URL du src
+  const [iframeInput, setIframeInput] = useState("");
+  const [extractError, setExtractError] = useState("");
+
+  // Extraire l'URL src d'un iframe Google Maps
+  const extractEmbedUrl = (html: string): string | null => {
+    const match = html.match(/src="([^"]+)"/);
+    if (match && match[1]) {
+      // Nettoyer l'URL (enlever les paramètres inutiles)
+      let url = match[1];
+      // Garder seulement l'essentiel
+      if (url.includes("google.com/maps/embed")) {
+        return url;
+      }
+    }
+    return null;
+  };
+
+  const handleIframePaste = () => {
+    const url = extractEmbedUrl(iframeInput);
+    if (url) {
+      set({ mapUrl: url });
+      setExtractError("");
+      setIframeInput("");
+    } else {
+      setExtractError("Impossible d'extraire le lien. Collez l'intégralité du code iframe Google Maps.");
+    }
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+      <div style={field}>
+        <label style={lbl}>Nom du lieu</label>
+        <input value={block.label} onChange={e => set({ label: e.target.value })}
+          style={inp} placeholder="Ex : Palais des Congrès de Dakar" />
+      </div>
+      
+      <div style={field}>
+        <label style={lbl}>Adresse complète (optionnel)</label>
+        <input value={block.address ?? ""} onChange={e => set({ address: e.target.value })}
+          style={inp} placeholder="Ex : Avenue Cheikh Anta Diop, Dakar, Sénégal" />
+      </div>
+
+      {/* Zone de saisie de l'iframe Google Maps */}
+      <div style={{ 
+        background: "#F8F6F1", 
+        borderRadius: 12, 
+        padding: "1rem",
+        border: "1px solid rgba(20,20,16,.08)"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+          <span style={{ fontSize: "1rem" }}>🗺️</span>
+          <span style={{ fontSize: "0.7rem", fontWeight: 700, color: "#141410" }}>
+            Carte Google Maps
+          </span>
+        </div>
+        
+        {block.mapUrl ? (
+          // Aperçu de la carte si déjà renseignée
+          <div>
+            <div style={{ 
+              position: "relative", 
+              borderRadius: 10, 
+              overflow: "hidden",
+              marginBottom: "0.75rem",
+              border: "1px solid rgba(20,20,16,.1)"
+            }}>
+              <iframe
+                src={block.mapUrl}
+                style={{ width: "100%", height: 240, border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="Carte Google Maps"
+              />
+              <button
+                onClick={() => set({ mapUrl: undefined })}
+                style={{
+                  position: "absolute",
+                  top: "0.5rem",
+                  right: "0.5rem",
+                  background: "rgba(0,0,0,.6)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "0.3rem 0.8rem",
+                  cursor: "pointer",
+                  fontSize: "0.7rem",
+                  fontWeight: 600,
+                  fontFamily: "inherit"
+                }}
+              >
+                ✕ Changer
+              </button>
+            </div>
+            <div style={{ fontSize: "0.65rem", color: "#928E80", textAlign: "center" }}>
+              ✅ Carte intégrée — cliquez sur "Changer" pour la remplacer
             </div>
           </div>
-        </div>
-      );
-
+        ) : (
+          // Formulaire de saisie de l'iframe
+          <div>
+            <div style={{ fontSize: "0.65rem", color: "#928E80", marginBottom: "0.5rem" }}>
+              Collez le code d'intégration Google Maps ci-dessous :
+            </div>
+            <textarea
+              value={iframeInput}
+              onChange={(e) => setIframeInput(e.target.value)}
+              placeholder='<iframe src="https://www.google.com/maps/embed?pb=!1m18..." width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>'
+              rows={3}
+              style={{
+                ...inp,
+                fontFamily: "monospace",
+                fontSize: "0.7rem",
+                resize: "vertical"
+              }}
+            />
+            {extractError && (
+              <div style={{ fontSize: "0.7rem", color: "#B8341E", marginTop: "0.5rem", background: "#FAEBE8", padding: "0.5rem", borderRadius: 8 }}>
+                ⚠️ {extractError}
+              </div>
+            )}
+            <button
+              onClick={handleIframePaste}
+              disabled={!iframeInput.trim()}
+              style={{
+                marginTop: "0.75rem",
+                padding: "0.5rem 1rem",
+                borderRadius: 8,
+                border: "none",
+                background: iframeInput.trim() ? "#C08435" : "rgba(20,20,16,.1)",
+                color: iframeInput.trim() ? "#fff" : "#928E80",
+                cursor: iframeInput.trim() ? "pointer" : "default",
+                fontSize: "0.75rem",
+                fontWeight: 600,
+                fontFamily: "inherit",
+                width: "100%"
+              }}
+            >
+              📌 Extraire et intégrer la carte
+            </button>
+            <div style={{ fontSize: "0.6rem", color: "#928E80", marginTop: "0.75rem", lineHeight: 1.5 }}>
+              💡 <strong>Comment obtenir le code ?</strong><br />
+              1. Allez sur Google Maps<br />
+              2. Trouvez votre lieu<br />
+              3. Cliquez sur "Partager" → "Intégrer une carte"<br />
+              4. Copiez le code iframe complet et collez-le ici
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+      
     case "profile":
       return (
         <div style={{ fontSize: "0.65rem", color: "#928E80", padding: "0.5rem",
