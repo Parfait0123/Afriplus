@@ -99,7 +99,7 @@ function ProfilCompletionForm() {
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .single() as any;
 
       if (profile) {
         setFullName(profile.full_name ?? user.user_metadata?.full_name ?? "");
