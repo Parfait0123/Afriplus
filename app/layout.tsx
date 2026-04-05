@@ -11,14 +11,17 @@ export const metadata: Metadata = {
   },
   description:
     "La plateforme de référence pour l'actualité africaine, les bourses d'études et les opportunités du continent.",
-   icons: {
+     icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },  
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/favicon-16x16.png", sizes: "16x16" },
-      { url: "/favicon-32x32.png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
     ],
     apple: "/apple-touch-icon.png",
   },
+  manifest: "/manifest.json",
+
     keywords: [
     "Afrique",
     "actualités africaines",
@@ -67,8 +70,7 @@ export const metadata: Metadata = {
   },
   alternates: {
     canonical: "https://afripulse.com",
-  },
-  manifest: "/manifest.json",
+  }
 };
 
 // ── Viewport (séparé dans Next.js 15) ──────────────────────
