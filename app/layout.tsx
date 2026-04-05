@@ -11,7 +11,15 @@ export const metadata: Metadata = {
   },
   description:
     "La plateforme de référence pour l'actualité africaine, les bourses d'études et les opportunités du continent.",
-  keywords: [
+   icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16" },
+      { url: "/favicon-32x32.png", sizes: "32x32" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
+    keywords: [
     "Afrique",
     "actualités africaines",
     "bourses d'études",
