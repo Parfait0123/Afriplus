@@ -1,8 +1,8 @@
-# 📱 Guide Utilisateur AfriPulse
+# 📱 Guide Utilisateur AroMe
 
-## Bienvenue sur AfriPulse !
+## Bienvenue sur AroMe !
 
-**AfriPulse** est votre plateforme digitale pour rester connecté aux actualités, opportunités et ressources du continent africain. Que vous cherchiez une bourse d'étude, une opportunité de carrière, un événement professionnel ou simplement les dernières actualités africaines, vous êtes au bon endroit.
+**AroMe** est votre plateforme digitale pour rester connecté aux actualités, opportunités et ressources du continent africain. Que vous cherchiez une bourse d'étude, une opportunité de carrière, un événement professionnel ou simplement les dernières actualités africaines, vous êtes au bon endroit.
 
 Ce guide vous accompagnera pas à pas pour tirer le meilleur parti de la plateforme.
 
@@ -29,12 +29,14 @@ Ce guide vous accompagnera pas à pas pour tirer le meilleur parti de la platefo
 ## 🚀 Premiers pas
 
 ### Configuration requise
+
 - **Navigateur web** : Chrome, Firefox, Safari, Edge (version récente)
 - **Connexion Internet** : Haut débit recommandé
 - **Adresse email** : Nécessaire pour créer un compte
 - **JavaScript** : Actif dans votre navigateur
 
 ### Accès à la plateforme
+
 **URL** : `www.afripulse.com`
 
 > 💡 **Conseil** : Mettez la plateforme en favori pour un accès rapide !
@@ -44,10 +46,12 @@ Ce guide vous accompagnera pas à pas pour tirer le meilleur parti de la platefo
 ## 👤 Créer un compte
 
 ### Étape 1 : Accéder à l'inscription
+
 1. Cliquez sur le bouton **"S'inscrire"** en haut à droite de la page d'accueil
 2. Ou allez directement sur : `www.afripulse.com/auth/inscription`
 
 ### Étape 2 : Remplir le formulaire
+
 ```
 Prénom & Nom complet        [________________________]
 Adresse email              [________________________]  (ex: votre@email.com)
@@ -56,21 +60,25 @@ Confirmer le mot de passe [________________________]
 ```
 
 **Requirements du mot de passe** :
+
 - ✅ Au moins 8 caractères
 - ✅ Un mélange de majuscules et minuscules
 - ✅ Au moins un chiffre
 - ✅ Un caractère spécial (@, #, $, %, etc.)
 
 ### Étape 3 : Accepter les conditions
+
 ☑️ J'accepte les [Conditions Générales d'Utilisation](/cgu)  
 ☑️ J'accepte la [Politique de Confidentialité](/confidentialite)
 
 ### Étape 4 : Valider
+
 Cliquez sur le bouton **"Créer mon compte"**
 
 ### Étape 5 : Confirmation email
+
 1. Ouvrez votre boîte email
-2. Cherchez un email de **"AfriPulse"** (sujet : Bienvenue sur AfriPulse)
+2. Cherchez un email de **"AroMe"** (sujet : Bienvenue sur AroMe)
 3. Cliquez sur le lien **"Confirmer mon email"**
 4. Vous êtes prêt ! ✅
 
@@ -81,12 +89,14 @@ Cliquez sur le bouton **"Créer mon compte"**
 ## 🔐 Se connecter
 
 ### Connexion classique
+
 1. Allez sur `www.afripulse.com/auth/connexion`
 2. Entrez votre **email** et **mot de passe**
 3. Cliquez sur **"Me connecter"**
 4. Vous êtes connecté ! 🎉
 
 ### Mot de passe oublié ?
+
 1. Sur la page de connexion, cliquez sur **"Mot de passe oublié ?"**
 2. Entrez votre adresse email
 3. Vous recevrez un email avec un lien de réinitialisation
@@ -94,11 +104,14 @@ Cliquez sur le bouton **"Créer mon compte"**
 5. Reconnectez-vous avec votre nouveau mot de passe
 
 ### Rester connecté
+
 Une case **"Rester connecté"** est disponible.
+
 - ✅ **Activé** : Vous resterez connecté 30 jours (sur cet appareil)
 - ❌ **Désactivé** : Vous devrez vous reconnecter à chaque visite
 
 ### Déconnexion
+
 Pour vous déconnecter, cliquez sur votre **profil** (en haut à droite) → **"Se déconnecter"**
 
 ---
@@ -108,65 +121,78 @@ Pour vous déconnecter, cliquez sur votre **profil** (en haut à droite) → **"
 ### Structure de la page d'accueil
 
 **1. En-tête (Navbar)**
+
 ```
-Logo AfriPulse  |  Actualités  Bourses  Opportunités  Événements  Recherche  Profil
+Logo AroMe  |  Actualités  Bourses  Opportunités  Événements  Recherche  Profil
 ```
 
 **2. Bloc Héros**
+
 - Bienvenue avec image inspirante
 - Résumé des 4 piliers (actualités, bourses, opportunités, événements)
 
 **3. Articles en vedette**
+
 - Affiche les 3 dernières actualités importantes
 - Cliquez pour lire l'article complet
 
 **4. Ticker d'actualités**
+
 - Défilement continu des plus récentes news
 - Utile pour rester informé en temps réel
 
 **5. Section Bourses**
+
 - 6 meilleures bourses actuelles
 - Avec deadline visible
 
 **6. Section Opportunités**
+
 - Dernières offres d'emploi et stages
 
 **7. Section Événements**
+
 - Événements à venir et conférences
 
 **8. Newsletter**
+
 - Formulaire pour s'abonner (détails ci-dessous)
 
 **9. Pied de page (Footer)**
+
 - Liens utiles, CGU, Confidentialité, Contact
 
 ### Navigateur principal
+
 Accessible en haut de chaque page :
 
-| Menu | Description |
-|------|-------------|
-| 📰 **Actualités** | Articles d'actualité catégorisés |
-| 🎓 **Bourses** | Programmes de bourses d'études |
+| Menu                | Description                          |
+| ------------------- | ------------------------------------ |
+| 📰 **Actualités**   | Articles d'actualité catégorisés     |
+| 🎓 **Bourses**      | Programmes de bourses d'études       |
 | 💼 **Opportunités** | Offres d'emploi, stages, volontariat |
-| 🎪 **Événements** | Conférences, forums, ateliers |
-| 🔍 **Recherche** | Moteur de recherche global |
-| 👤 **Profil** | Votre compte & tableau de bord |
+| 🎪 **Événements**   | Conférences, forums, ateliers        |
+| 🔍 **Recherche**    | Moteur de recherche global           |
+| 👤 **Profil**       | Votre compte & tableau de bord       |
 
 ---
 
 ## 📰 Les actualités
 
 ### Accéder à la section actualités
+
 1. Cliquez sur **"Actualités"** dans la barre de navigation
 2. Ou allez sur : `www.afripulse.com/actualites`
 
 ### Interface de la liste des articles
 
 **Affichage** :
+
 - **Vue par carte** : Articles avec image, titre, catégorie, auteur
 - **Scrolling infini** : Charger plus d'articles en descendant
 
 **Filtres disponibles** :
+
 ```
 Catégories:
   ├─ Politique
@@ -199,6 +225,7 @@ Tri:
 ```
 
 **Informations clés** :
+
 - **Catégorie** : Code couleur (Politique = bleu, Économie = orange, etc.)
 - **Favori** : ⭐ Marquer comme article favori
 - **Auteur** : Journaliste ou éditeur
@@ -211,6 +238,7 @@ Tri:
 2. Vous serez dirigé vers : `www.afripulse.com/actualites/[titre-article]`
 
 **Layout de l'article** :
+
 ```
 ┌──────────────────────────────────┐
 │  Titre principal                 │
@@ -233,9 +261,10 @@ Tri:
 ```
 
 **Actions disponibles** :
+
 - ❤️ **Aimer** l'article
 - 📤 **Partager** via réseaux sociaux
-- 🔗 **Copier le lien** 
+- 🔗 **Copier le lien**
 - 💬 **Commenter** (si commentaires activés)
 - ⬅️ **Retour** à la liste
 
@@ -243,19 +272,21 @@ Tri:
 
 ✅ **S'abonner à une catégorie** : Recevez les articles de votre catégorie préférée  
 ✅ **Marquer comme lu** : Vous suivez vos articles lus automatiquement  
-✅ **Partager avec amis** : Cliquez sur le bouton partage  
+✅ **Partager avec amis** : Cliquez sur le bouton partage
 
 ---
 
 ## 🎓 Les bourses d'études
 
 ### Accéder à la section bourses
+
 1. Cliquez sur **"Bourses"** dans la navigation
 2. Ou allez sur : `www.afripulse.com/bourses`
 
 ### Parcourir les bourses
 
 **Vue d'ensemble** :
+
 ```
 Bourse: "African Excellence Scholarship"
 📍 Afrique de l'Ouest | 🎓 Master
@@ -329,13 +360,15 @@ Tri:
 
 ### Candidater à une bourse
 
-**Méthode 1 : Via AfriPulse**
+**Méthode 1 : Via AroMe**
+
 1. Sur la page de la bourse, cliquez **"Postuler"**
 2. Connectez-vous (si nécessaire)
 3. Remplissez le formulaire de candidature intégré (le cas échéant)
 4. Votre candidature est enregistrée dans votre tableau de bord
 
 **Méthode 2 : Site officiel**
+
 1. Cliquez sur **"Visiter le site officiel"**
 2. Vous êtes redirigé vers le portail de candidature
 3. Suivez les instructions de l'organisation
@@ -343,6 +376,7 @@ Tri:
 ### Gestion des candidatures
 
 Une fois une bourse postulée :
+
 1. Allez sur votre **Profil** → **"Mes candidatures"**
 2. Vous verrez toutes vos candidatures avec le statut :
    - 📝 **Candidature enregistrée**
@@ -363,18 +397,19 @@ Une fois une bourse postulée :
 ## 💼 Les opportunités professionnelles
 
 ### Accéder à la section opportunités
+
 1. Cliquez sur **"Opportunités"** dans la navigation
 2. Ou allez sur : `www.afripulse.com/opportunites`
 
 ### Types d'opportunités disponibles
 
-| Type | Description | Durée typique |
-|------|-------------|--------------|
-| 🏢 **Emploi CDI** | Contrat permanent | Illimitée |
-| 📅 **Stage** | Formation en entreprise | 2-6 mois |
-| 🎓 **Graduate Program** | Programme pour jeunes diplômés | 1-2 ans |
-| 💰 **Freelance** | Travail indépendant par projet | Variable |
-| 🤝 **Volontariat** | Engagement social/humanitaire | Variable |
+| Type                    | Description                    | Durée typique |
+| ----------------------- | ------------------------------ | ------------- |
+| 🏢 **Emploi CDI**       | Contrat permanent              | Illimitée     |
+| 📅 **Stage**            | Formation en entreprise        | 2-6 mois      |
+| 🎓 **Graduate Program** | Programme pour jeunes diplômés | 1-2 ans       |
+| 💰 **Freelance**        | Travail indépendant par projet | Variable      |
+| 🤝 **Volontariat**      | Engagement social/humanitaire  | Variable      |
 
 ### Naviguer les opportunités
 
@@ -448,6 +483,7 @@ Tri:
 ### Postuler à une opportunité
 
 **Étape 1 : Préparez vos documents**
+
 - CV à jour (PDF recommandé)
 - Lettre de motivation
 - Portfolio (si applicable)
@@ -456,6 +492,7 @@ Tri:
 **Étape 2 : Cliquez sur "POSTULER"**
 
 **Étape 3 : Complétez votre profil** (si première candidature)
+
 ```
 Prénom / Nom complet
 Téléphone
@@ -466,12 +503,14 @@ Skills/Compétences
 ```
 
 **Étape 4 : Uploadez vos documents**
+
 - Glissez-déposez ou sélectionnez vos fichiers
 - Formats acceptés : PDF, DOC, DOCX
 
 **Étape 5 : Ajoutez une lettre de motivation** (optionnel)
 
 **Étape 6 : Confirmez la candidature**
+
 - Cochez les conditions d'emploi
 - Cliquez **"Soumettre ma candidature"**
 - Confirmation immédiate ✅
@@ -479,6 +518,7 @@ Skills/Compétences
 ### Suivi des candidatures
 
 Après candidature :
+
 1. Vous recevez un **email de confirmation**
 2. La candidature apparaît dans **Profil → Mes candidatures**
 3. Vous pouvez voir le statut :
@@ -494,30 +534,32 @@ Après candidature :
 ✅ **Lettre personnalisée** : Montrez pourquoi vous êtes le bon candidat  
 ✅ **Reposez-vous** : Avant un entretien, reposez-vous bien  
 ✅ **Préparez des exemples** : Préparez des histoires de succès  
-✅ **Suivi professionnel** : Relancez poliment après 1-2 semaines sans nouvelle  
+✅ **Suivi professionnel** : Relancez poliment après 1-2 semaines sans nouvelle
 
 ---
 
 ## 🎪 Les événements
 
 ### Accéder à la section événements
+
 1. Cliquez sur **"Événements"** dans la navigation
 2. Ou allez sur : `www.afripulse.com/evenements`
 
 ### Types d'événements
 
-| Type | Focus | Audience |
-|------|-------|----------|
-| 🎤 **Conférence** | Présentation expertise | Professionnels |
-| 🤝 **Forum** | Interactions & réseautage | Généraliste |
-| 💻 **Hackathon** | Compétition technologique | Développeurs |
-| 🏪 **Salon** | Exposition & networking | Large |
-| 🛠️ **Atelier** | Formation hands-on | Tous niveaux |
-| 🏆 **Sommet** | Événement majeur annuel | VIP + invités |
+| Type              | Focus                     | Audience       |
+| ----------------- | ------------------------- | -------------- |
+| 🎤 **Conférence** | Présentation expertise    | Professionnels |
+| 🤝 **Forum**      | Interactions & réseautage | Généraliste    |
+| 💻 **Hackathon**  | Compétition technologique | Développeurs   |
+| 🏪 **Salon**      | Exposition & networking   | Large          |
+| 🛠️ **Atelier**    | Formation hands-on        | Tous niveaux   |
+| 🏆 **Sommet**     | Événement majeur annuel   | VIP + invités  |
 
 ### Parcourir les événements
 
 **Filtres** :
+
 ```
 Par type:
   ├─ Conférence
@@ -589,6 +631,7 @@ Tri:
 ### S'inscrire à un événement
 
 **Étape 1 : Consultez les détails**
+
 - Vérifiez la date, heure et lieu
 - Lisez la description complète
 - Consultez le programme / agenda
@@ -596,6 +639,7 @@ Tri:
 **Étape 2 : Cliquez sur "S'INSCRIRE"**
 
 **Étape 3 : Complétez le formulaire d'inscription**
+
 ```
 Prénom
 Nom
@@ -608,11 +652,13 @@ Questions / Commentaires
 ```
 
 **Étape 4 : Confirmez votre inscription**
+
 - Acceptez les conditions
 - Cliquez **"Confirmer mon inscription"**
 - Vous recevez une **confirmation par email** ✅
 
 **Étape 5 : Préparez-vous**
+
 - Ajoutez l'événement à votre calendrier
 - Préparez vos documents/cartes de visite
 - Envisagez un transport
@@ -620,6 +666,7 @@ Questions / Commentaires
 ### Quelques jours avant l'événement
 
 Vous recevrez :
+
 - 📧 Email de rappel (3 jours avant)
 - ℹ️ Informations pratiques (accès, parking, etc.)
 - 🗺️ Plan du lieu (si physique)
@@ -638,7 +685,7 @@ Vous recevrez :
 ✅ **Cartes de visite** : Venez avec des cartes de visite à échanger  
 ✅ **Écoutez activement** : Notez les points clés des présentations  
 ✅ **Restez ouvert** : Dialoguez avec des gens nouveaux  
-✅ **Suivi** : Connectez-vous avec les gens rencontrés dans la semaine  
+✅ **Suivi** : Connectez-vous avec les gens rencontrés dans la semaine
 
 ---
 
@@ -647,11 +694,13 @@ Vous recevrez :
 ### Accéder à la recherche
 
 **Méthode 1 : Barre de recherche**
+
 - Cliquez sur la loupe 🔍 en haut de page
 - Entrez votre recherche
 - Appuyez sur Entrée
 
 **Méthode 2 : Menu navigation**
+
 - Cliquez sur **"Recherche"** dans la navbar
 - Accédez à la page complète de recherche
 
@@ -664,7 +713,7 @@ Vous recevrez :
 [ 🔍 Entrez votre recherche... ] [🔎 Chercher]
 
 Suggestions rapides:
-- "Tech Africa" 
+- "Tech Africa"
 - "Développeur Python"
 - "Bourses Master"
 - "Hackathon Senegal"
@@ -675,6 +724,7 @@ Suggestions rapides:
 Les résultats affichent 4 catégories :
 
 **1. Articles** (📰)
+
 ```
 Titre: "Web3 en Afrique : Les oportunités 2026"
 Catégorie: Tech | Auteur: Jean Dupont
@@ -683,6 +733,7 @@ Lire l'article →
 ```
 
 **2. Bourses** (🎓)
+
 ```
 "Tech Leaders Scholarship 2026"
 Niveau: Master | Région: Toute l'Afrique
@@ -691,6 +742,7 @@ Voir la bourse →
 ```
 
 **3. Opportunités** (💼)
+
 ```
 "Senior Developer - Lagos, Nigeria"
 Type: Emploi CDI | Secteur: Technologie
@@ -699,6 +751,7 @@ Postuler →
 ```
 
 **4. Événements** (🎪)
+
 ```
 "African Tech Summit 2026"
 Date: 20-22 Septembre 2026 | Localisation: Durban, Afrique du Sud
@@ -736,7 +789,7 @@ Filtres disponibles:
 ✅ **Utilisez les guillemets** : "Web3 Africa" pour phrase exacte  
 ✅ **Essayez les variations** : "Emploi", "Job", "Opportunité"  
 ✅ **Réduisez les filtres** : Commencez large, affinez ensuite  
-✅ **Sauvegarder les recherches** : Pour les recherches fréquentes  
+✅ **Sauvegarder les recherches** : Pour les recherches fréquentes
 
 ---
 
@@ -748,7 +801,7 @@ Filtres disponibles:
 ✅ **Bourses fraîches** : Nouvelles opportunités avant tout le monde  
 ✅ **Contenus exclusifs** : Articles réservés aux abonnés  
 ✅ **Aucun spam** : 1 email par semaine maximum  
-✅ **Gratuit** : 100% gratuit et sans engagement  
+✅ **Gratuit** : 100% gratuit et sans engagement
 
 ### S'abonner à l'accueil
 
@@ -768,6 +821,7 @@ Filtres disponibles:
 ### Processus d'abonnement
 
 **Étape 1 : Entrez votre email**
+
 ```
 Votre adresse email: user@example.com
 ```
@@ -778,22 +832,24 @@ Votre adresse email: user@example.com
 Un email de confirmation est envoyé à votre adresse.
 
 **Étape 4 : Vérifiez votre email**
-Ouvrez l'email "Confirmez votre abonnement AfriPulse"
+Ouvrez l'email "Confirmez votre abonnement AroMe"
 
 **Étape 5 : Cliquez sur le lien de confirmation**
+
 ```
 [CONFIRMER MON ABONNEMENT]
 ```
 
 **Étape 6 : Abonnement activé** ✅
 
->  💡 Gardez l'email de bienvenue pour retrouver les préférences
+> 💡 Gardez l'email de bienvenue pour retrouver les préférences
 
 ### Gérer votre abonnement
 
 **Changer vos préférences**
 
 1. Très bas de chaque email newsletter :
+
    ```
    Gérer mes préférences → [LIEN]
    ```
@@ -801,6 +857,7 @@ Ouvrez l'email "Confirmez votre abonnement AfriPulse"
 2. Ou allez directement sur votre **Profil → Préférences newsletter**
 
 3. Sélectionnez les catégories qui vous intéressent :
+
    ```
    ☑️ Actualités (Toutes)
    ☑️ Politique
@@ -813,6 +870,7 @@ Ouvrez l'email "Confirmez votre abonnement AfriPulse"
    ```
 
 4. Choisissez la fréquence :
+
    ```
    ⬜ Quotidien
    ◈ Hebdomadaire (recommandé)
@@ -826,10 +884,12 @@ Ouvrez l'email "Confirmez votre abonnement AfriPulse"
 Si vous ne souhaitez plus recevoir les emails :
 
 **Méthode 1 : Depuis un email**
+
 - Rendez-vous au bas de l'email
 - Cliquez sur **"Se désabonner"**
 
 **Méthode 2 : Depuis votre profil**
+
 - Allez sur **Profil → Préférences newsletter**
 - Cliquez **"Se désabonner complètement"**
 
@@ -898,6 +958,7 @@ Photo de profil       [UPLOAD]  [📷 Webcam]
 ```
 
 **Après modification** :
+
 - Cliquez **"Enregistrer les modifications"**
 - Message de confirmation ✅
 
@@ -910,14 +971,16 @@ OFFRE                              STATUT          DATE      ACTION
 ────────────────────────────────────────────────────────────────
 Senior Developer - Lagos           Entretien       15 Juin   👁️ Voir
 Marketing Manager - Dakar         Acceptée        08 Mai    ✅ Accepter
-UX Designer - Johannesburg         Rejetée         22 Avril  
+UX Designer - Johannesburg         Rejetée         22 Avril
 Data Analyst - Casablanca         En révision     03 Avril  ⏳
 ```
 
 **Filtres** :
+
 - Toutes | En cours | Réussies | Rejetées
 
 **Détails par candidature** :
+
 - Date candidature
 - Dernier statut
 - Date du dernier changement
@@ -938,6 +1001,7 @@ Web3 Masterclass                   10 Juin         En ligne     ✅ Confirmé
 ```
 
 **Actions** :
+
 - 🗑️ **Supprimer** (annuler inscription)
 - 📅 **Ajouter au calendrier**
 - 🔗 **Obtenir lien accès** (si virtuel)
@@ -948,6 +1012,7 @@ Web3 Masterclass                   10 Juin         En ligne     ✅ Confirmé
 Cliquez sur **"Mes préférences"** pour :
 
 **1. Notifications par email**
+
 ```
 ☑️ Actualités dans mes domaines
 ☑️ Nouvelles bourses
@@ -958,6 +1023,7 @@ Cliquez sur **"Mes préférences"** pour :
 ```
 
 **2. Confidentialité**
+
 ```
 ☐ Profil visible publiquement
 ☐ Partager ma bio
@@ -965,6 +1031,7 @@ Cliquez sur **"Mes préférences"** pour :
 ```
 
 **3. Langue & Zone horaire**
+
 ```
 Langue: Français ▼
 Zone horaire: GMT+1 (Dakar) ▼
@@ -990,7 +1057,8 @@ Zone horaire: GMT+1 (Dakar) ▼
 
 **Q1 : Je n'ai pas reçu l'email de confirmation d'inscription**
 
-**R :** 
+**R :**
+
 1. Vérifiez votre dossier **spam/courrier indésirable**
 2. Attendez 5-10 minutes (email peut être lent)
 3. Check si vous avez utilisé la bonne adresse email
@@ -1002,6 +1070,7 @@ Zone horaire: GMT+1 (Dakar) ▼
 **Q2 : Comment réinitialiser mon mot de passe ?**
 
 **R :**
+
 1. Allez sur `/auth/connexion`
 2. Cliquez **"Mot de passe oublié ?"**
 3. Entrez votre email
@@ -1015,6 +1084,7 @@ Zone horaire: GMT+1 (Dakar) ▼
 
 **R :**
 Généralement à cause de :
+
 - ⚠️ Trop de tentatives de connexion échouées (réessayez dans 30 min)
 - ⚠️ Activité suspecte (contactez le support)
 - ⚠️ Violation des CGU (vous serez averti)
@@ -1028,6 +1098,7 @@ Contactez support: support@afripulse.com
 **Q4 : Comment sauvegarder une bourse pour plus tard ?**
 
 **R :**
+
 1. Consultez la page de la bourse
 2. Cliquez sur le cœur ❤️ en haut
 3. La bourse est sauvegardée dans **Profil → Articles sauvegardés**
@@ -1038,6 +1109,7 @@ Contactez support: support@afripulse.com
 
 **R :**
 Oui ! Utilisez les **filtres multiples** :
+
 1. Allez sur la section (Actualités, Bourses, etc.)
 2. Cumulez les filtres (ex: Master + Afrique de l'Ouest + Deadline)
 3. Les résultats se mettent à jour automatiquement
@@ -1048,6 +1120,7 @@ Oui ! Utilisez les **filtres multiples** :
 
 **R :**
 Utilisez le menu **"Trier par"** :
+
 - Plus récent
 - Plus pertinent
 - Deadline proche
@@ -1069,6 +1142,7 @@ Si vous avez fait une erreur, contactez l'organisation RH directement.
 
 **R :**
 Cela varie selon l'organisation. En général :
+
 - 📊 **Petites organisations** : 1-2 semaines
 - 🏢 **Grandes entreprises** : 3-4 semaines
 - 🏛️ **Organismes publics** : 6-8 semaines
@@ -1080,7 +1154,7 @@ Vous recevrez un email à chaque changement de statut.
 **Q9 : At-il des frais de candidature ?**
 
 **R :**
-Non ! AfriPulse est gratuit pour les candidatures. Toute plateforme de candidature externe peut être payante à la discrétion de l'organisation.
+Non ! AroMe est gratuit pour les candidatures. Toute plateforme de candidature externe peut être payante à la discrétion de l'organisation.
 
 ---
 
@@ -1090,6 +1164,7 @@ Non ! AfriPulse est gratuit pour les candidatures. Toute plateforme de candidatu
 
 **R :**
 Selon votre choix dans les préférences :
+
 - 📬 **Quotidien** : 1 email par jour
 - 📨 **Hebdomadaire** : 1 email par semaine (lundi recommandé)
 - 📬 **Mensuel** : 1 email par mois
@@ -1100,6 +1175,7 @@ Selon votre choix dans les préférences :
 
 **R :**
 Oui, 2 options :
+
 1. Bas de chaque email : **"Se désabonner"**
 2. Profil → **Préférences newsletter** → **"Désabonnement"**
 
@@ -1112,6 +1188,7 @@ Immédiat, sans question.
 **Q12 : Le site est très lent / ne charge pas**
 
 **R :**
+
 1. 🔄 Rechargez la page (Ctrl+R)
 2. 💾 Videz le cache (Ctrl+Maj+Suppr)
 3. 🌐 Vérifiez votre connexion Internet
@@ -1123,12 +1200,14 @@ Immédiat, sans question.
 **Q13 :Un bouton/lien ne fonctionne pas**
 
 **R :**
+
 1. 🔄 Rechargez la page
 2. 💾 Videz le cache du navigateur
 3. 📱 Essayez sur un appareil différent
 4. 📧 Signalez le bug : support@afripulse.com
 
 Décrivez :
+
 - Quel navigateur/version
 - Quelle page
 - Ce que vous essayiez de faire
@@ -1142,6 +1221,7 @@ Décrivez :
 
 **R :**
 ✅ Oui ! Nous utilisons :
+
 - 🔐 Chiffrement SSL/TLS pour tous les transferts
 - 🔒 Authentification par JWT sécurisé
 - 🛡️ Politique RLS sur la base de données
@@ -1155,6 +1235,7 @@ Consultez notre [Politique de confidentialité](/confidentialite)
 **Q15 : Comment puis-je télécharger mes données ?**
 
 **R :**
+
 1. Allez sur **Profil → Paramètres**
 2. Cliquez **"Télécharger mes données"**
 3. Vous recevrez un zip avec :
@@ -1171,6 +1252,7 @@ Consultez notre [Politique de confidentialité](/confidentialite)
 
 **R :**
 ✅ Oui, 100% gratuit :
+
 - 🎓 Parcourir bourses : Gratuit
 - 💼 Postuler à des offres : Gratuit
 - 🎪 S'inscrire à événements : Gratuit (sauf si payants)
@@ -1185,13 +1267,15 @@ Aucune limite, aucun frais caché.
 
 **R :**
 Plusieurs canaux :
+
 - 📧 Email : support@afripulse.com
 - 💬 Chat en direct : (si disponible en bas à droite)
 - 📞 Téléphone : Voir page Contact
-- 🐦 Twitter : @AfriPulseApp
+- 🐦 Twitter : @AroMeApp
 - 📋 Formulaire : Page Contact
 
 **Temps de réponse typiques** :
+
 - Chat : Immédiat (heures ouvrables)
 - Email : < 24h
 - Téléphone : Pendant les heures de bureau
@@ -1203,12 +1287,14 @@ Plusieurs canaux :
 ### Nous contacter
 
 **Email général**
+
 ```
 support@afripulse.com
 Réponse en < 24 heures
 ```
 
 **Formulaire de contact**
+
 ```
 www.afripulse.com/contact
 - Sujet de votre message
@@ -1217,6 +1303,7 @@ www.afripulse.com/contact
 ```
 
 **Heures d'ouverture**
+
 ```
 Lundi - Vendredi : 09h00 - 18h00 (GMT+1)
 Samedi - Dimanche : Support par email
@@ -1225,6 +1312,7 @@ Samedi - Dimanche : Support par email
 ### Signaler un problème
 
 ⚠️ **Bug ou problème technique ?**
+
 1. Note précis du problème
 2. Capture d'écran
 3. Votre navigateur (Chrome v90, etc.)
@@ -1232,6 +1320,7 @@ Samedi - Dimanche : Support par email
 5. Envoyez à : support@afripulse.com avec sujet **[BUG]**
 
 💡 **Idée d'amélioration ?**
+
 - Envoyez vos suggestions à : feedback@afripulse.com
 - Nous lisons chaque suggestion !
 
@@ -1239,10 +1328,10 @@ Samedi - Dimanche : Support par email
 
 Suivez-nous pour les mises à jour et actualités :
 
-- 🐦 **Twitter** : @AfriPulseApp
+- 🐦 **Twitter** : @AroMeApp
 - 💼 **LinkedIn** : /company/afripulse
 - 📱 **Instagram** : @afripulse_official
-- 🎥 **YouTube** : AfriPulse Channel
+- 🎥 **YouTube** : AroMe Channel
 
 ### Ressources additionnelles
 
@@ -1278,21 +1367,21 @@ Suivez-nous pour les mises à jour et actualités :
 
 ## 🎓 Termes & Définitions
 
-| Terme | Définition |
-|-------|-----------|
-| **Bourse** | Programme financier pour études |
-| **Opportunité** | Emploi, stage, ou position |
+| Terme           | Définition                           |
+| --------------- | ------------------------------------ |
+| **Bourse**      | Programme financier pour études      |
+| **Opportunité** | Emploi, stage, ou position           |
 | **Candidature** | Votre application pour une ressource |
-| **Deadline** | Date limite pour candidater |
-| **RLS** | Row Level Security (sécurité DB) |
-| **CMS** | Système de gestion de contenu |
-| **Newsletter** | Email récurrent avec actualités |
+| **Deadline**    | Date limite pour candidater          |
+| **RLS**         | Row Level Security (sécurité DB)     |
+| **CMS**         | Système de gestion de contenu        |
+| **Newsletter**  | Email récurrent avec actualités      |
 
 ---
 
 ## 📝 Derniers mots
 
-Bienvenue dans la communauté AfriPulse ! 
+Bienvenue dans la communauté AroMe !
 
 Nous sommes déterminés à vous fournir la plateforme la meilleure pour explorer les opportunités africaines. Si vous avez des questions, n'hésitez pas à nous contacter.
 

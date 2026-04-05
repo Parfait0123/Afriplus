@@ -17,10 +17,7 @@ import type {
   ApplicationStatus,
 } from "@/types";
 
-import {
-  STATUS_LABEL,
-  STATUS_COLOR,
-} from "@/types";
+import { STATUS_LABEL, STATUS_COLOR } from "@/types";
 
 /* ── Ré-exports pour rétrocompatibilité ── */
 export type { UserRole, Profile, ContentType, ApplicationStatus };
@@ -30,7 +27,7 @@ export { STATUS_LABEL, STATUS_COLOR };
 function getClient() {
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
   );
 }
 
@@ -39,7 +36,7 @@ function getClient() {
 ══════════════════════════════════════════════════════ */
 export function useAuth() {
   const supabase = getClient();
-  const [user, setUser]       = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -52,15 +49,23 @@ export function useAuth() {
           .select("*")
           .eq("id", data.user.id)
           .single()
-          .then(({ data: p }) => { setProfile(p); setLoading(false); });
+          .then(({ data: p }) => {
+            setProfile(p);
+            setLoading(false);
+          });
       } else {
         setLoading(false);
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (!session?.user) { setProfile(null); setLoading(false); }
+      if (!session?.user) {
+        setProfile(null);
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -76,23 +81,31 @@ export function useAuth() {
     loading,
     signOut,
     isLoggedIn: !!user,
-    isAdmin:    profile?.role === "admin",
-    isEditor:   profile?.role === "editor" || profile?.role === "admin",
+    isAdmin: profile?.role === "admin",
+    isEditor: profile?.role === "editor" || profile?.role === "admin",
   };
 }
 
 /* ══════════════════════════════════════════════════════
    useSave — état de sauvegarde d'un contenu
 ══════════════════════════════════════════════════════ */
-export function useSave(contentType: ContentType, contentSlug: string, contentTitle?: string, contentMeta?: Record<string, unknown>) {
+export function useSave(
+  contentType: ContentType,
+  contentSlug: string,
+  contentTitle?: string,
+  contentMeta?: Record<string, unknown>,
+) {
   const supabase = getClient();
-  const [saved, setSaved]   = useState(false);
+  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { setLoading(false); return; }
+      if (!data.user) {
+        setLoading(false);
+        return;
+      }
       setLoggedIn(true);
       const { data: row } = await supabase
         .from("saves")
@@ -107,11 +120,14 @@ export function useSave(contentType: ContentType, contentSlug: string, contentTi
   }, [contentType, contentSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
     if (saved) {
       setSaved(false);
-      await supabase.from("saves")
+      await supabase
+        .from("saves")
         .delete()
         .eq("user_id", user.id)
         .eq("content_type", contentType)
@@ -135,19 +151,26 @@ export function useSave(contentType: ContentType, contentSlug: string, contentTi
    useApplication — suivi de candidature
 ══════════════════════════════════════════════════════ */
 export function useApplication(
-  contentType:   "scholarship" | "opportunity",
-  contentSlug:   string,
+  contentType: "scholarship" | "opportunity",
+  contentSlug: string,
   contentTitle?: string,
-  deadline?:     string,
+  deadline?: string,
 ) {
   const supabase = getClient();
-  const [application, setApplication] = useState<{ id: string; status: ApplicationStatus; notes: string | null } | null>(null);
-  const [loading, setLoading]         = useState(true);
-  const [isLoggedIn, setLoggedIn]     = useState(false);
+  const [application, setApplication] = useState<{
+    id: string;
+    status: ApplicationStatus;
+    notes: string | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { setLoading(false); return; }
+      if (!data.user) {
+        setLoading(false);
+        return;
+      }
       setLoggedIn(true);
       const { data: row } = await supabase
         .from("applications")
@@ -162,28 +185,33 @@ export function useApplication(
   }, [contentType, contentSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* upsert — envoie title et deadline depuis les props du hook */
-  const upsert = useCallback(async (status: ApplicationStatus, notes?: string) => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-    const payload = {
-      user_id:       user.id,
-      content_type:  contentType,
-      content_slug:  contentSlug,
-      content_title: contentTitle ?? null,
-      content_meta:  {},
-      status,
-      notes:         notes ?? null,
-      /* deadline est de type DATE en base — on ne l'envoie pas
+  const upsert = useCallback(
+    async (status: ApplicationStatus, notes?: string) => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const payload = {
+        user_id: user.id,
+        content_type: contentType,
+        content_slug: contentSlug,
+        content_title: contentTitle ?? null,
+        content_meta: {},
+        status,
+        notes: notes ?? null,
+        /* deadline est de type DATE en base — on ne l'envoie pas
          depuis une string française non parseable ("15 Mar 2025").
          Elle peut être mise à jour séparément si nécessaire. */
-    };
-    const { data } = await supabase
-      .from("applications")
-      .upsert(payload, { onConflict: "user_id,content_type,content_slug" })
-      .select("id, status, notes")
-      .single();
-    if (data) setApplication(data);
-  }, [contentType, contentSlug, contentTitle, deadline]); // eslint-disable-line react-hooks/exhaustive-deps
+      };
+      const { data } = await supabase
+        .from("applications")
+        .upsert(payload, { onConflict: "user_id,content_type,content_slug" })
+        .select("id, status, notes")
+        .single();
+      if (data) setApplication(data);
+    },
+    [contentType, contentSlug, contentTitle, deadline],
+  ); // eslint-disable-line react-hooks/exhaustive-deps
 
   const remove = useCallback(async () => {
     if (!application) return;
@@ -197,15 +225,23 @@ export function useApplication(
 /* ══════════════════════════════════════════════════════
    useEventRegistration — inscription + export .ics
 ══════════════════════════════════════════════════════ */
-export function useEventRegistration(eventSlug: string, eventTitle?: string, eventDate?: string, eventLocation?: string) {
+export function useEventRegistration(
+  eventSlug: string,
+  eventTitle?: string,
+  eventDate?: string,
+  eventLocation?: string,
+) {
   const supabase = getClient();
   const [registered, setRegistered] = useState(false);
-  const [loading, setLoading]       = useState(true);
-  const [isLoggedIn, setLoggedIn]   = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) { setLoading(false); return; }
+      if (!data.user) {
+        setLoading(false);
+        return;
+      }
       setLoggedIn(true);
       const { data: row } = await supabase
         .from("event_registrations")
@@ -219,11 +255,14 @@ export function useEventRegistration(eventSlug: string, eventTitle?: string, eve
   }, [eventSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggle = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
     if (registered) {
       setRegistered(false);
-      await supabase.from("event_registrations")
+      await supabase
+        .from("event_registrations")
         .delete()
         .eq("user_id", user.id)
         .eq("event_slug", eventSlug);
@@ -241,9 +280,11 @@ export function useEventRegistration(eventSlug: string, eventTitle?: string, eve
 
   const exportICS = useCallback(() => {
     if (!eventDate) return;
-    const dt  = eventDate.replace(/-/g, "");
+    const dt = eventDate.replace(/-/g, "");
     const ics = [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//AfriPulse//FR",
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//AroMe//FR",
       "BEGIN:VEVENT",
       `UID:${eventSlug}@afripulse.com`,
       `DTSTART;VALUE=DATE:${dt}`,
@@ -251,10 +292,16 @@ export function useEventRegistration(eventSlug: string, eventTitle?: string, eve
       `SUMMARY:${eventTitle ?? eventSlug}`,
       eventLocation ? `LOCATION:${eventLocation}` : "",
       `URL:https://afripulse.com/evenements/${eventSlug}`,
-      "END:VEVENT", "END:VCALENDAR",
-    ].filter(Boolean).join("\r\n");
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ]
+      .filter(Boolean)
+      .join("\r\n");
     const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
-    Object.assign(document.createElement("a"), { href: url, download: `${eventSlug}.ics` }).click();
+    Object.assign(document.createElement("a"), {
+      href: url,
+      download: `${eventSlug}.ics`,
+    }).click();
     URL.revokeObjectURL(url);
   }, [eventSlug, eventTitle, eventDate, eventLocation]);
 

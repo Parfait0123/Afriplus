@@ -6,8 +6,8 @@ import NavigationProgress from "@/components/ui/NavigationProgress";
 // ── Métadonnées optimisées ─────────────────────────────────
 export const metadata: Metadata = {
   title: {
-    default: "AfriPulse — L'Afrique en temps réel",
-    template: "%s | AfriPulse",
+    default: "AroMe — L'Afrique en temps réel",
+    template: "%s | AroMe",
   },
   description:
     "La plateforme de référence pour l'actualité africaine, les bourses d'études et les opportunités du continent.",
@@ -19,9 +19,9 @@ export const metadata: Metadata = {
     "emploi Afrique",
     "événements africains",
   ],
-  authors: [{ name: "AfriPulse" }],
-  creator: "AfriPulse",
-  publisher: "AfriPulse",
+  authors: [{ name: "AroMe" }],
+  creator: "AroMe",
+  publisher: "AroMe",
   robots: {
     index: true,
     follow: true,
@@ -34,28 +34,28 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "AfriPulse — L'Afrique en temps réel",
+    title: "AroMe — L'Afrique en temps réel",
     description:
       "Actualités, bourses d'études, opportunités professionnelles et événements africains.",
     type: "website",
     locale: "fr_FR",
-    siteName: "AfriPulse",
+    siteName: "AroMe",
     images: [
       {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "AfriPulse — L'Afrique en temps réel",
+        alt: "AroMe — L'Afrique en temps réel",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AfriPulse — L'Afrique en temps réel",
+    title: "AroMe — L'Afrique en temps réel",
     description:
       "Actualités, bourses d'études, opportunités professionnelles et événements africains.",
     images: ["/og-image.jpg"],
-    creator: "@AfriPulse",
+    creator: "@AroMe",
   },
   alternates: {
     canonical: "https://afripulse.com",
@@ -109,10 +109,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="antialiased bg-[#FAFAF8] text-[#141410]">
-         <Suspense fallback={null}>
+        <Suspense fallback={null}>
           <NavigationProgress />
         </Suspense>
-        
+
         {/* Skip to main content pour accessibilité */}
         <a
           href="#main-content"

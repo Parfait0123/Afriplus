@@ -10,16 +10,16 @@ import Footer from "@/components/layout/Footer";
    Type — uniquement les champs publics du profil
    ================================================================ */
 type PublicProfile = {
-  id:           string;
-  full_name:    string | null;
-  avatar_url:   string | null;
-  bio:          string | null;
-  domain:       string | null;
-  level:        string | null;
-  country:      string | null;
-  city:         string | null;
+  id: string;
+  full_name: string | null;
+  avatar_url: string | null;
+  bio: string | null;
+  domain: string | null;
+  level: string | null;
+  country: string | null;
+  city: string | null;
   linkedin_url: string | null;
-  website_url:  string | null;
+  website_url: string | null;
 };
 
 const SELECT_FIELDS =
@@ -35,36 +35,38 @@ function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get:    (name: string) => store.get(name)?.value,
-        set:    () => {},
+        get: (name: string) => store.get(name)?.value,
+        set: () => {},
         remove: () => {},
       },
-    }
+    },
   );
 }
 
 /* ================================================================
    Metadata Open Graph
    ================================================================ */
-export async function generateMetadata(
-  { params }: { params: { id: string } }
-): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string };
+}): Promise<Metadata> {
   const { data } = await getSupabase()
     .from("profiles")
     .select("full_name,bio,avatar_url")
     .eq("id", params.id)
     .single();
 
-  if (!data) return { title: "Profil introuvable — AfriPulse" };
+  if (!data) return { title: "Profil introuvable — AroMe" };
 
-  const name = data.full_name ?? "Utilisateur AfriPulse";
+  const name = data.full_name ?? "Utilisateur AroMe";
   return {
-    title:       `${name} — AfriPulse`,
-    description: data.bio ?? `Découvrez le profil de ${name} sur AfriPulse.`,
+    title: `${name} — AroMe`,
+    description: data.bio ?? `Découvrez le profil de ${name} sur AroMe.`,
     openGraph: {
-      title:       `${name} sur AfriPulse`,
+      title: `${name} sur AroMe`,
       description: data.bio ?? "",
-      images:      data.avatar_url ? [{ url: data.avatar_url }] : [],
+      images: data.avatar_url ? [{ url: data.avatar_url }] : [],
     },
   };
 }
@@ -72,9 +74,11 @@ export async function generateMetadata(
 /* ================================================================
    PAGE
    ================================================================ */
-export default async function PublicProfilePage(
-  { params }: { params: { id: string } }
-) {
+export default async function PublicProfilePage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const { data: profile } = await getSupabase()
     .from("profiles")
     .select(SELECT_FIELDS)
@@ -85,8 +89,11 @@ export default async function PublicProfilePage(
 
   const initials = profile.full_name?.[0]?.toUpperCase() ?? "A";
   const location = [profile.city, profile.country].filter(Boolean).join(", ");
-  const metaLine = [profile.domain, profile.level, location].filter(Boolean).join(" · ");
-  const hasInfo  = profile.domain || profile.level || profile.country || profile.city;
+  const metaLine = [profile.domain, profile.level, location]
+    .filter(Boolean)
+    .join(" · ");
+  const hasInfo =
+    profile.domain || profile.level || profile.country || profile.city;
   const hasLinks = profile.linkedin_url || profile.website_url;
 
   return (
@@ -94,7 +101,6 @@ export default async function PublicProfilePage(
       <Navbar />
 
       <div className="pp-page">
-
         {/* ════ HERO ════ */}
         <section className="pp-hero">
           <div className="pp-hero-grid" />
@@ -102,23 +108,23 @@ export default async function PublicProfilePage(
           <div className="pp-hero-glow-r" />
 
           <div className="pp-hero-inner">
-
             {/* Avatar */}
             <div className="pp-avatar">
-              {profile.avatar_url
-                ? <img
-                    src={profile.avatar_url}
-                    alt={profile.full_name ?? "Avatar"}
-                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                  />
-                : initials
-              }
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.full_name ?? "Avatar"}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                initials
+              )}
             </div>
 
             {/* Nom + meta */}
             <div>
               <h1 className="pp-name">
-                {profile.full_name ?? "Utilisateur AfriPulse"}
+                {profile.full_name ?? "Utilisateur AroMe"}
               </h1>
               {metaLine && (
                 <p className="pp-meta" style={{ marginTop: "0.6rem" }}>
@@ -165,14 +171,11 @@ export default async function PublicProfilePage(
 
         {/* ════ CORPS ════ */}
         <div className="pp-body">
-
           {/* Bio */}
           {profile.bio && (
             <div className="pp-card" style={{ animationDelay: "0ms" }}>
               <span className="pp-card-label">À propos</span>
-              <p className="pp-bio-text">
-                {profile.bio}
-              </p>
+              <p className="pp-bio-text">{profile.bio}</p>
             </div>
           )}
 
@@ -182,16 +185,18 @@ export default async function PublicProfilePage(
               <span className="pp-card-label">Informations</span>
               <div className="pp-info-grid">
                 {[
-                  { k: "Domaine", v: profile.domain  },
-                  { k: "Niveau",  v: profile.level   },
-                  { k: "Pays",    v: profile.country },
-                  { k: "Ville",   v: profile.city    },
-                ].filter(i => i.v).map(item => (
-                  <div key={item.k}>
-                    <div className="pp-info-key">{item.k}</div>
-                    <div className="pp-info-val">{item.v}</div>
-                  </div>
-                ))}
+                  { k: "Domaine", v: profile.domain },
+                  { k: "Niveau", v: profile.level },
+                  { k: "Pays", v: profile.country },
+                  { k: "Ville", v: profile.city },
+                ]
+                  .filter((i) => i.v)
+                  .map((item) => (
+                    <div key={item.k}>
+                      <div className="pp-info-key">{item.k}</div>
+                      <div className="pp-info-val">{item.v}</div>
+                    </div>
+                  ))}
               </div>
             </div>
           )}
@@ -214,7 +219,10 @@ export default async function PublicProfilePage(
                     <div className="pp-link-text">
                       <div className="pp-link-name">LinkedIn</div>
                       <div className="pp-link-url">
-                        {profile.linkedin_url.replace(/^https?:\/\/(www\.)?/, "")}
+                        {profile.linkedin_url.replace(
+                          /^https?:\/\/(www\.)?/,
+                          "",
+                        )}
                       </div>
                     </div>
                     <IcoArrow className="pp-link-arrow" />
@@ -233,7 +241,10 @@ export default async function PublicProfilePage(
                     <div className="pp-link-text">
                       <div className="pp-link-name">Site web</div>
                       <div className="pp-link-url">
-                        {profile.website_url.replace(/^https?:\/\/(www\.)?/, "")}
+                        {profile.website_url.replace(
+                          /^https?:\/\/(www\.)?/,
+                          "",
+                        )}
                       </div>
                     </div>
                     <IcoArrow className="pp-link-arrow" />
@@ -243,13 +254,17 @@ export default async function PublicProfilePage(
             </div>
           )}
 
-          {/* Encart CTA AfriPulse */}
-          <div className="pp-card pp-card--dark" style={{ animationDelay: "180ms" }}>
+          {/* Encart CTA AroMe */}
+          <div
+            className="pp-card pp-card--dark"
+            style={{ animationDelay: "180ms" }}
+          >
             <div className="pp-cta-inner">
               <div className="pp-cta-text">
-                <div className="pp-cta-title">Rejoins la communauté AfriPulse</div>
+                <div className="pp-cta-title">Rejoins la communauté AroMe</div>
                 <div className="pp-cta-desc">
-                  Bourses, opportunités, événements — tout ce qu'il faut pour avancer.
+                  Bourses, opportunités, événements — tout ce qu'il faut pour
+                  avancer.
                 </div>
               </div>
               <Link href="/inscription" className="pp-cta-btn">
@@ -261,10 +276,9 @@ export default async function PublicProfilePage(
           {/* Retour */}
           <div className="pp-back">
             <Link href="/" className="pp-back-link">
-              ← Retour sur AfriPulse
+              ← Retour sur AroMe
             </Link>
           </div>
-
         </div>
       </div>
 
@@ -276,30 +290,67 @@ export default async function PublicProfilePage(
 /* ================================================================
    ICÔNES SVG
    ================================================================ */
-function IcoLinkedIn({ color = "currentColor", size = 14 }: { color?: string; size?: number }) {
+function IcoLinkedIn({
+  color = "currentColor",
+  size = 14,
+}: {
+  color?: string;
+  size?: number;
+}) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
-      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/>
-      <rect x="2" y="9" width="4" height="12"/>
-      <circle cx="4" cy="4" r="2"/>
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z" />
+      <rect x="2" y="9" width="4" height="12" />
+      <circle cx="4" cy="4" r="2" />
     </svg>
   );
 }
 
-function IcoGlobe({ color = "currentColor", size = 14 }: { color?: string; size?: number }) {
+function IcoGlobe({
+  color = "currentColor",
+  size = 14,
+}: {
+  color?: string;
+  size?: number;
+}) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="2" y1="12" x2="22" y2="12"/>
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="2" y1="12" x2="22" y2="12" />
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
     </svg>
   );
 }
 
-function IcoArrow({ color = "currentColor", className }: { color?: string; className?: string }) {
+function IcoArrow({
+  color = "currentColor",
+  className,
+}: {
+  color?: string;
+  className?: string;
+}) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <polyline points="9 18 15 12 9 6"/>
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <polyline points="9 18 15 12 9 6" />
     </svg>
   );
 }

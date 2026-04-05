@@ -13,7 +13,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
  */
 async function getSupabaseClient() {
   const cookieStore = await cookies();
-  
+
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -22,17 +22,23 @@ async function getSupabaseClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+        setAll(
+          cookiesToSet: {
+            name: string;
+            value: string;
+            options: CookieOptions;
+          }[],
+        ) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              cookieStore.set(name, value, options),
             );
           } catch {
             // Géré par le middleware dans les Server Components
           }
         },
       },
-    }
+    },
   );
 }
 
@@ -40,7 +46,7 @@ async function getSupabaseClient() {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const token = searchParams.get("token");
-  
+
   if (!token) {
     return NextResponse.redirect(new URL("/?error=missing_token", request.url));
   }
@@ -60,16 +66,18 @@ export async function GET(request: Request) {
 
   // 2. Si déjà confirmé, rediriger directement
   if (subscriber.confirmed) {
-    return NextResponse.redirect(new URL("/newsletter/confirmation?already_confirmed=true", request.url));
+    return NextResponse.redirect(
+      new URL("/newsletter/confirmation?already_confirmed=true", request.url),
+    );
   }
 
   // 3. Valider l'inscription
   const { error: updateError } = await supabase
     .from("newsletter_subscribers")
-    .update({ 
-      confirmed: true, 
+    .update({
+      confirmed: true,
       confirmed_at: new Date().toISOString(),
-      confirmation_token: null // Sécurité : on invalide le token utilisé
+      confirmation_token: null, // Sécurité : on invalide le token utilisé
     })
     .eq("id", subscriber.id);
 
@@ -78,7 +86,9 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/?error=update_failed", request.url));
   }
 
-  return NextResponse.redirect(new URL("/newsletter/confirmation?success=true", request.url));
+  return NextResponse.redirect(
+    new URL("/newsletter/confirmation?success=true", request.url),
+  );
 }
 
 // POST : Envoi ou renvoi de l'email de confirmation
@@ -95,7 +105,10 @@ export async function POST(request: Request) {
       .single();
 
     if (error || !subscriber) {
-      return NextResponse.json({ error: "Abonné introuvable" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Abonné introuvable" },
+        { status: 404 },
+      );
     }
 
     if (subscriber.confirmed) {
@@ -106,9 +119,9 @@ export async function POST(request: Request) {
 
     // Envoi de l'email via Resend
     const { error: mailError } = await resend.emails.send({
-      from: "AfriPulse <newsletter@afripulse.com>",
+      from: "AroMe <newsletter@afripulse.com>",
       to: email,
-      subject: "Confirmez votre inscription à la newsletter AfriPulse",
+      subject: "Confirmez votre inscription à la newsletter AroMe",
       html: `
         <!DOCTYPE html>
         <html>
@@ -127,7 +140,7 @@ export async function POST(request: Request) {
                 ${SITE_URL}/api/newsletter/confirm?token=${confirmationToken}
               </p>
               <hr style="border: 0; border-top: 1px solid #e8e4dc; margin: 20px 0;" />
-              <p style="font-size: 12px; color: #928e80;">© ${new Date().getFullYear()} AfriPulse. Tous droits réservés.</p>
+              <p style="font-size: 12px; color: #928e80;">© ${new Date().getFullYear()} AroMe. Tous droits réservés.</p>
             </div>
           </body>
         </html>
@@ -137,12 +150,11 @@ export async function POST(request: Request) {
     if (mailError) throw mailError;
 
     return NextResponse.json({ success: true, message: "Email envoyé" });
-
   } catch (err: any) {
     console.error("Erreur POST Newsletter:", err);
     return NextResponse.json(
-      { error: err.message || "Une erreur technique est survenue" }, 
-      { status: 500 }
+      { error: err.message || "Une erreur technique est survenue" },
+      { status: 500 },
     );
   }
 }

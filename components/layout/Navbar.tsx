@@ -72,7 +72,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="nb-logo">
-          Afri<span style={{ color: "#C08435" }}>Pulse</span>
+          Aro<span style={{ color: "#C08435" }}>Me</span>
         </Link>
 
         {/* Liens desktop */}

@@ -1,5 +1,5 @@
 -- ============================================================
--- AfriPulse — Données de test
+-- AroMe — Données de test
 -- 20 articles · 20 bourses · 20 opportunités · 20 événements
 -- Compatible avec le schéma exact fourni
 -- ============================================================

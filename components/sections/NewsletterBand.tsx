@@ -5,9 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function NewsletterBand() {
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error" | "already">("idle");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error" | "already"
+  >("idle");
   const [isVisible, setIsVisible] = useState(false);
-  
+
   const subscribed = status === "success";
 
   useEffect(() => {
@@ -15,7 +17,7 @@ export default function NewsletterBand() {
       ([entry]) => {
         if (entry.isIntersecting) setIsVisible(true);
       },
-      { threshold: 0.2 }
+      { threshold: 0.2 },
     );
     const element = document.getElementById("newsletter-band");
     if (element) observer.observe(element);
@@ -53,7 +55,8 @@ export default function NewsletterBand() {
     <div
       id="newsletter-band"
       style={{
-        background: "linear-gradient(135deg, #0c0b08 0%, #141410 50%, #1a1812 100%)",
+        background:
+          "linear-gradient(135deg, #0c0b08 0%, #141410 50%, #1a1812 100%)",
         padding: "clamp(3rem, 8vw, 6rem) 0",
         position: "relative",
         overflow: "hidden",
@@ -79,7 +82,8 @@ export default function NewsletterBand() {
           width: "clamp(300px, 50vw, 600px)",
           height: "clamp(300px, 50vw, 600px)",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(192,132,53,.15) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(192,132,53,.15) 0%, transparent 70%)",
           pointerEvents: "none",
           animation: "pulse 8s ease-in-out infinite",
         }}
@@ -92,7 +96,8 @@ export default function NewsletterBand() {
           width: "clamp(400px, 60vw, 700px)",
           height: "clamp(400px, 60vw, 700px)",
           borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(26,92,64,.1) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(26,92,64,.1) 0%, transparent 70%)",
           pointerEvents: "none",
           animation: "pulse 12s ease-in-out infinite reverse",
         }}
@@ -181,7 +186,9 @@ export default function NewsletterBand() {
             }}
           >
             Ne manquez{" "}
-            <em style={{ fontStyle: "italic", color: "#E09B48", fontWeight: 200 }}>
+            <em
+              style={{ fontStyle: "italic", color: "#E09B48", fontWeight: 200 }}
+            >
               rien d&apos;essentiel
             </em>
           </h2>
@@ -213,7 +220,8 @@ export default function NewsletterBand() {
           {subscribed ? (
             <div
               style={{
-                background: "linear-gradient(135deg, rgba(26,92,64,.2), rgba(26,92,64,.05))",
+                background:
+                  "linear-gradient(135deg, rgba(26,92,64,.2), rgba(26,92,64,.05))",
                 border: "1px solid rgba(26,92,64,.4)",
                 borderRadius: 20,
                 padding: "1.5rem 2rem",
@@ -221,7 +229,9 @@ export default function NewsletterBand() {
                 backdropFilter: "blur(10px)",
               }}
             >
-              <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>✨</div>
+              <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>
+                ✨
+              </div>
               <div
                 style={{
                   fontSize: "1rem",
@@ -232,8 +242,10 @@ export default function NewsletterBand() {
               >
                 Inscription confirmée !
               </div>
-              <div style={{ fontSize: "0.8rem", color: "rgba(255,255,255,.5)" }}>
-                Bienvenue dans la communauté AfriPulse
+              <div
+                style={{ fontSize: "0.8rem", color: "rgba(255,255,255,.5)" }}
+              >
+                Bienvenue dans la communauté AroMe
               </div>
             </div>
           ) : (
@@ -264,7 +276,8 @@ export default function NewsletterBand() {
                     color: "#fff",
                     fontFamily: "'DM Sans', system-ui, sans-serif",
                     fontSize: "clamp(0.85rem, 3vw, 0.9rem)",
-                    padding: "clamp(0.8rem, 2.5vw, 1rem) clamp(1rem, 4vw, 1.5rem)",
+                    padding:
+                      "clamp(0.8rem, 2.5vw, 1rem) clamp(1rem, 4vw, 1.5rem)",
                     outline: "none",
                   }}
                 />
@@ -280,7 +293,8 @@ export default function NewsletterBand() {
                     border: "none",
                     borderRadius: "100px",
                     margin: "0.35rem",
-                    padding: "clamp(0.5rem, 1.5vw, 0.7rem) clamp(1rem, 3vw, 1.8rem)",
+                    padding:
+                      "clamp(0.5rem, 1.5vw, 0.7rem) clamp(1rem, 3vw, 1.8rem)",
                     cursor: status === "loading" ? "wait" : "pointer",
                     whiteSpace: "nowrap",
                     transition: "all 0.2s ease",
@@ -288,7 +302,8 @@ export default function NewsletterBand() {
                   onMouseEnter={(e) => {
                     if (status !== "loading") {
                       e.currentTarget.style.transform = "scale(1.02)";
-                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(192,132,53,.4)";
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 12px rgba(192,132,53,.4)";
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -297,7 +312,13 @@ export default function NewsletterBand() {
                   }}
                 >
                   {status === "loading" ? (
-                    <span style={{ display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                    <span
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                      }}
+                    >
                       <span
                         style={{
                           width: 14,
@@ -347,7 +368,8 @@ export default function NewsletterBand() {
                     gap: "0.3rem",
                   }}
                 >
-                  ✨ Cet email est déjà inscrit — vous recevez déjà nos actualités !
+                  ✨ Cet email est déjà inscrit — vous recevez déjà nos
+                  actualités !
                 </div>
               )}
             </form>
@@ -420,7 +442,9 @@ export default function NewsletterBand() {
               }}
             >
               <span style={{ fontSize: "0.9rem" }}>{item.icon}</span>
-              <span style={{ fontSize: "0.7rem", color: "rgba(255,255,255,.5)" }}>
+              <span
+                style={{ fontSize: "0.7rem", color: "rgba(255,255,255,.5)" }}
+              >
                 {item.text}
               </span>
             </div>

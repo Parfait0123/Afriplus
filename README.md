@@ -1,8 +1,8 @@
-# 📰 AfriPulse
+# 📰 AroMe
 
 > **Plateforme digitale africaine** pour découvrir les actualités, opportunités et ressources du continent.
 
-**AfriPulse** est une plateforme moderne et complète offrant un accès centralisé aux actualités africaines, bourses d'études, opportunités de carrière, événements et ressources professionnelles. Avec un système d'authentification robuste, un tableau de bord administrateur puissant et une newsletter intégrée, AfriPulse permet aux utilisateurs de rester informés et connectés aux meilleures opportunités en Afrique.
+**AroMe** est une plateforme moderne et complète offrant un accès centralisé aux actualités africaines, bourses d'études, opportunités de carrière, événements et ressources professionnelles. Avec un système d'authentification robuste, un tableau de bord administrateur puissant et une newsletter intégrée, AroMe permet aux utilisateurs de rester informés et connectés aux meilleures opportunités en Afrique.
 
 ---
 
@@ -622,7 +622,7 @@ git push origin feature/ma-fonctionnalite
 
 ## 📄 Licence
 
-Propriétaire - AfriPulse © 2024
+Propriétaire - AroMe © 2024
 
 ---
 

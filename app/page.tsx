@@ -67,19 +67,19 @@ type Event = {
 
 /* ─── Palettes catégories (inchangées) ─── */
 const tagColors: Record<string, { bg: string; color: string }> = {
-  "Politique":     { bg: "#EBF0FB", color: "#1E4DA8" },
-  "Économie":      { bg: "#FBF4E8", color: "#C08435" },
-  "Tech":          { bg: "#EAF4EF", color: "#1A5C40" },
-  "Sport":         { bg: "#FAEBE8", color: "#B8341E" },
-  "Culture":       { bg: "#FBF4E8", color: "#C08435" },
-  "Santé":         { bg: "#EAF4EF", color: "#1A5C40" },
-  "Environnement": { bg: "#EAF4EF", color: "#1A5C40" },
+  Politique: { bg: "#EBF0FB", color: "#1E4DA8" },
+  Économie: { bg: "#FBF4E8", color: "#C08435" },
+  Tech: { bg: "#EAF4EF", color: "#1A5C40" },
+  Sport: { bg: "#FAEBE8", color: "#B8341E" },
+  Culture: { bg: "#FBF4E8", color: "#C08435" },
+  Santé: { bg: "#EAF4EF", color: "#1A5C40" },
+  Environnement: { bg: "#EAF4EF", color: "#1A5C40" },
 };
 const oppTagColors: Record<string, { bg: string; color: string }> = {
   "Emploi CDI": { bg: "#EAF4EF", color: "#1A5C40" },
-  "Stage":      { bg: "#EBF0FB", color: "#1E4DA8" },
-  "Graduate":   { bg: "#FBF4E8", color: "#C08435" },
-  "Emploi":     { bg: "#FBF4E8", color: "#C08435" },
+  Stage: { bg: "#EBF0FB", color: "#1E4DA8" },
+  Graduate: { bg: "#FBF4E8", color: "#C08435" },
+  Emploi: { bg: "#FBF4E8", color: "#C08435" },
 };
 
 /* ─── Styles inline (inchangés) ─── */
@@ -113,36 +113,147 @@ const cardBase: React.CSSProperties = {
   transition: "box-shadow .25s, transform .25s",
 };
 const ArrowIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+  <svg
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
     <path d="M5 12h14M12 5l7 7-7 7" />
   </svg>
 );
 
 /* ─── Composant carte opportunité visuelle ─── */
-function OppCard({ opp, tc, tagPill, cardBase }: {
+function OppCard({
+  opp,
+  tc,
+  tagPill,
+  cardBase,
+}: {
   opp: Opportunity;
   tc: { bg: string; color: string };
   tagPill: React.CSSProperties;
   cardBase: React.CSSProperties;
 }) {
   return (
-    <Link href={`/opportunites/${opp.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
-      <div style={{ ...cardBase, display: "flex", flexDirection: "column", height: "100%" }} className="card-lift">
-        <div style={{ height: 110, background: opp.cover_url ? `url(${opp.cover_url}) center/cover no-repeat` : opp.image_gradient, position: "relative", flexShrink: 0 }}>
-          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 10%, rgba(0,0,0,.5) 100%)" }} />
-          <div style={{ position: "absolute", bottom: "0.7rem", left: "0.85rem", width: 32, height: 32, borderRadius: 9, background: "rgba(255,255,255,.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "#C08435" }}>
+    <Link
+      href={`/opportunites/${opp.slug}`}
+      style={{ textDecoration: "none", display: "block", height: "100%" }}
+    >
+      <div
+        style={{
+          ...cardBase,
+          display: "flex",
+          flexDirection: "column",
+          height: "100%",
+        }}
+        className="card-lift"
+      >
+        <div
+          style={{
+            height: 110,
+            background: opp.cover_url
+              ? `url(${opp.cover_url}) center/cover no-repeat`
+              : opp.image_gradient,
+            position: "relative",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background:
+                "linear-gradient(180deg, transparent 10%, rgba(0,0,0,.5) 100%)",
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              bottom: "0.7rem",
+              left: "0.85rem",
+              width: 32,
+              height: 32,
+              borderRadius: 9,
+              background: "rgba(255,255,255,.95)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontFamily: "'Fraunces', Georgia, serif",
+              fontSize: "0.78rem",
+              fontWeight: 900,
+              color: "#C08435",
+            }}
+          >
             {opp.company_initials}
           </div>
-          <span style={{ position: "absolute", top: "0.7rem", right: "0.7rem", ...tagPill, background: tc.bg, color: tc.color }}>
+          <span
+            style={{
+              position: "absolute",
+              top: "0.7rem",
+              right: "0.7rem",
+              ...tagPill,
+              background: tc.bg,
+              color: tc.color,
+            }}
+          >
             {opp.type}
           </span>
         </div>
-        <div style={{ padding: "1rem 1.2rem", display: "flex", flexDirection: "column", gap: "0.4rem", flex: 1 }}>
-          <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C08435" }}>{opp.company}</div>
-          <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.92rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, flex: 1 }}>{opp.title}</div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.75rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
-            <span style={{ fontSize: "0.63rem", color: "#928E80" }}>📍 {opp.location}</span>
-            <span style={{ fontSize: "0.65rem", fontWeight: 700, color: "#C08435" }}>Postuler →</span>
+        <div
+          style={{
+            padding: "1rem 1.2rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.4rem",
+            flex: 1,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "0.6rem",
+              fontWeight: 700,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: "#C08435",
+            }}
+          >
+            {opp.company}
+          </div>
+          <div
+            style={{
+              fontFamily: "'Fraunces', Georgia, serif",
+              fontSize: "0.92rem",
+              fontWeight: 700,
+              color: "#141410",
+              lineHeight: 1.3,
+              flex: 1,
+            }}
+          >
+            {opp.title}
+          </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              paddingTop: "0.75rem",
+              borderTop: "1px solid rgba(20,20,16,.07)",
+            }}
+          >
+            <span style={{ fontSize: "0.63rem", color: "#928E80" }}>
+              📍 {opp.location}
+            </span>
+            <span
+              style={{ fontSize: "0.65rem", fontWeight: 700, color: "#C08435" }}
+            >
+              Postuler →
+            </span>
           </div>
         </div>
       </div>
@@ -166,7 +277,9 @@ export default function Home() {
         // Articles : publiés, ordre par published_at descendant
         const { data: articlesData, error: articlesErr } = await sb
           .from("articles")
-          .select("id,slug,title,excerpt,category,author_name,reading_time,published_at,cover_url,image_gradient,featured")
+          .select(
+            "id,slug,title,excerpt,category,author_name,reading_time,published_at,cover_url,image_gradient,featured",
+          )
           .eq("published", true)
           .order("published_at", { ascending: false })
           .limit(8);
@@ -176,7 +289,9 @@ export default function Home() {
         // Bourses : publiées, urgentes d'abord, puis deadline proche
         const { data: scholarshipsData, error: schErr } = await sb
           .from("scholarships")
-          .select("id,slug,title,organization,country,flag,level,amount,deadline,urgent,cover_url,image_gradient")
+          .select(
+            "id,slug,title,organization,country,flag,level,amount,deadline,urgent,cover_url,image_gradient",
+          )
           .eq("published", true)
           .order("urgent", { ascending: false })
           .order("deadline", { ascending: true })
@@ -187,7 +302,9 @@ export default function Home() {
         // Opportunités : publiées, ordre par created_at descendant
         const { data: oppData, error: oppErr } = await sb
           .from("opportunities")
-          .select("id,slug,title,company,company_initials,location,type,cover_url,image_gradient")
+          .select(
+            "id,slug,title,company,company_initials,location,type,cover_url,image_gradient",
+          )
           .eq("published", true)
           .order("created_at", { ascending: false })
           .limit(8);
@@ -197,13 +314,14 @@ export default function Home() {
         // Événements : publiés, ordre par event_date asc (les plus proches d'abord)
         const { data: eventsData, error: eventsErr } = await sb
           .from("events")
-          .select("id,slug,title,type,location,flag,day,month,year,cover_url,image_gradient")
+          .select(
+            "id,slug,title,type,location,flag,day,month,year,cover_url,image_gradient",
+          )
           .eq("published", true)
           .order("event_date", { ascending: true })
           .limit(8);
         if (eventsErr) console.error("Erreur événements:", eventsErr);
         else setEvents(eventsData as Event[]);
-
       } catch (err) {
         console.error("Erreur générale:", err);
       } finally {
@@ -217,10 +335,30 @@ export default function Home() {
     return (
       <>
         <Navbar />
-        <main style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#F8F6F1" }}>
+        <main
+          style={{
+            minHeight: "100vh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "#F8F6F1",
+          }}
+        >
           <div style={{ textAlign: "center" }}>
-            <div style={{ width: 48, height: 48, borderRadius: "50%", border: "3px solid rgba(20,20,16,.08)", borderTopColor: "#C08435", animation: "spin 0.8s linear infinite", margin: "0 auto 1rem" }} />
-            <p style={{ color: "#928E80" }}>Chargement de l'actualité africaine...</p>
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                border: "3px solid rgba(20,20,16,.08)",
+                borderTopColor: "#C08435",
+                animation: "spin 0.8s linear infinite",
+                margin: "0 auto 1rem",
+              }}
+            />
+            <p style={{ color: "#928E80" }}>
+              Chargement de l'actualité africaine...
+            </p>
           </div>
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </main>
@@ -229,18 +367,18 @@ export default function Home() {
     );
   }
 
-  const hero       = articles[0];
-  const topRow     = articles.slice(1, 4);
-  const midRow     = articles.slice(4, 8);
+  const hero = articles[0];
+  const topRow = articles.slice(1, 4);
+  const midRow = articles.slice(4, 8);
   const allBourses = scholarships;
-  const topOpps    = opportunities.slice(0, 4);
-  const botOpps    = opportunities.slice(4, 8);
-  const topEvents  = events.slice(0, 4);
+  const topOpps = opportunities.slice(0, 4);
+  const botOpps = opportunities.slice(4, 8);
+  const topEvents = events.slice(0, 4);
   const sideEvents = events.slice(4, 8);
 
   // Trouver une bourse urgente pour la bannière (priorité aux urgentes)
-  const urgentScholarship = allBourses.find(s => s.urgent);
-  const urgentCount = allBourses.filter(s => s.urgent).length;
+  const urgentScholarship = allBourses.find((s) => s.urgent);
+  const urgentCount = allBourses.filter((s) => s.urgent).length;
 
   return (
     <>
@@ -249,21 +387,48 @@ export default function Home() {
       {/* ══════════════════════════════════════════
           HERO  — bg: #F8F6F1
       ══════════════════════════════════════════ */}
-      <section style={{ background: "#F8F6F1", paddingTop: "clamp(5.5rem, 10vh, 8rem)", borderBottom: "1px solid rgba(20,20,16,.08)" }}>
+      <section
+        style={{
+          background: "#F8F6F1",
+          paddingTop: "clamp(5.5rem, 10vh, 8rem)",
+          borderBottom: "1px solid rgba(20,20,16,.08)",
+        }}
+      >
         <div className="ap-container">
-
           {/* Barre chapeau */}
           <div className="ap-topbar">
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}
+            >
               <span className="dot-live" />
-              <span style={{ fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#141410" }}>
+              <span
+                style={{
+                  fontSize: "0.72rem",
+                  fontWeight: 700,
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                  color: "#141410",
+                }}
+              >
                 Mis à jour en continu
               </span>
             </div>
             <div className="ap-topbar-links">
-              {(["Actualités","Bourses","Opportunités","Événements"] as const).map((cat, i) => (
-                <Link key={cat} href={`/${["actualites","bourses","opportunites","evenements"][i]}`}
-                  style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: "#928E80", textDecoration: "none" }}>
+              {(
+                ["Actualités", "Bourses", "Opportunités", "Événements"] as const
+              ).map((cat, i) => (
+                <Link
+                  key={cat}
+                  href={`/${["actualites", "bourses", "opportunites", "evenements"][i]}`}
+                  style={{
+                    fontSize: "0.72rem",
+                    fontWeight: 600,
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                    color: "#928E80",
+                    textDecoration: "none",
+                  }}
+                >
                   {cat}
                 </Link>
               ))}
@@ -272,7 +437,6 @@ export default function Home() {
 
           {/* Grille héro */}
           <div className="ap-hero-grid">
-
             {/* Col gauche : titre + article featured */}
             <div>
               <div className="anim-up ap-hero-badge">
@@ -280,29 +444,124 @@ export default function Home() {
               </div>
 
               <h1 className="anim-up-1 ap-hero-title">
-                L&apos;actualité,<br />
+                L&apos;actualité,
+                <br />
                 les{" "}
-                <em style={{ fontStyle: "italic", fontWeight: 200, color: "#C08435" }}>
+                <em
+                  style={{
+                    fontStyle: "italic",
+                    fontWeight: 200,
+                    color: "#C08435",
+                  }}
+                >
                   opportunités
                 </em>
               </h1>
 
               {hero && (
-                <Link href={`/actualites/${hero.slug}`} style={{ textDecoration: "none", display: "block" }} className="anim-up-2">
+                <Link
+                  href={`/actualites/${hero.slug}`}
+                  style={{ textDecoration: "none", display: "block" }}
+                  className="anim-up-2"
+                >
                   <div className="ap-hero-card card-lift">
-                    <div style={{ background: hero.cover_url ? `url(${hero.cover_url}) center/cover no-repeat` : hero.image_gradient, position: "relative", flexShrink: 0 }} className="ap-hero-card-img">
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,.42) 100%)" }} />
-                      <span style={{ position: "absolute", top: "1rem", left: "1rem", background: "#B8341E", color: "#fff", fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "0.28rem 0.75rem", borderRadius: 100 }}>
+                    <div
+                      style={{
+                        background: hero.cover_url
+                          ? `url(${hero.cover_url}) center/cover no-repeat`
+                          : hero.image_gradient,
+                        position: "relative",
+                        flexShrink: 0,
+                      }}
+                      className="ap-hero-card-img"
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, transparent 40%, rgba(0,0,0,.42) 100%)",
+                        }}
+                      />
+                      <span
+                        style={{
+                          position: "absolute",
+                          top: "1rem",
+                          left: "1rem",
+                          background: "#B8341E",
+                          color: "#fff",
+                          fontSize: "0.58rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.1em",
+                          textTransform: "uppercase",
+                          padding: "0.28rem 0.75rem",
+                          borderRadius: 100,
+                        }}
+                      >
                         À la une
                       </span>
                     </div>
-                    <div style={{ padding: "1.75rem 2rem", display: "flex", flexDirection: "column", justifyContent: "center", gap: "0.75rem" }}>
-                      <span style={{ ...tagPill, ...(tagColors[hero.category] || {}) }}>{hero.category}</span>
-                      <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.35rem", fontWeight: 700, lineHeight: 1.25, color: "#141410" }}>{hero.title}</h2>
-                      <p style={{ fontSize: "0.82rem", color: "#928E80", fontWeight: 300, lineHeight: 1.72, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{hero.excerpt}</p>
-                      <div style={{ display: "flex", gap: "0.9rem", fontSize: "0.67rem", color: "#928E80", paddingTop: "0.75rem", borderTop: "1px solid rgba(20,20,16,.06)" }}>
+                    <div
+                      style={{
+                        padding: "1.75rem 2rem",
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        gap: "0.75rem",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...tagPill,
+                          ...(tagColors[hero.category] || {}),
+                        }}
+                      >
+                        {hero.category}
+                      </span>
+                      <h2
+                        style={{
+                          fontFamily: "'Fraunces', Georgia, serif",
+                          fontSize: "1.35rem",
+                          fontWeight: 700,
+                          lineHeight: 1.25,
+                          color: "#141410",
+                        }}
+                      >
+                        {hero.title}
+                      </h2>
+                      <p
+                        style={
+                          {
+                            fontSize: "0.82rem",
+                            color: "#928E80",
+                            fontWeight: 300,
+                            lineHeight: 1.72,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          } as React.CSSProperties
+                        }
+                      >
+                        {hero.excerpt}
+                      </p>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.9rem",
+                          fontSize: "0.67rem",
+                          color: "#928E80",
+                          paddingTop: "0.75rem",
+                          borderTop: "1px solid rgba(20,20,16,.06)",
+                        }}
+                      >
                         <span>{hero.author_name}</span>
-                        <span>{new Date(hero.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        <span>
+                          {new Date(hero.published_at).toLocaleDateString(
+                            "fr-FR",
+                            { day: "numeric", month: "short", year: "numeric" },
+                          )}
+                        </span>
                         <span>{hero.reading_time} min</span>
                       </div>
                     </div>
@@ -318,7 +577,7 @@ export default function Home() {
                 {[
                   { n: "12K+", l: "Lecteurs actifs" },
                   { n: "340+", l: "Bourses" },
-                  { n: "515",   l: "Pays couverts" },
+                  { n: "515", l: "Pays couverts" },
                   { n: "1 200+", l: "Opportunités" },
                 ].map((s) => (
                   <div key={s.l} className="ap-stats-content">
@@ -331,13 +590,73 @@ export default function Home() {
               {/* Mini articles */}
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {topRow.map((art, i) => (
-                  <Link key={art.id} href={`/actualites/${art.slug}`} style={{ textDecoration: "none" }}>
-                    <div style={{ display: "flex", gap: "1rem", padding: "1rem 0", borderBottom: i < topRow.length - 1 ? "1px solid rgba(20,20,16,.08)" : "none" }}>
-                      <div style={{ width: 58, height: 58, flexShrink: 0, borderRadius: 12, background: art.cover_url ? `url(${art.cover_url}) center/cover no-repeat` : art.image_gradient }} />
+                  <Link
+                    key={art.id}
+                    href={`/actualites/${art.slug}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "1rem",
+                        padding: "1rem 0",
+                        borderBottom:
+                          i < topRow.length - 1
+                            ? "1px solid rgba(20,20,16,.08)"
+                            : "none",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: 58,
+                          height: 58,
+                          flexShrink: 0,
+                          borderRadius: 12,
+                          background: art.cover_url
+                            ? `url(${art.cover_url}) center/cover no-repeat`
+                            : art.image_gradient,
+                        }}
+                      />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ ...tagPill, ...(tagColors[art.category] || {}), marginBottom: "0.3rem", display: "inline-block" }}>{art.category}</span>
-                        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.85rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{art.title}</div>
-                        <div style={{ fontSize: "0.63rem", color: "#928E80", marginTop: "0.3rem" }}>{new Date(art.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
+                        <span
+                          style={{
+                            ...tagPill,
+                            ...(tagColors[art.category] || {}),
+                            marginBottom: "0.3rem",
+                            display: "inline-block",
+                          }}
+                        >
+                          {art.category}
+                        </span>
+                        <div
+                          style={
+                            {
+                              fontFamily: "'Fraunces', Georgia, serif",
+                              fontSize: "0.85rem",
+                              fontWeight: 700,
+                              color: "#141410",
+                              lineHeight: 1.3,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            } as React.CSSProperties
+                          }
+                        >
+                          {art.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.63rem",
+                            color: "#928E80",
+                            marginTop: "0.3rem",
+                          }}
+                        >
+                          {new Date(art.published_at).toLocaleDateString(
+                            "fr-FR",
+                            { day: "numeric", month: "short" },
+                          )}
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -346,10 +665,40 @@ export default function Home() {
 
               {/* CTAs */}
               <div className="ap-hero-ctas">
-                <Link href="/actualites" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.88rem", fontWeight: 600, padding: "0.82rem 1.6rem", borderRadius: 100, textDecoration: "none", background: "#141410", color: "#fff", boxShadow: "0 8px 32px rgba(20,20,16,.12)" }}>
+                <Link
+                  href="/actualites"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    padding: "0.82rem 1.6rem",
+                    borderRadius: 100,
+                    textDecoration: "none",
+                    background: "#141410",
+                    color: "#fff",
+                    boxShadow: "0 8px 32px rgba(20,20,16,.12)",
+                  }}
+                >
                   Explorer les actualités →
                 </Link>
-                <Link href="/bourses" style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", fontSize: "0.88rem", fontWeight: 600, padding: "0.82rem 1.6rem", borderRadius: 100, textDecoration: "none", background: "transparent", color: "#38382E", border: "1.5px solid rgba(20,20,16,.15)" }}>
+                <Link
+                  href="/bourses"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    padding: "0.82rem 1.6rem",
+                    borderRadius: 100,
+                    textDecoration: "none",
+                    background: "transparent",
+                    color: "#38382E",
+                    border: "1.5px solid rgba(20,20,16,.15)",
+                  }}
+                >
                   Voir les bourses
                 </Link>
               </div>
@@ -372,10 +721,21 @@ export default function Home() {
               <div>
                 <div className="sh-kicker">Actualités</div>
                 <h2 className="ap-section-title">
-                  Aussi à la <em style={{ fontStyle: "italic", color: "#C08435", fontWeight: 200 }}>une</em>
+                  Aussi à la{" "}
+                  <em
+                    style={{
+                      fontStyle: "italic",
+                      color: "#C08435",
+                      fontWeight: 200,
+                    }}
+                  >
+                    une
+                  </em>
                 </h2>
               </div>
-              <Link href="/actualites" style={sectionLink}>Toutes les actualités →</Link>
+              <Link href="/actualites" style={sectionLink}>
+                Toutes les actualités →
+              </Link>
             </div>
           </RevealWrapper>
 
@@ -383,23 +743,111 @@ export default function Home() {
             {/* Grande carte immersive */}
             {midRow[0] && (
               <RevealWrapper>
-                <Link href={`/actualites/${midRow[0].slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
-                  <div className="ap-news-big card-lift" style={{ background: midRow[0].cover_url ? `url(${midRow[0].cover_url}) center/cover no-repeat` : midRow[0].image_gradient }}>
-                    <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.78) 100%)" }} />
+                <Link
+                  href={`/actualites/${midRow[0].slug}`}
+                  style={{
+                    textDecoration: "none",
+                    display: "block",
+                    height: "100%",
+                  }}
+                >
+                  <div
+                    className="ap-news-big card-lift"
+                    style={{
+                      background: midRow[0].cover_url
+                        ? `url(${midRow[0].cover_url}) center/cover no-repeat`
+                        : midRow[0].image_gradient,
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background:
+                          "linear-gradient(180deg, rgba(0,0,0,.08) 0%, rgba(0,0,0,.78) 100%)",
+                      }}
+                    />
                     <span className="ap-news-num">01</span>
-                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "2rem" }}>
-                      <span style={{ ...tagPill, background: "rgba(255,255,255,.15)", color: "#fff", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,.2)", marginBottom: "0.75rem", display: "inline-block" }}>
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        padding: "2rem",
+                      }}
+                    >
+                      <span
+                        style={{
+                          ...tagPill,
+                          background: "rgba(255,255,255,.15)",
+                          color: "#fff",
+                          backdropFilter: "blur(8px)",
+                          border: "1px solid rgba(255,255,255,.2)",
+                          marginBottom: "0.75rem",
+                          display: "inline-block",
+                        }}
+                      >
                         {midRow[0].category}
                       </span>
-                      <h3 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(1.25rem, 2.2vw, 1.7rem)", fontWeight: 700, color: "#fff", lineHeight: 1.22, marginBottom: "0.85rem" }}>
+                      <h3
+                        style={{
+                          fontFamily: "'Fraunces', Georgia, serif",
+                          fontSize: "clamp(1.25rem, 2.2vw, 1.7rem)",
+                          fontWeight: 700,
+                          color: "#fff",
+                          lineHeight: 1.22,
+                          marginBottom: "0.85rem",
+                        }}
+                      >
                         {midRow[0].title}
                       </h3>
-                      <p style={{ fontSize: "0.82rem", color: "rgba(255,255,255,.72)", fontWeight: 300, lineHeight: 1.7, marginBottom: "1.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                      <p
+                        style={
+                          {
+                            fontSize: "0.82rem",
+                            color: "rgba(255,255,255,.72)",
+                            fontWeight: 300,
+                            lineHeight: 1.7,
+                            marginBottom: "1.25rem",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                          } as React.CSSProperties
+                        }
+                      >
                         {midRow[0].excerpt}
                       </p>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{ fontSize: "0.68rem", color: "rgba(255,255,255,.55)" }}>{midRow[0].author_name} · {new Date(midRow[0].published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                        <span style={{ display: "flex", alignItems: "center", gap: "0.4rem", fontSize: "0.78rem", fontWeight: 700, color: "#C08435" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.68rem",
+                            color: "rgba(255,255,255,.55)",
+                          }}
+                        >
+                          {midRow[0].author_name} ·{" "}
+                          {new Date(midRow[0].published_at).toLocaleDateString(
+                            "fr-FR",
+                            { day: "numeric", month: "short" },
+                          )}
+                        </span>
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.4rem",
+                            fontSize: "0.78rem",
+                            fontWeight: 700,
+                            color: "#C08435",
+                          }}
+                        >
                           Lire <ArrowIcon />
                         </span>
                       </div>
@@ -413,21 +861,82 @@ export default function Home() {
             <div className="ap-news-list">
               {midRow.slice(1).map((art, i) => (
                 <RevealWrapper key={art.id} delay={0.1 * (i + 1)}>
-                  <Link href={`/actualites/${art.slug}`} style={{ textDecoration: "none", display: "block" }}>
+                  <Link
+                    href={`/actualites/${art.slug}`}
+                    style={{ textDecoration: "none", display: "block" }}
+                  >
                     <div className="ap-news-row">
                       <span className="ap-news-row-num">0{i + 2}</span>
-                      <div style={{ width: 88, height: 88, flexShrink: 0, borderRadius: 14, background: art.cover_url ? `url(${art.cover_url}) center/cover no-repeat` : art.image_gradient, overflow: "hidden", position: "relative" }}>
-                        <div style={{ position: "absolute", inset: 0, background: "linear-gradient(135deg, transparent 40%, rgba(0,0,0,.28) 100%)" }} />
+                      <div
+                        style={{
+                          width: 88,
+                          height: 88,
+                          flexShrink: 0,
+                          borderRadius: 14,
+                          background: art.cover_url
+                            ? `url(${art.cover_url}) center/cover no-repeat`
+                            : art.image_gradient,
+                          overflow: "hidden",
+                          position: "relative",
+                        }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            inset: 0,
+                            background:
+                              "linear-gradient(135deg, transparent 40%, rgba(0,0,0,.28) 100%)",
+                          }}
+                        />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
-                          <span style={{ ...tagPill, ...(tagColors[art.category] || {}) }}>{art.category}</span>
-                          <span style={{ fontSize: "0.62rem", color: "#928E80" }}>{art.reading_time} min</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            marginBottom: "0.4rem",
+                          }}
+                        >
+                          <span
+                            style={{
+                              ...tagPill,
+                              ...(tagColors[art.category] || {}),
+                            }}
+                          >
+                            {art.category}
+                          </span>
+                          <span
+                            style={{ fontSize: "0.62rem", color: "#928E80" }}
+                          >
+                            {art.reading_time} min
+                          </span>
                         </div>
-                        <h3 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1rem", fontWeight: 700, color: "#141410", lineHeight: 1.3, marginBottom: "0.35rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>
+                        <h3
+                          style={
+                            {
+                              fontFamily: "'Fraunces', Georgia, serif",
+                              fontSize: "1rem",
+                              fontWeight: 700,
+                              color: "#141410",
+                              lineHeight: 1.3,
+                              marginBottom: "0.35rem",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            } as React.CSSProperties
+                          }
+                        >
                           {art.title}
                         </h3>
-                        <div style={{ fontSize: "0.65rem", color: "#928E80" }}>{art.author_name} · {new Date(art.published_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</div>
+                        <div style={{ fontSize: "0.65rem", color: "#928E80" }}>
+                          {art.author_name} ·{" "}
+                          {new Date(art.published_at).toLocaleDateString(
+                            "fr-FR",
+                            { day: "numeric", month: "short" },
+                          )}
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -453,9 +962,22 @@ export default function Home() {
             <div className="ap-section-header">
               <div>
                 <div className="sh-kicker">Bourses d&apos;études</div>
-                <h2 className="ap-section-title">Financez vos <em style={{ fontStyle: "italic", color: "#C08435", fontWeight: 200 }}>études</em></h2>
+                <h2 className="ap-section-title">
+                  Financez vos{" "}
+                  <em
+                    style={{
+                      fontStyle: "italic",
+                      color: "#C08435",
+                      fontWeight: 200,
+                    }}
+                  >
+                    études
+                  </em>
+                </h2>
               </div>
-              <Link href="/bourses" style={sectionLink}>Toutes les bourses →</Link>
+              <Link href="/bourses" style={sectionLink}>
+                Toutes les bourses →
+              </Link>
             </div>
           </RevealWrapper>
 
@@ -463,16 +985,56 @@ export default function Home() {
           {urgentScholarship && (
             <RevealWrapper>
               <div className="ap-urgency-bar">
-                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                  }}
+                >
                   <span style={{ fontSize: "1.1rem" }}>⏰</span>
                   <div>
-                    <span style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#C08435", display: "block" }}>Deadlines proches</span>
-                    <span style={{ fontSize: "0.87rem", color: "#F8F6F1", fontWeight: 500 }}>
-                      {urgentCount} bourse{urgentCount > 1 ? "s" : ""} ferme{urgentCount > 1 ? "nt" : ""} dans moins de 30 jours — ne les ratez pas
+                    <span
+                      style={{
+                        fontSize: "0.65rem",
+                        fontWeight: 700,
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        color: "#C08435",
+                        display: "block",
+                      }}
+                    >
+                      Deadlines proches
+                    </span>
+                    <span
+                      style={{
+                        fontSize: "0.87rem",
+                        color: "#F8F6F1",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {urgentCount} bourse{urgentCount > 1 ? "s" : ""} ferme
+                      {urgentCount > 1 ? "nt" : ""} dans moins de 30 jours — ne
+                      les ratez pas
                     </span>
                   </div>
                 </div>
-                <Link href="/bourses?filter=urgent" style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontSize: "0.8rem", fontWeight: 600, padding: "0.55rem 1.2rem", borderRadius: 100, textDecoration: "none", background: "#C08435", color: "#fff", flexShrink: 0 }}>
+                <Link
+                  href="/bourses?filter=urgent"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.4rem",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    padding: "0.55rem 1.2rem",
+                    borderRadius: 100,
+                    textDecoration: "none",
+                    background: "#C08435",
+                    color: "#fff",
+                    flexShrink: 0,
+                  }}
+                >
                   Voir les urgentes <ArrowIcon />
                 </Link>
               </div>
@@ -483,31 +1045,174 @@ export default function Home() {
           <div className="ap-grid-3">
             {allBourses.map((sc, i) => (
               <RevealWrapper key={sc.id} delay={0.07 * i}>
-                <Link href={`/bourses/${sc.slug}`} style={{ textDecoration: "none", display: "block", height: "100%" }}>
-                  <div style={{ ...cardBase, display: "flex", flexDirection: "column", height: "100%" }} className="card-lift">
-                    <div style={{ height: 130, background: sc.cover_url ? `url(${sc.cover_url}) center/cover no-repeat` : sc.image_gradient, position: "relative", flexShrink: 0 }}>
-                      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, transparent 30%, rgba(0,0,0,.52) 100%)" }} />
-                      <div style={{ position: "absolute", bottom: "0.75rem", left: "0.9rem", display: "flex", alignItems: "center", gap: "0.4rem", background: "rgba(255,255,255,.92)", backdropFilter: "blur(8px)", padding: "0.2rem 0.6rem 0.2rem 0.4rem", borderRadius: 100, fontSize: "0.63rem", fontWeight: 700, color: "#141410" }}>
-                        <span style={{ fontSize: "0.9rem" }}>{sc.flag}</span>{sc.country}
+                <Link
+                  href={`/bourses/${sc.slug}`}
+                  style={{
+                    textDecoration: "none",
+                    display: "block",
+                    height: "100%",
+                  }}
+                >
+                  <div
+                    style={{
+                      ...cardBase,
+                      display: "flex",
+                      flexDirection: "column",
+                      height: "100%",
+                    }}
+                    className="card-lift"
+                  >
+                    <div
+                      style={{
+                        height: 130,
+                        background: sc.cover_url
+                          ? `url(${sc.cover_url}) center/cover no-repeat`
+                          : sc.image_gradient,
+                        position: "relative",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          position: "absolute",
+                          inset: 0,
+                          background:
+                            "linear-gradient(180deg, transparent 30%, rgba(0,0,0,.52) 100%)",
+                        }}
+                      />
+                      <div
+                        style={{
+                          position: "absolute",
+                          bottom: "0.75rem",
+                          left: "0.9rem",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.4rem",
+                          background: "rgba(255,255,255,.92)",
+                          backdropFilter: "blur(8px)",
+                          padding: "0.2rem 0.6rem 0.2rem 0.4rem",
+                          borderRadius: 100,
+                          fontSize: "0.63rem",
+                          fontWeight: 700,
+                          color: "#141410",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.9rem" }}>{sc.flag}</span>
+                        {sc.country}
                       </div>
                       {sc.urgent && (
-                        <div style={{ position: "absolute", top: "0.75rem", right: "0.75rem", display: "flex", alignItems: "center", gap: "0.3rem", padding: "0.2rem 0.65rem", borderRadius: 100, fontSize: "0.58rem", fontWeight: 700, background: "#B8341E", color: "#fff" }}>
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "0.75rem",
+                            right: "0.75rem",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.3rem",
+                            padding: "0.2rem 0.65rem",
+                            borderRadius: 100,
+                            fontSize: "0.58rem",
+                            fontWeight: 700,
+                            background: "#B8341E",
+                            color: "#fff",
+                          }}
+                        >
                           🔥 Urgent
                         </div>
                       )}
                     </div>
-                    <div style={{ padding: "1.1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem", flex: 1 }}>
-                      <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#C08435" }}>{sc.organization}</div>
-                      <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.95rem", fontWeight: 700, color: "#141410", lineHeight: 1.32, flex: 1 }}>{sc.title}</div>
-                      <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-                        <span style={{ fontSize: "0.58rem", fontWeight: 600, padding: "0.18rem 0.55rem", borderRadius: 100, background: "#EAF4EF", color: "#1A5C40" }}>{sc.level}</span>
+                    <div
+                      style={{
+                        padding: "1.1rem 1.25rem",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "0.5rem",
+                        flex: 1,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "0.6rem",
+                          fontWeight: 700,
+                          letterSpacing: "0.08em",
+                          textTransform: "uppercase",
+                          color: "#C08435",
+                        }}
+                      >
+                        {sc.organization}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: "'Fraunces', Georgia, serif",
+                          fontSize: "0.95rem",
+                          fontWeight: 700,
+                          color: "#141410",
+                          lineHeight: 1.32,
+                          flex: 1,
+                        }}
+                      >
+                        {sc.title}
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "0.4rem",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: "0.58rem",
+                            fontWeight: 600,
+                            padding: "0.18rem 0.55rem",
+                            borderRadius: 100,
+                            background: "#EAF4EF",
+                            color: "#1A5C40",
+                          }}
+                        >
+                          {sc.level}
+                        </span>
                         {sc.amount && (
-                          <span style={{ fontSize: "0.58rem", fontWeight: 600, padding: "0.18rem 0.55rem", borderRadius: 100, background: "#FBF4E8", color: "#C08435" }}>{sc.amount}</span>
+                          <span
+                            style={{
+                              fontSize: "0.58rem",
+                              fontWeight: 600,
+                              padding: "0.18rem 0.55rem",
+                              borderRadius: 100,
+                              background: "#FBF4E8",
+                              color: "#C08435",
+                            }}
+                          >
+                            {sc.amount}
+                          </span>
                         )}
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: "0.8rem", borderTop: "1px solid rgba(20,20,16,.07)" }}>
-                        <span style={{ fontSize: "0.63rem", color: "#928E80" }}>📅 {new Date(sc.deadline).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}</span>
-                        <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#C08435" }}>Postuler →</span>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          paddingTop: "0.8rem",
+                          borderTop: "1px solid rgba(20,20,16,.07)",
+                        }}
+                      >
+                        <span style={{ fontSize: "0.63rem", color: "#928E80" }}>
+                          📅{" "}
+                          {new Date(sc.deadline).toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.68rem",
+                            fontWeight: 700,
+                            color: "#C08435",
+                          }}
+                        >
+                          Postuler →
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -521,24 +1226,105 @@ export default function Home() {
       {/* ══════════════════════════════════════════
           CTA  — bg: #141410
       ══════════════════════════════════════════ */}
-      <section style={{ background: "#141410", padding: "4.5rem 0", position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle at 15% 50%, rgba(192,132,53,.1), transparent 55%), radial-gradient(circle at 85% 50%, rgba(26,92,64,.08), transparent 55%)", pointerEvents: "none" }} />
-        <div className="ap-container" style={{ position: "relative", zIndex: 1 }}>
+      <section
+        style={{
+          background: "#141410",
+          padding: "4.5rem 0",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage:
+              "radial-gradient(circle at 15% 50%, rgba(192,132,53,.1), transparent 55%), radial-gradient(circle at 85% 50%, rgba(26,92,64,.08), transparent 55%)",
+            pointerEvents: "none",
+          }}
+        />
+        <div
+          className="ap-container"
+          style={{ position: "relative", zIndex: 1 }}
+        >
           <RevealWrapper>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", gap: "1.5rem" }}>
-              <h2 style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "clamp(1.9rem, 4.5vw, 3.8rem)", fontWeight: 900, color: "#F8F6F1", lineHeight: 1.05, letterSpacing: "-0.03em", maxWidth: 680 }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: "1.5rem",
+              }}
+            >
+              <h2
+                style={{
+                  fontFamily: "'Fraunces', Georgia, serif",
+                  fontSize: "clamp(1.9rem, 4.5vw, 3.8rem)",
+                  fontWeight: 900,
+                  color: "#F8F6F1",
+                  lineHeight: 1.05,
+                  letterSpacing: "-0.03em",
+                  maxWidth: 680,
+                }}
+              >
                 Votre prochain grand{" "}
-                <em style={{ color: "#C08435", fontWeight: 200, fontStyle: "italic" }}>pas</em>{" "}
+                <em
+                  style={{
+                    color: "#C08435",
+                    fontWeight: 200,
+                    fontStyle: "italic",
+                  }}
+                >
+                  pas
+                </em>{" "}
                 commence ici
               </h2>
-              <p style={{ fontSize: "0.95rem", color: "rgba(248,246,241,.5)", fontWeight: 300, maxWidth: 440, lineHeight: 1.82 }}>
-                Rejoignez plus de 12 000 Africains qui utilisent AfriPulse pour saisir chaque opportunité.
+              <p
+                style={{
+                  fontSize: "0.95rem",
+                  color: "rgba(248,246,241,.5)",
+                  fontWeight: 300,
+                  maxWidth: 440,
+                  lineHeight: 1.82,
+                }}
+              >
+                Rejoignez plus de 12 000 Africains qui utilisent AroMe pour
+                saisir chaque opportunité.
               </p>
               <div className="ap-cta-btns">
-                <Link href="/auth/inscription" style={{ display: "inline-flex", alignItems: "center", fontSize: "0.9rem", fontWeight: 600, padding: "0.88rem 2.2rem", borderRadius: 100, textDecoration: "none", background: "#C08435", color: "#fff", boxShadow: "0 10px 40px rgba(192,132,53,.4)" }}>
+                <Link
+                  href="/auth/inscription"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    padding: "0.88rem 2.2rem",
+                    borderRadius: 100,
+                    textDecoration: "none",
+                    background: "#C08435",
+                    color: "#fff",
+                    boxShadow: "0 10px 40px rgba(192,132,53,.4)",
+                  }}
+                >
                   Créer un compte gratuit →
                 </Link>
-                <Link href="/actualites" style={{ display: "inline-flex", alignItems: "center", fontSize: "0.9rem", fontWeight: 500, padding: "0.88rem 1.8rem", borderRadius: 100, textDecoration: "none", background: "transparent", color: "rgba(248,246,241,.65)", border: "1.5px solid rgba(248,246,241,.15)" }}>
+                <Link
+                  href="/actualites"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    fontSize: "0.9rem",
+                    fontWeight: 500,
+                    padding: "0.88rem 1.8rem",
+                    borderRadius: 100,
+                    textDecoration: "none",
+                    background: "transparent",
+                    color: "rgba(248,246,241,.65)",
+                    border: "1.5px solid rgba(248,246,241,.15)",
+                  }}
+                >
                   Explorer d&apos;abord
                 </Link>
               </div>
@@ -556,19 +1342,40 @@ export default function Home() {
             <div className="ap-section-header">
               <div>
                 <div className="sh-kicker">Opportunités professionnelles</div>
-                <h2 className="ap-section-title">Boostez votre <em style={{ fontStyle: "italic", color: "#C08435", fontWeight: 200 }}>carrière</em></h2>
+                <h2 className="ap-section-title">
+                  Boostez votre{" "}
+                  <em
+                    style={{
+                      fontStyle: "italic",
+                      color: "#C08435",
+                      fontWeight: 200,
+                    }}
+                  >
+                    carrière
+                  </em>
+                </h2>
               </div>
-              <Link href="/opportunites" style={sectionLink}>Toutes les opportunités →</Link>
+              <Link href="/opportunites" style={sectionLink}>
+                Toutes les opportunités →
+              </Link>
             </div>
           </RevealWrapper>
 
           {/* 4 cartes visuelles */}
           <div className="ap-grid-4" style={{ marginBottom: "1.25rem" }}>
             {topOpps.map((opp, i) => {
-              const tc = oppTagColors[opp.type] || { bg: "#FBF4E8", color: "#C08435" };
+              const tc = oppTagColors[opp.type] || {
+                bg: "#FBF4E8",
+                color: "#C08435",
+              };
               return (
                 <RevealWrapper key={opp.id} delay={0.07 * i}>
-                  <OppCard opp={opp} tc={tc} tagPill={tagPill} cardBase={cardBase} />
+                  <OppCard
+                    opp={opp}
+                    tc={tc}
+                    tagPill={tagPill}
+                    cardBase={cardBase}
+                  />
                 </RevealWrapper>
               );
             })}
@@ -577,21 +1384,104 @@ export default function Home() {
           {/* 4 lignes compactes */}
           <div className="ap-grid-2">
             {botOpps.map((opp, i) => {
-              const tc = oppTagColors[opp.type] || { bg: "#FBF4E8", color: "#C08435" };
+              const tc = oppTagColors[opp.type] || {
+                bg: "#FBF4E8",
+                color: "#C08435",
+              };
               return (
                 <RevealWrapper key={opp.id} delay={0.07 * i}>
-                  <Link href={`/opportunites/${opp.slug}`} style={{ textDecoration: "none", display: "block" }}>
-                    <div style={{ ...cardBase, display: "flex", alignItems: "center", gap: "1rem", padding: "1rem 1.25rem" }} className="card-lift">
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: opp.image_gradient, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.78rem", fontWeight: 900, color: "rgba(255,255,255,.85)" }}>
+                  <Link
+                    href={`/opportunites/${opp.slug}`}
+                    style={{ textDecoration: "none", display: "block" }}
+                  >
+                    <div
+                      style={{
+                        ...cardBase,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "1rem",
+                        padding: "1rem 1.25rem",
+                      }}
+                      className="card-lift"
+                    >
+                      <div
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 12,
+                          background: opp.image_gradient,
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontFamily: "'Fraunces', Georgia, serif",
+                          fontSize: "0.78rem",
+                          fontWeight: 900,
+                          color: "rgba(255,255,255,.85)",
+                        }}
+                      >
                         {opp.company_initials}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.62rem", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: "#C08435", marginBottom: "0.2rem" }}>{opp.company}</div>
-                        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.9rem", fontWeight: 700, color: "#141410", lineHeight: 1.28, display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{opp.title}</div>
-                        <div style={{ fontSize: "0.63rem", color: "#928E80", marginTop: "0.2rem" }}>📍 {opp.location}</div>
+                        <div
+                          style={{
+                            fontSize: "0.62rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.07em",
+                            textTransform: "uppercase",
+                            color: "#C08435",
+                            marginBottom: "0.2rem",
+                          }}
+                        >
+                          {opp.company}
+                        </div>
+                        <div
+                          style={
+                            {
+                              fontFamily: "'Fraunces', Georgia, serif",
+                              fontSize: "0.9rem",
+                              fontWeight: 700,
+                              color: "#141410",
+                              lineHeight: 1.28,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            } as React.CSSProperties
+                          }
+                        >
+                          {opp.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.63rem",
+                            color: "#928E80",
+                            marginTop: "0.2rem",
+                          }}
+                        >
+                          📍 {opp.location}
+                        </div>
                       </div>
-                      <span style={{ ...tagPill, background: tc.bg, color: tc.color, flexShrink: 0 }}>{opp.type}</span>
-                      <span style={{ fontSize: "0.68rem", fontWeight: 700, color: "#C08435", flexShrink: 0 }}>→</span>
+                      <span
+                        style={{
+                          ...tagPill,
+                          background: tc.bg,
+                          color: tc.color,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {opp.type}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "0.68rem",
+                          fontWeight: 700,
+                          color: "#C08435",
+                          flexShrink: 0,
+                        }}
+                      >
+                        →
+                      </span>
                     </div>
                   </Link>
                 </RevealWrapper>
@@ -610,9 +1500,22 @@ export default function Home() {
             <div className="ap-section-header">
               <div>
                 <div className="sh-kicker">Événements</div>
-                <h2 className="ap-section-title">À ne pas <em style={{ fontStyle: "italic", color: "#C08435", fontWeight: 200 }}>manquer</em></h2>
+                <h2 className="ap-section-title">
+                  À ne pas{" "}
+                  <em
+                    style={{
+                      fontStyle: "italic",
+                      color: "#C08435",
+                      fontWeight: 200,
+                    }}
+                  >
+                    manquer
+                  </em>
+                </h2>
               </div>
-              <Link href="/evenements" style={sectionLink}>Tous les événements →</Link>
+              <Link href="/evenements" style={sectionLink}>
+                Tous les événements →
+              </Link>
             </div>
           </RevealWrapper>
 
@@ -621,17 +1524,95 @@ export default function Home() {
             <div className="ap-grid-2-main">
               {topEvents.map((ev, i) => (
                 <RevealWrapper key={ev.id} delay={0.07 * i}>
-                  <Link href={`/evenements/${ev.slug}`} style={{ textDecoration: "none", display: "block" }}>
-                    <div style={{ ...cardBase, display: "flex" }} className="card-lift">
-                      <div style={{ background: "linear-gradient(180deg, #FBF4E8, #F5ECD8)", borderRight: "1px solid rgba(192,132,53,.15)", padding: "1.25rem 1rem", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, minWidth: 72 }}>
-                        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "2rem", fontWeight: 900, color: "#C08435", lineHeight: 1 }}>{ev.day}</span>
-                        <span style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#928E80", marginTop: "0.15rem" }}>{ev.month}</span>
-                        <span style={{ fontSize: "0.55rem", color: "#928E80" }}>{ev.year}</span>
+                  <Link
+                    href={`/evenements/${ev.slug}`}
+                    style={{ textDecoration: "none", display: "block" }}
+                  >
+                    <div
+                      style={{ ...cardBase, display: "flex" }}
+                      className="card-lift"
+                    >
+                      <div
+                        style={{
+                          background:
+                            "linear-gradient(180deg, #FBF4E8, #F5ECD8)",
+                          borderRight: "1px solid rgba(192,132,53,.15)",
+                          padding: "1.25rem 1rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          minWidth: 72,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: "'Fraunces', Georgia, serif",
+                            fontSize: "2rem",
+                            fontWeight: 900,
+                            color: "#C08435",
+                            lineHeight: 1,
+                          }}
+                        >
+                          {ev.day}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.6rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.1em",
+                            textTransform: "uppercase",
+                            color: "#928E80",
+                            marginTop: "0.15rem",
+                          }}
+                        >
+                          {ev.month}
+                        </span>
+                        <span style={{ fontSize: "0.55rem", color: "#928E80" }}>
+                          {ev.year}
+                        </span>
                       </div>
-                      <div style={{ padding: "1.1rem 1.25rem", display: "flex", flexDirection: "column", gap: "0.35rem", flex: 1 }}>
-                        <div style={{ fontSize: "0.58rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#C08435" }}>{ev.type}</div>
-                        <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "0.92rem", fontWeight: 700, lineHeight: 1.3, color: "#141410" }}>{ev.title}</div>
-                        <div style={{ fontSize: "0.63rem", color: "#928E80", marginTop: "auto" }}>📍 {ev.location} {ev.flag}</div>
+                      <div
+                        style={{
+                          padding: "1.1rem 1.25rem",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "0.35rem",
+                          flex: 1,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "0.58rem",
+                            fontWeight: 700,
+                            letterSpacing: "0.1em",
+                            textTransform: "uppercase",
+                            color: "#C08435",
+                          }}
+                        >
+                          {ev.type}
+                        </div>
+                        <div
+                          style={{
+                            fontFamily: "'Fraunces', Georgia, serif",
+                            fontSize: "0.92rem",
+                            fontWeight: 700,
+                            lineHeight: 1.3,
+                            color: "#141410",
+                          }}
+                        >
+                          {ev.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.63rem",
+                            color: "#928E80",
+                            marginTop: "auto",
+                          }}
+                        >
+                          📍 {ev.location} {ev.flag}
+                        </div>
                       </div>
                     </div>
                   </Link>
@@ -641,26 +1622,130 @@ export default function Home() {
 
             {/* Agenda latéral sombre */}
             <RevealWrapper delay={0.15}>
-              <div style={{ background: "#141410", borderRadius: 20, padding: "1.75rem", display: "flex", flexDirection: "column" }}>
-                <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#C08435", marginBottom: "0.75rem" }}>
+              <div
+                style={{
+                  background: "#141410",
+                  borderRadius: 20,
+                  padding: "1.75rem",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "0.65rem",
+                    fontWeight: 700,
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                    color: "#C08435",
+                    marginBottom: "0.75rem",
+                  }}
+                >
                   📅 Agenda complet
                 </div>
                 {sideEvents.map((ev, i) => (
-                  <Link key={ev.id} href={`/evenements/${ev.slug}`} style={{ textDecoration: "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.9rem", padding: "0.7rem 0", borderBottom: i < sideEvents.length - 1 ? "1px solid rgba(248,246,241,.06)" : "none" }}>
-                      <div style={{ textAlign: "center", flexShrink: 0, width: 40 }}>
-                        <span style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: "1.3rem", fontWeight: 900, color: "#C08435", lineHeight: 1, display: "block" }}>{ev.day}</span>
-                        <span style={{ fontSize: "0.55rem", fontWeight: 700, textTransform: "uppercase", color: "rgba(248,246,241,.35)" }}>{ev.month}</span>
+                  <Link
+                    key={ev.id}
+                    href={`/evenements/${ev.slug}`}
+                    style={{ textDecoration: "none" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.9rem",
+                        padding: "0.7rem 0",
+                        borderBottom:
+                          i < sideEvents.length - 1
+                            ? "1px solid rgba(248,246,241,.06)"
+                            : "none",
+                      }}
+                    >
+                      <div
+                        style={{
+                          textAlign: "center",
+                          flexShrink: 0,
+                          width: 40,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontFamily: "'Fraunces', Georgia, serif",
+                            fontSize: "1.3rem",
+                            fontWeight: 900,
+                            color: "#C08435",
+                            lineHeight: 1,
+                            display: "block",
+                          }}
+                        >
+                          {ev.day}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: "0.55rem",
+                            fontWeight: 700,
+                            textTransform: "uppercase",
+                            color: "rgba(248,246,241,.35)",
+                          }}
+                        >
+                          {ev.month}
+                        </span>
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#F8F6F1", lineHeight: 1.28, display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" } as React.CSSProperties}>{ev.title}</div>
-                        <div style={{ fontSize: "0.63rem", color: "rgba(248,246,241,.4)", marginTop: "0.15rem" }}>{ev.location}</div>
+                        <div
+                          style={
+                            {
+                              fontSize: "0.82rem",
+                              fontWeight: 600,
+                              color: "#F8F6F1",
+                              lineHeight: 1.28,
+                              display: "-webkit-box",
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: "vertical",
+                              overflow: "hidden",
+                            } as React.CSSProperties
+                          }
+                        >
+                          {ev.title}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: "0.63rem",
+                            color: "rgba(248,246,241,.4)",
+                            marginTop: "0.15rem",
+                          }}
+                        >
+                          {ev.location}
+                        </div>
                       </div>
-                      <span style={{ fontSize: "0.7rem", color: "#C08435", flexShrink: 0 }}>→</span>
+                      <span
+                        style={{
+                          fontSize: "0.7rem",
+                          color: "#C08435",
+                          flexShrink: 0,
+                        }}
+                      >
+                        →
+                      </span>
                     </div>
                   </Link>
                 ))}
-                <Link href="/evenements" style={{ display: "block", textAlign: "center", fontSize: "0.8rem", fontWeight: 600, color: "#C08435", textDecoration: "none", marginTop: "1.25rem", padding: "0.65rem", borderRadius: 12, border: "1px solid rgba(192,132,53,.25)", background: "rgba(192,132,53,.06)" }}>
+                <Link
+                  href="/evenements"
+                  style={{
+                    display: "block",
+                    textAlign: "center",
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "#C08435",
+                    textDecoration: "none",
+                    marginTop: "1.25rem",
+                    padding: "0.65rem",
+                    borderRadius: 12,
+                    border: "1px solid rgba(192,132,53,.25)",
+                    background: "rgba(192,132,53,.06)",
+                  }}
+                >
                   Voir tous les événements →
                 </Link>
               </div>

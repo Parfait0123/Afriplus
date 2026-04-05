@@ -4,7 +4,7 @@ import { Resend } from "resend";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   if (existing) {
     return NextResponse.json(
       { message: "already_subscribed" },
-      { status: 409 }
+      { status: 409 },
     );
   }
 
@@ -46,19 +46,19 @@ export async function POST(request: Request) {
 
   // Envoyer l'email de confirmation
   try {
-   const response =  await resend.emails.send({
-      from: "AfriPulse <onboarding@resend.dev>",
+    const response = await resend.emails.send({
+      from: "AroMe <onboarding@resend.dev>",
       to: email,
       subject: "Confirmez votre inscription",
       html: `
-        <h1>Bienvenue sur AfriPulse !</h1>
+        <h1>Bienvenue sur AroMe !</h1>
         <p>Cliquez ici pour confirmer votre inscription :</p>
         <a href="${process.env.NEXT_PUBLIC_SITE_URL}/api/newsletter/confirm?token=${confirmationToken}">
           Confirmer
         </a>
       `,
     });
-      console.log("Réponse Resend :", response);
+    console.log("Réponse Resend :", response);
   } catch (emailError) {
     // Même si l'email échoue, l'abonné est enregistré
     console.error("Erreur d'envoi d'email:", emailError);

@@ -238,7 +238,7 @@ export default function AdminLayout({
                       lineHeight: 1,
                     }}
                   >
-                    Afri<span style={{ color: "#C08435" }}>Pulse</span>
+                    Aro<span style={{ color: "#C08435" }}>Me</span>
                   </div>
                   <div
                     style={{
@@ -613,7 +613,7 @@ export default function AdminLayout({
                 color: "#F8F6F1",
               }}
             >
-              Afri<span style={{ color: "#C08435" }}>Pulse</span>
+              Aro<span style={{ color: "#C08435" }}>Me</span>
             </span>
           </Link>
         </div>

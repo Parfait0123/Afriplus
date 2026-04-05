@@ -154,7 +154,7 @@ create table if not exists public.articles (
   content        text,
   category       text        not null default 'Tech',
   author_id      uuid        references public.profiles(id) on delete set null,
-  author_name    text        not null default 'Rédaction AfriPulse',
+  author_name    text        not null default 'Rédaction AroMe',
   date           timestamptz not null default now(),
   read_time      int         not null default 5,
   featured       boolean     not null default false,

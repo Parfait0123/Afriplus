@@ -1,5 +1,5 @@
 -- ============================================================
--- AfriPulse — Schéma Supabase COMPLET ET DÉFINITIF
+-- AroMe — Schéma Supabase COMPLET ET DÉFINITIF
 -- Analysé depuis : toutes les pages admin fournies
 -- Idempotent : safe à ré-exécuter sur une base existante
 -- ============================================================
