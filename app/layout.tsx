@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import "./globals.css";
+import { Analytics } from '@vercel/analytics/next';
+ 
 import NavigationProgress from "@/components/ui/NavigationProgress";
 
 // ── Métadonnées optimisées ─────────────────────────────────
@@ -91,6 +93,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
+    
     <html lang="fr" suppressHydrationWarning>
       <head>
         {/* Polices optimisées avec preconnect */}
@@ -132,7 +135,11 @@ export default function RootLayout({
         </a>
 
         <main id="main-content">{children}</main>
+
+        <Analytics />
       </body>
     </html>
+    
+    
   );
 }
